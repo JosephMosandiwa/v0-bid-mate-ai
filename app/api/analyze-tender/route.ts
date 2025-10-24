@@ -5,8 +5,11 @@ export async function POST(request: Request) {
     const { documentText } = await request.json()
 
     if (!documentText) {
+      console.error("[v0] No document text provided")
       return Response.json({ error: "Document text is required" }, { status: 400 })
     }
+
+    console.log("[v0] Starting tender analysis, text length:", documentText.length)
 
     const { text } = await generateText({
       model: "openai/gpt-4-turbo",
@@ -37,18 +40,54 @@ Extract specific actionable tasks that the bidder needs to complete. These shoul
 
 Prioritize tasks based on complexity and importance. Include deadlines if mentioned in the document.
 
-Tender Document:
-${documentText}
+IMPORTANT: You MUST respond with ONLY valid JSON. Do not include any explanatory text before or after the JSON. Start your response with { and end with }.
 
-Provide only the JSON response, no additional text.`,
+Tender Document:
+${documentText}`,
     })
 
-    // Parse the AI response
-    const analysis = JSON.parse(text)
+    console.log("[v0] AI response received, length:", text.length)
+    console.log("[v0] AI response preview:", text.substring(0, 500))
 
+    let analysis
+    try {
+      // Try to extract JSON if there's extra text
+      const jsonMatch = text.match(/\{[\s\S]*\}/)
+      const jsonText = jsonMatch ? jsonMatch[0] : text
+
+      console.log("[v0] Attempting to parse JSON...")
+      analysis = JSON.parse(jsonText)
+      console.log("[v0] JSON parsed successfully")
+    } catch (parseError) {
+      console.error("[v0] JSON parsing failed:", parseError)
+      console.error("[v0] Raw AI response:", text)
+
+      return Response.json(
+        {
+          error: "Failed to parse AI response as JSON. The AI returned invalid JSON format.",
+          details: parseError instanceof Error ? parseError.message : "Unknown parsing error",
+          rawResponse: text.substring(0, 1000), // Include first 1000 chars for debugging
+        },
+        { status: 500 },
+      )
+    }
+
+    if (!analysis.summary || !analysis.keyRequirements || !analysis.actionableTasks) {
+      console.error("[v0] Analysis missing required fields:", analysis)
+      return Response.json(
+        {
+          error: "AI analysis is missing required fields",
+          receivedFields: Object.keys(analysis),
+        },
+        { status: 500 },
+      )
+    }
+
+    console.log("[v0] Analysis completed successfully")
     return Response.json(analysis)
   } catch (error: any) {
     console.error("[v0] Tender analysis error:", error)
+    console.error("[v0] Error stack:", error?.stack)
 
     if (error?.message?.includes("API key") || error?.message?.includes("authentication")) {
       return Response.json(
@@ -62,6 +101,22 @@ Provide only the JSON response, no additional text.`,
       )
     }
 
-    return Response.json({ error: "Failed to analyze tender document" }, { status: 500 })
+    if (error?.message?.includes("model")) {
+      return Response.json(
+        {
+          error: "AI model error. The specified model may not be available.",
+          details: error.message,
+        },
+        { status: 500 },
+      )
+    }
+
+    return Response.json(
+      {
+        error: "Failed to analyze tender document",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

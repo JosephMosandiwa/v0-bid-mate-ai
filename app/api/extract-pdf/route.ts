@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server"
+import pdf from "pdf-parse"
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,10 +22,12 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    // Extract text from PDF
-    const text = await extractTextFromPDF(buffer, file.name)
+    const data = await pdf(buffer)
+    const text = data.text
 
     console.log("[v0] Extracted text length:", text.length)
+    console.log("[v0] Number of pages:", data.numpages)
+    console.log("[v0] Text preview:", text.substring(0, 300))
 
     if (text.length < 100) {
       console.warn("[v0] Extracted text is very short, might be a scanned PDF")
@@ -37,71 +40,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return Response.json({ text })
+    return Response.json({ text, pages: data.numpages })
   } catch (error) {
     console.error("[v0] PDF extraction error:", error)
     return Response.json(
       { error: error instanceof Error ? error.message : "Failed to extract text from PDF" },
       { status: 500 },
     )
-  }
-}
-
-async function extractTextFromPDF(buffer: Buffer, filename: string): Promise<string> {
-  try {
-    console.log("[v0] Starting PDF text extraction for:", filename)
-
-    // Convert buffer to string and look for text content
-    const pdfString = buffer.toString("binary")
-
-    // Extract text between stream objects in PDF
-    const textMatches = pdfString.match(/stream\s*([\s\S]*?)\s*endstream/g)
-
-    if (!textMatches || textMatches.length === 0) {
-      console.warn("[v0] No text streams found in PDF")
-      throw new Error("No readable text found in PDF. The document might be scanned or image-based.")
-    }
-
-    let extractedText = ""
-
-    // Process each text stream
-    for (const match of textMatches) {
-      // Remove stream markers
-      const content = match.replace(/stream\s*/, "").replace(/\s*endstream/, "")
-
-      // Try to extract readable text
-      // This is a simplified approach - in production, use a proper PDF library
-      const readableText = content
-        .replace(/[^\x20-\x7E\n\r]/g, " ") // Keep only printable ASCII and newlines
-        .replace(/\s+/g, " ") // Normalize whitespace
-        .trim()
-
-      if (readableText.length > 10) {
-        extractedText += readableText + "\n"
-      }
-    }
-
-    // Also try to extract text from the raw PDF content
-    const rawText = pdfString
-      .replace(/[^\x20-\x7E\n\r]/g, " ")
-      .replace(/\s+/g, " ")
-      .split(" ")
-      .filter((word) => word.length > 2 && /[a-zA-Z]/.test(word))
-      .join(" ")
-
-    if (rawText.length > extractedText.length) {
-      extractedText = rawText
-    }
-
-    console.log("[v0] Extracted text preview:", extractedText.substring(0, 200))
-
-    if (extractedText.length < 100) {
-      throw new Error("Insufficient text extracted from PDF. The document might be scanned, image-based, or encrypted.")
-    }
-
-    return extractedText
-  } catch (error) {
-    console.error("[v0] Text extraction error:", error)
-    throw error instanceof Error ? error : new Error("Failed to extract text from PDF")
   }
 }
