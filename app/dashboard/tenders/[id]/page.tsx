@@ -198,7 +198,12 @@ export default function TenderDetailPage() {
       console.log("[v0] Extract API response status:", extractResponse.status)
 
       if (!extractResponse.ok) {
-        const errorData = await extractResponse.json()
+        let errorData
+        try {
+          errorData = await extractResponse.json()
+        } catch {
+          errorData = { error: `HTTP ${extractResponse.status}: ${extractResponse.statusText}` }
+        }
         console.error("[v0] PDF extraction failed:", errorData)
         throw new Error(errorData.error || "Failed to extract text from PDF")
       }
@@ -221,15 +226,29 @@ export default function TenderDetailPage() {
       })
 
       console.log("[v0] Analyze API response status:", analyzeResponse.status)
+      console.log("[v0] Analyze API response headers:", Object.fromEntries(analyzeResponse.headers.entries()))
 
       if (!analyzeResponse.ok) {
-        const errorData = await analyzeResponse.json()
+        let errorData
+        try {
+          errorData = await analyzeResponse.json()
+        } catch (jsonError) {
+          console.error("[v0] Failed to parse error response as JSON:", jsonError)
+          errorData = { error: `HTTP ${analyzeResponse.status}: ${analyzeResponse.statusText}` }
+        }
         console.error("[v0] Analysis API failed:", errorData)
         throw new Error(errorData.error || "Failed to analyze document")
       }
 
-      const analysis = await analyzeResponse.json()
-      console.log("[v0] Analysis received:", analysis)
+      let analysis
+      try {
+        analysis = await analyzeResponse.json()
+        console.log("[v0] Analysis received:", analysis)
+      } catch (jsonError) {
+        console.error("[v0] Failed to parse analysis response as JSON:", jsonError)
+        console.error("[v0] Response was:", await analyzeResponse.text())
+        throw new Error("Failed to parse analysis response. The server returned invalid JSON.")
+      }
 
       const result = await analyzeDocument(documentId, analysis)
       console.log("[v0] Save result:", result)
