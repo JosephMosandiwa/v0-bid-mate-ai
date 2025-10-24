@@ -1,4 +1,3 @@
-import { openai } from "@ai-sdk/openai"
 import { generateText } from "ai"
 
 export async function POST(request: Request) {
@@ -10,7 +9,7 @@ export async function POST(request: Request) {
     }
 
     const { text } = await generateText({
-      model: openai("gpt-4-turbo"),
+      model: "openai/gpt-4-turbo",
       prompt: `You are an expert tender analyst. Analyze the following tender document and provide a comprehensive analysis in JSON format with the following structure:
 
 {

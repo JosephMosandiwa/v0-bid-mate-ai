@@ -1,4 +1,3 @@
-import { openai } from "@ai-sdk/openai"
 import { streamText, convertToModelMessages } from "ai"
 
 export const maxDuration = 30
@@ -31,7 +30,7 @@ Be concise, practical, and specific in your advice. Always reference the tender 
     console.log("[v0] Calling OpenAI GPT-4 with", modelMessages.length, "messages")
 
     const result = streamText({
-      model: openai("gpt-4-turbo"),
+      model: "openai/gpt-4-turbo",
       messages: modelMessages,
       temperature: 0.7,
       maxTokens: 2000,

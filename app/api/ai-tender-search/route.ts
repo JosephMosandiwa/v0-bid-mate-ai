@@ -1,4 +1,3 @@
-import { openai } from "@ai-sdk/openai"
 import { generateText } from "ai"
 
 export async function POST(request: Request) {
@@ -75,7 +74,7 @@ export async function POST(request: Request) {
     ]
 
     const { text } = await generateText({
-      model: openai("gpt-4-turbo"),
+      model: "openai/gpt-4-turbo",
       prompt: `You are an AI assistant helping users find relevant government tenders. 
 
 User Query: "${query}"
