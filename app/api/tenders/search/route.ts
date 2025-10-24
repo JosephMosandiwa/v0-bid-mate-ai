@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
     const limit = Number.parseInt(searchParams.get("limit") || "50")
     const offset = Number.parseInt(searchParams.get("offset") || "0")
 
+    console.log("[v0] Search params:", { query, level, province, category, isActive, limit, offset })
+
     const supabase = await createClient()
 
     // Build query
@@ -35,8 +37,8 @@ export async function GET(request: NextRequest) {
       dbQuery = dbQuery.eq("category", category)
     }
 
-    // Apply full-text search if query provided
-    if (query) {
+    if (query && query.trim()) {
+      console.log("[v0] Applying full-text search for query:", query)
       dbQuery = dbQuery.textSearch("search_vector", query, {
         type: "websearch",
         config: "english",
@@ -45,9 +47,19 @@ export async function GET(request: NextRequest) {
 
     const { data: tenders, error, count } = await dbQuery
 
+    console.log("[v0] Search results:", {
+      tendersCount: tenders?.length || 0,
+      totalCount: count,
+      hasError: !!error,
+    })
+
     if (error) {
-      console.error("[API] Error searching tenders:", error)
-      return Response.json({ error: "Failed to search tenders" }, { status: 500 })
+      console.error("[v0] Error searching tenders:", error)
+      return Response.json({ error: "Failed to search tenders", details: error.message }, { status: 500 })
+    }
+
+    if (count === 0) {
+      console.log("[v0] No tenders found in database. The scraped_tenders table may be empty.")
     }
 
     return Response.json({
@@ -57,7 +69,13 @@ export async function GET(request: NextRequest) {
       offset,
     })
   } catch (error) {
-    console.error("[API] Tender search error:", error)
-    return Response.json({ error: "Failed to search tenders" }, { status: 500 })
+    console.error("[v0] Tender search error:", error)
+    return Response.json(
+      {
+        error: "Failed to search tenders",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }

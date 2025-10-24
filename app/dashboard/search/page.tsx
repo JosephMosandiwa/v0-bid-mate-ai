@@ -85,16 +85,29 @@ export default function SearchPage() {
         params.append("province", provinceFilter)
       }
 
+      console.log("[v0] Searching with params:", params.toString())
+
       const response = await fetch(`/api/tenders/search?${params.toString()}`)
 
+      console.log("[v0] Search response status:", response.status)
+
       if (!response.ok) {
-        throw new Error("Failed to search tenders")
+        const errorData = await response.json()
+        console.error("[v0] Search error response:", errorData)
+        throw new Error(errorData.details || "Failed to search tenders")
       }
 
       const results = await response.json()
+      console.log("[v0] Search results:", results)
+
+      if (results.total === 0 && !searchQuery && levelFilter === "all" && provinceFilter === "all") {
+        setError("No tenders available yet. The database may need to be populated with scraped tenders.")
+      }
+
       setTenders(results.tenders || [])
     } catch (err) {
-      setError("Failed to search tenders. Please try again.")
+      const errorMessage = err instanceof Error ? err.message : "Failed to search tenders. Please try again."
+      setError(errorMessage)
       console.error("[v0] Search error:", err)
     } finally {
       setSearching(false)
