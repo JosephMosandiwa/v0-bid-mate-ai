@@ -228,12 +228,16 @@ export default function TenderDetailPage() {
       console.log("[v0] Analyze API response status:", analyzeResponse.status)
       console.log("[v0] Analyze API response headers:", Object.fromEntries(analyzeResponse.headers.entries()))
 
+      const responseClone = analyzeResponse.clone()
+
       if (!analyzeResponse.ok) {
         let errorData
         try {
           errorData = await analyzeResponse.json()
         } catch (jsonError) {
           console.error("[v0] Failed to parse error response as JSON:", jsonError)
+          const responseText = await responseClone.text()
+          console.error("[v0] Error response body:", responseText)
           errorData = { error: `HTTP ${analyzeResponse.status}: ${analyzeResponse.statusText}` }
         }
         console.error("[v0] Analysis API failed:", errorData)
@@ -242,11 +246,26 @@ export default function TenderDetailPage() {
 
       let analysis
       try {
+        const contentType = analyzeResponse.headers.get("content-type")
+        console.log("[v0] Response content-type:", contentType)
+
+        if (!contentType || !contentType.includes("application/json")) {
+          const responseText = await responseClone.text()
+          console.error("[v0] Response is not JSON. Content-Type:", contentType)
+          console.error("[v0] Response body:", responseText)
+          throw new Error("Server returned non-JSON response. Expected JSON but got: " + contentType)
+        }
+
         analysis = await analyzeResponse.json()
         console.log("[v0] Analysis received:", analysis)
       } catch (jsonError) {
         console.error("[v0] Failed to parse analysis response as JSON:", jsonError)
-        console.error("[v0] Response was:", await analyzeResponse.text())
+        try {
+          const responseText = await responseClone.text()
+          console.error("[v0] Response body was:", responseText)
+        } catch (textError) {
+          console.error("[v0] Could not read response body:", textError)
+        }
         throw new Error("Failed to parse analysis response. The server returned invalid JSON.")
       }
 
