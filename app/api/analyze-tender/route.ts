@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     console.log("[v0] Calling AI model for analysis...")
 
     const { text } = await generateText({
-      model: "openai/gpt-4-turbo",
+      model: "openai/gpt-4o",
       prompt: `You are an expert tender analyst. Analyze the following tender document and provide a comprehensive analysis in JSON format with the following structure:
 
 {
@@ -123,11 +123,10 @@ IMPORTANT: Respond with ONLY valid JSON. Do not include markdown code blocks, ex
       return Response.json(
         {
           error:
-            "OpenAI API key is missing or invalid. Please add your OPENAI_API_KEY environment variable in the Vercel dashboard.",
-          errorType: "api_key_required",
-          dashboardUrl: "https://vercel.com/dashboard/stores",
+            "AI service authentication failed. The Vercel AI Gateway may be experiencing issues. Please try again later.",
+          errorType: "ai_service_error",
         },
-        { status: 403 },
+        { status: 503 },
       )
     }
 

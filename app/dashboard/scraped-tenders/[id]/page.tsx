@@ -202,7 +202,7 @@ export default function ScrapedTenderDetailPage() {
 
           const response = await fetch(doc.blob_url)
           if (!response.ok) {
-            console.warn("[v0] Failed to fetch document:", doc.document_name)
+            console.warn("[v0] Failed to fetch document:", doc.document_name, response.status)
             continue
           }
 
@@ -222,7 +222,8 @@ export default function ScrapedTenderDetailPage() {
             extractedTexts.push(text)
             console.log("[v0] Extracted", text.length, "characters from", doc.document_name)
           } else {
-            console.warn("[v0] Failed to extract text from:", doc.document_name)
+            const errorData = await extractResponse.json().catch(() => ({ error: "Unknown error" }))
+            console.warn("[v0] Failed to extract text from:", doc.document_name, errorData.error)
           }
         } catch (error) {
           console.error("[v0] Error extracting text from", doc.document_name, error)
@@ -230,7 +231,7 @@ export default function ScrapedTenderDetailPage() {
       }
 
       if (extractedTexts.length === 0) {
-        setAnalysisError("Could not extract text from any documents")
+        setAnalysisError("Could not extract text from any documents. The PDFs might be scanned images or encrypted.")
         setAnalysisLoading(false)
         return
       }
@@ -246,8 +247,18 @@ export default function ScrapedTenderDetailPage() {
       })
 
       if (!analyzeResponse.ok) {
-        const errorData = await analyzeResponse.json()
-        throw new Error(errorData.error || "Failed to analyze documents")
+        const errorData = await analyzeResponse.json().catch(() => ({ error: "Unknown error" }))
+        console.error("[v0] Analysis API error:", errorData)
+
+        if (errorData.errorType === "api_key_required") {
+          throw new Error(
+            "OpenAI API key is missing. Please add your OPENAI_API_KEY in the environment variables (Vars section in the sidebar).",
+          )
+        } else if (errorData.details) {
+          throw new Error(`Analysis failed: ${errorData.details}`)
+        } else {
+          throw new Error(errorData.error || "Failed to analyze documents")
+        }
       }
 
       const analysisResult = await analyzeResponse.json()
@@ -257,15 +268,19 @@ export default function ScrapedTenderDetailPage() {
       setAnalysisCached(false)
 
       console.log("[v0] Saving analysis to database")
-      await fetch(`/api/tenders/scraped/${id}/analysis`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ analysis: analysisResult }),
-      })
-      console.log("[v0] Analysis saved successfully")
+      try {
+        await fetch(`/api/tenders/scraped/${id}/analysis`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ analysis: analysisResult }),
+        })
+        console.log("[v0] Analysis saved successfully")
+      } catch (saveError) {
+        console.error("[v0] Failed to save analysis:", saveError)
+      }
     } catch (error: any) {
       console.error("[v0] Error analyzing documents:", error)
-      setAnalysisError(error.message || "Failed to analyze documents")
+      setAnalysisError(error.message || "Failed to analyze documents. Please try again.")
     } finally {
       setAnalysisLoading(false)
     }
