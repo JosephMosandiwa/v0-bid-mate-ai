@@ -20,7 +20,16 @@ export class GenericHtmlScraper extends BaseScraper {
     try {
       console.log(`[Scraper] Starting scrape for ${this.sourceName}`)
 
-      const response = await fetch(this.sourceUrl, {
+      const scrapingApiKey = process.env.SCRAPING_API_KEY
+      let url = this.sourceUrl
+
+      if (scrapingApiKey) {
+        // Use ScraperAPI service (or similar) to handle the request
+        url = `http://api.scraperapi.com?api_key=${scrapingApiKey}&url=${encodeURIComponent(this.sourceUrl)}`
+        console.log(`[Scraper] Using ScraperAPI service for ${this.sourceName}`)
+      }
+
+      const response = await fetch(url, {
         headers: {
           "User-Agent": "BidMateAI-TenderBot/1.0 (Tender Aggregation Service)",
           Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -188,5 +197,20 @@ export class GenericHtmlScraper extends BaseScraper {
     }
 
     return null
+  }
+
+  private cleanText(text: string): string {
+    return text.trim().replace(/\s+/g, " ")
+  }
+
+  private makeAbsoluteUrl(link: string, baseUrl: string): string {
+    if (link.startsWith("http")) {
+      return link
+    }
+    return new URL(link, baseUrl).href
+  }
+
+  private parseDate(date: string): string {
+    return new Date(date).toISOString()
   }
 }

@@ -20,6 +20,7 @@ import {
   Loader2,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { createBrowserClient } from "@supabase/ssr"
 
 interface TenderSource {
   id: number
@@ -58,6 +59,11 @@ export default function ScrapingAdminPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [levelFilter, setLevelFilter] = useState<string>("all")
   const { toast } = useToast()
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
 
   useEffect(() => {
     loadData()
@@ -120,10 +126,19 @@ export default function ScrapingAdminPage() {
   const handleScrapeSource = async (sourceId: number) => {
     setScraping(sourceId)
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session) {
+        throw new Error("Not authenticated")
+      }
+
       const response = await fetch("/api/scraping/trigger", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ sourceId }),
       })
@@ -141,7 +156,7 @@ export default function ScrapingAdminPage() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to scrape source",
+        description: error instanceof Error ? error.message : "Failed to scrape source",
         variant: "destructive",
       })
     } finally {
@@ -152,10 +167,19 @@ export default function ScrapingAdminPage() {
   const handleScrapeAll = async () => {
     setScraping(-1)
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session) {
+        throw new Error("Not authenticated")
+      }
+
       const response = await fetch("/api/scraping/trigger", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ scrapeAll: true }),
       })
@@ -173,7 +197,7 @@ export default function ScrapingAdminPage() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to scrape all sources",
+        description: error instanceof Error ? error.message : "Failed to scrape all sources",
         variant: "destructive",
       })
     } finally {

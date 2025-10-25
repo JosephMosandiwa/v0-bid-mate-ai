@@ -1,15 +1,27 @@
 import { ScrapingService } from "@/lib/services/scraping-service"
+import { createClient } from "@supabase/supabase-js"
 import type { NextRequest } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const { sourceId, scrapeAll } = await request.json()
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-    // Verify authorization (you should add proper auth here)
     const authHeader = request.headers.get("authorization")
-    if (!authHeader || authHeader !== `Bearer ${process.env.SCRAPING_API_KEY}`) {
+    if (!authHeader) {
       return Response.json({ error: "Unauthorized" }, { status: 401 })
     }
+
+    const token = authHeader.replace("Bearer ", "")
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(token)
+
+    if (authError || !user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { sourceId, scrapeAll } = await request.json()
 
     const scrapingService = new ScrapingService()
 
