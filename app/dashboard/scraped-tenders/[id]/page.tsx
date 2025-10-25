@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -92,15 +92,18 @@ export default function ScrapedTenderDetailPage() {
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [analysisCached, setAnalysisCached] = useState(false)
 
+  const analysisInitiated = useRef(false)
+
   useEffect(() => {
     loadTenderDetails()
   }, [id])
 
   useEffect(() => {
-    if (documents.length > 0 && !analysis && !analysisLoading) {
+    if (documents.length > 0 && !analysis && !analysisLoading && !analysisInitiated.current) {
+      analysisInitiated.current = true
       checkAndLoadAnalysis()
     }
-  }, [documents])
+  }, [documents, analysis, analysisLoading])
 
   const loadTenderDetails = async () => {
     try {
