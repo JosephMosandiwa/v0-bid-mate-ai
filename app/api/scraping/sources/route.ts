@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@supabase/supabase-js"
 import type { NextRequest } from "next/server"
 
 export async function GET(request: NextRequest) {
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
     console.log("[v0] Query params:", { level, province, active })
 
-    const supabase = await createClient()
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
     console.log("[v0] Supabase client created")
 
     let query = supabase.from("tender_sources").select("*").order("name")
@@ -60,18 +60,18 @@ export async function PATCH(request: NextRequest) {
       return Response.json({ error: "sourceId required" }, { status: 400 })
     }
 
-    const supabase = await createClient()
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
     const { data, error } = await supabase.from("tender_sources").update(updates).eq("id", sourceId).select().single()
 
     if (error) {
-      console.error("[API] Error updating source:", error)
+      console.error("[v0] Error updating source:", error)
       return Response.json({ error: "Failed to update source" }, { status: 500 })
     }
 
     return Response.json({ source: data })
   } catch (error) {
-    console.error("[API] Source update error:", error)
+    console.error("[v0] Source update error:", error)
     return Response.json({ error: "Failed to update source" }, { status: 500 })
   }
 }
