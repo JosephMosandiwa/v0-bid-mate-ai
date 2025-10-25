@@ -84,10 +84,16 @@ export class UsageTrackingService {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
     // Get AI usage
-    const { data: aiData } = await supabase
+    const { data: aiData, error: aiError } = await supabase
       .from("ai_usage_logs")
       .select("input_tokens, output_tokens, estimated_cost_usd")
       .gte("created_at", monthStart.toISOString())
+
+    // If table doesn't exist, return default values
+    if (aiError && aiError.code === "42P01") {
+      console.log("[v0] Usage tracking tables not found. Please run script 017 to create them.")
+      return this.getDefaultStats()
+    }
 
     const aiCount = aiData?.length || 0
     const aiTotalCost = aiData?.reduce((sum, log) => sum + Number(log.estimated_cost_usd), 0) || 0
@@ -159,6 +165,28 @@ export class UsageTrackingService {
 
     if (error) {
       console.error("[v0] Error updating storage snapshot:", error)
+    }
+  }
+
+  // Helper method to return default stats
+  private static getDefaultStats(): UsageStats {
+    return {
+      aiAnalyses: {
+        count: 0,
+        totalCost: 0,
+        avgCostPerAnalysis: 0,
+      },
+      scraping: {
+        count: 0,
+        creditsUsed: 0,
+        successRate: 0,
+      },
+      storage: {
+        totalFiles: 0,
+        totalSizeGB: 0,
+        estimatedCost: 0,
+      },
+      monthlyTotal: 0,
     }
   }
 }
