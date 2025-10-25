@@ -18,7 +18,8 @@ export class GenericHtmlScraper extends BaseScraper {
 
   async scrape(): Promise<ScraperResult> {
     try {
-      console.log(`[Scraper] Starting scrape for ${this.sourceName}`)
+      console.log(`[v0] GenericHtmlScraper: Starting scrape for ${this.sourceName}`)
+      console.log(`[v0] GenericHtmlScraper: Source URL: ${this.sourceUrl}`)
 
       const scrapingApiKey = process.env.SCRAPING_API_KEY
       let url = this.sourceUrl
@@ -26,8 +27,12 @@ export class GenericHtmlScraper extends BaseScraper {
       if (scrapingApiKey) {
         // Use ScraperAPI service (or similar) to handle the request
         url = `http://api.scraperapi.com?api_key=${scrapingApiKey}&url=${encodeURIComponent(this.sourceUrl)}`
-        console.log(`[Scraper] Using ScraperAPI service for ${this.sourceName}`)
+        console.log(`[v0] GenericHtmlScraper: Using ScraperAPI service`)
+      } else {
+        console.log(`[v0] GenericHtmlScraper: No SCRAPING_API_KEY found, using direct fetch`)
       }
+
+      console.log(`[v0] GenericHtmlScraper: Fetching URL...`)
 
       const response = await fetch(url, {
         headers: {
@@ -36,25 +41,32 @@ export class GenericHtmlScraper extends BaseScraper {
         },
       })
 
+      console.log(`[v0] GenericHtmlScraper: Response status: ${response.status}`)
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
       const html = await response.text()
+      console.log(`[v0] GenericHtmlScraper: Received HTML (${html.length} chars)`)
+
       const $ = cheerio.load(html)
       const tenders: ScrapedTender[] = []
 
       // Look for common tender patterns
       const tenderElements = this.findTenderElements($)
 
-      console.log(`[Scraper] Found ${tenderElements.length} potential tender elements`)
+      console.log(`[v0] GenericHtmlScraper: Found ${tenderElements.length} potential tender elements`)
 
       for (const element of tenderElements) {
         const tender = this.extractTenderData($, element)
         if (tender && tender.title) {
           tenders.push(tender)
+          console.log(`[v0] GenericHtmlScraper: Extracted tender: ${tender.title}`)
         }
       }
+
+      console.log(`[v0] GenericHtmlScraper: Successfully extracted ${tenders.length} tenders`)
 
       return {
         success: true,
@@ -62,7 +74,7 @@ export class GenericHtmlScraper extends BaseScraper {
         scrapedCount: tenders.length,
       }
     } catch (error) {
-      console.error(`[Scraper] Error scraping ${this.sourceName}:`, error)
+      console.error(`[v0] GenericHtmlScraper: Error scraping ${this.sourceName}:`, error)
       return {
         success: false,
         tenders: [],

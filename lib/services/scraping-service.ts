@@ -21,6 +21,8 @@ export class ScrapingService {
         .eq("id", sourceId)
         .single()
 
+      console.log(`[ScrapingService] Source query result:`, { source, error: sourceError })
+
       if (sourceError || !source) {
         throw new Error(`Source not found: ${sourceId}`)
       }
@@ -33,18 +35,29 @@ export class ScrapingService {
         }
       }
 
+      console.log(`[ScrapingService] Creating scraper for ${source.name}`)
+
       // Create scraper
       const scraper = ScraperFactory.createScraper(source)
+
+      console.log(`[ScrapingService] Starting scrape...`)
 
       // Scrape tenders
       const result = await scraper.scrape()
 
+      console.log(`[ScrapingService] Scrape completed:`, result)
+
       // Save tenders to database
       if (result.success && result.tenders.length > 0) {
+        console.log(`[ScrapingService] Saving ${result.tenders.length} tenders to database`)
         await this.saveTenders(sourceId, source, result.tenders)
+        console.log(`[ScrapingService] Tenders saved successfully`)
+      } else {
+        console.log(`[ScrapingService] No tenders to save`)
       }
 
       // Update source statistics
+      console.log(`[ScrapingService] Updating source stats`)
       await this.updateSourceStats(sourceId, result)
 
       console.log(`[ScrapingService] Completed scrape for source ${sourceId}: ${result.scrapedCount} tenders`)
@@ -74,6 +87,8 @@ export class ScrapingService {
   }
 
   private async saveTenders(sourceId: number, source: any, tenders: ScrapedTender[]) {
+    console.log(`[ScrapingService] Preparing to save ${tenders.length} tenders`)
+
     const tendersToInsert = tenders.map((tender) => ({
       source_id: sourceId,
       source_name: source.name,
@@ -97,6 +112,8 @@ export class ScrapingService {
       is_active: true,
     }))
 
+    console.log(`[ScrapingService] Sample tender data:`, tendersToInsert[0])
+
     // Insert tenders (upsert based on source_id + tender_reference or title)
     const { error } = await this.supabase.from("scraped_tenders").upsert(tendersToInsert, {
       onConflict: "source_id,title",
@@ -107,6 +124,8 @@ export class ScrapingService {
       console.error("[ScrapingService] Error saving tenders:", error)
       throw error
     }
+
+    console.log(`[ScrapingService] Successfully saved ${tenders.length} tenders`)
   }
 
   private async updateSourceStats(sourceId: number, result: any) {
