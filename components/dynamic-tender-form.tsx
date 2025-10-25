@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Save, CheckCircle2 } from "lucide-react"
 import { GoogleAddressAutocomplete } from "@/components/google-address-autocomplete"
+import { formatZAR } from "@/lib/utils/currency"
 
 interface FormField {
   id: string
@@ -138,6 +139,12 @@ export function DynamicTenderForm({ tenderId, formFields, googleMapsApiKey }: Dy
     return addressKeywords.some((keyword) => label.includes(keyword))
   }
 
+  const isCurrencyField = (field: FormField): boolean => {
+    const currencyKeywords = ["price", "cost", "amount", "value", "budget", "fee", "payment", "tender value"]
+    const label = field.label.toLowerCase()
+    return currencyKeywords.some((keyword) => label.includes(keyword)) || field.type === "currency"
+  }
+
   const renderField = (field: FormField) => {
     const value = formData[field.id] || ""
     const error = errors[field.id]
@@ -150,6 +157,26 @@ export function DynamicTenderForm({ tenderId, formFields, googleMapsApiKey }: Dy
           placeholder={field.placeholder || "Start typing an address..."}
           apiKey={googleMapsApiKey}
         />
+      )
+    }
+
+    if (isCurrencyField(field) && (field.type === "text" || field.type === "number")) {
+      return (
+        <div className="relative">
+          <Input
+            id={field.id}
+            type="text"
+            value={value}
+            onChange={(e) => handleChange(field.id, e.target.value)}
+            placeholder={field.placeholder || "e.g., R 1,000,000 or 1000000"}
+            className={error ? "border-red-500" : ""}
+          />
+          {value && !isNaN(Number(value.toString().replace(/[^0-9.-]/g, ""))) && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Formatted: {formatZAR(value.toString().replace(/[^0-9.-]/g, ""))}
+            </p>
+          )}
+        </div>
       )
     }
 

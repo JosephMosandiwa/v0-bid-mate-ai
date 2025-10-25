@@ -21,6 +21,8 @@ export function GoogleAddressAutocomplete({
 }: GoogleAddressAutocompleteProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const autocompleteElementRef = useRef<any | null>(null)
+  const listenerRef = useRef<((event: any) => void) | null>(null)
+  const isMountedRef = useRef(true)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [inputValue, setInputValue] = useState(value)
@@ -30,6 +32,8 @@ export function GoogleAddressAutocomplete({
   }, [value])
 
   useEffect(() => {
+    isMountedRef.current = true
+
     if (!apiKey) {
       setError("Google Maps API key not configured")
       setIsLoading(false)
@@ -42,10 +46,16 @@ export function GoogleAddressAutocomplete({
         script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`
         script.async = true
         script.defer = true
-        script.onload = initAutocomplete
+        script.onload = () => {
+          if (isMountedRef.current) {
+            initAutocomplete()
+          }
+        }
         script.onerror = () => {
-          setError("Failed to load Google Maps. Please check your API key.")
-          setIsLoading(false)
+          if (isMountedRef.current) {
+            setError("Failed to load Google Maps. Please check your API key.")
+            setIsLoading(false)
+          }
         }
         document.head.appendChild(script)
       } else if ((window as any).google) {
@@ -54,16 +64,18 @@ export function GoogleAddressAutocomplete({
     }
 
     const initAutocomplete = async () => {
-      if (!containerRef.current) return
+      if (!containerRef.current || !isMountedRef.current) return
 
       try {
         const google = (window as any).google
 
         const { PlaceAutocompleteElement } = await google.maps.importLibrary("places")
 
+        if (!isMountedRef.current || !containerRef.current) return
+
         // Create the autocomplete element
         const autocompleteElement = new PlaceAutocompleteElement({
-          componentRestrictions: { country: "za" }, // Restrict to South Africa
+          componentRestrictions: { country: "za" },
           fields: ["address_components", "formatted_address", "geometry"],
           types: ["address"],
         })
@@ -73,40 +85,68 @@ export function GoogleAddressAutocomplete({
         containerRef.current.appendChild(autocompleteElement)
         autocompleteElementRef.current = autocompleteElement
 
-        // Listen for place selection
-        autocompleteElement.addEventListener("gmp-placeselect", async (event: any) => {
+        const placeSelectListener = async (event: any) => {
+          if (!isMountedRef.current) return
+
           const place = event.place
           if (place) {
-            await place.fetchFields({
-              fields: ["address_components", "formatted_address", "geometry"],
-            })
-
-            if (place.formattedAddress) {
-              setInputValue(place.formattedAddress)
-              onChange(place.formattedAddress, {
-                address_components: place.addressComponents,
-                formatted_address: place.formattedAddress,
-                geometry: place.location,
+            try {
+              await place.fetchFields({
+                fields: ["address_components", "formatted_address", "geometry"],
               })
+
+              if (!isMountedRef.current) return
+
+              if (place.formattedAddress) {
+                setInputValue(place.formattedAddress)
+                onChange(place.formattedAddress, {
+                  address_components: place.addressComponents,
+                  formatted_address: place.formattedAddress,
+                  geometry: place.location,
+                })
+              }
+            } catch (err) {
+              console.error("Error fetching place details:", err)
             }
           }
-        })
+        }
 
-        setIsLoading(false)
+        listenerRef.current = placeSelectListener
+        autocompleteElement.addEventListener("gmp-placeselect", placeSelectListener)
+
+        if (isMountedRef.current) {
+          setIsLoading(false)
+        }
       } catch (err) {
         console.error("Error initializing autocomplete:", err)
-        setError("Failed to initialize address autocomplete")
-        setIsLoading(false)
+        if (isMountedRef.current) {
+          setError("Failed to initialize address autocomplete")
+          setIsLoading(false)
+        }
       }
     }
 
     loadGoogleMaps()
 
     return () => {
-      // Cleanup
+      isMountedRef.current = false
+
+      if (autocompleteElementRef.current && listenerRef.current) {
+        try {
+          autocompleteElementRef.current.removeEventListener("gmp-placeselect", listenerRef.current)
+        } catch (err) {
+          console.error("Error removing event listener:", err)
+        }
+      }
+
+      // Cleanup container
       if (containerRef.current) {
         containerRef.current.innerHTML = ""
       }
+
+      // Clear refs
+      autocompleteElementRef.current = null
+      listenerRef.current = null
     }
   }, [apiKey, onChange])
 

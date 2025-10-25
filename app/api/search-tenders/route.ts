@@ -1,3 +1,5 @@
+import { formatZAR } from "@/lib/utils/currency"
+
 export async function POST(request: Request) {
   try {
     const { query } = await request.json()
@@ -20,7 +22,6 @@ export async function POST(request: Request) {
 
       console.log("[v0] Date range:", dateFrom, "to", dateTo)
 
-      // Fetch the swagger spec to discover correct endpoints
       console.log("[v0] Fetching swagger specification...")
       const swaggerUrl = "https://ocds-api.etenders.gov.za/swagger/v1/swagger.json"
 
@@ -70,7 +71,6 @@ export async function POST(request: Request) {
       let apiResponse = null
       let successfulEndpoint = null
 
-      // Try each endpoint until one works
       for (const endpoint of possibleEndpoints) {
         console.log("[v0] Trying endpoint:", endpoint)
         try {
@@ -90,7 +90,6 @@ export async function POST(request: Request) {
             console.log("[v0] Successfully connected to:", endpoint)
             break
           } else if (response.status !== 404) {
-            // Log non-404 errors as they might give us clues
             const errorText = await response.text()
             console.log("[v0] Non-404 error:", response.status, errorText.substring(0, 200))
           }
@@ -108,10 +107,8 @@ export async function POST(request: Request) {
       console.log("[v0] eTenders API response structure:", Object.keys(data))
       console.log("[v0] Sample data:", JSON.stringify(data).substring(0, 500))
 
-      // Parse OCDS format response
       let releases = []
 
-      // Handle different OCDS response formats
       if (data.releases) {
         releases = data.releases
       } else if (Array.isArray(data)) {
@@ -122,36 +119,24 @@ export async function POST(request: Request) {
 
       console.log("[v0] Found releases:", releases.length)
 
-      // Map OCDS releases to our tender format
       const tenders = releases
         .filter((release: any) => {
-          // Only include releases with tender information
           return release.tender && release.tender.title
         })
         .map((release: any) => {
           const tender = release.tender
           const parties = release.parties || []
 
-          // Find the buyer/procuring entity
           const buyer = parties.find((p: any) => p.roles?.includes("buyer") || p.roles?.includes("procuringEntity"))
 
-          // Extract value
           let value = "Not specified"
           if (tender.value?.amount) {
-            const currency = tender.value.currency || "ZAR"
-            const amount = new Intl.NumberFormat("en-ZA", {
-              style: "currency",
-              currency: currency,
-              minimumFractionDigits: 0,
-            }).format(tender.value.amount)
-            value = amount
+            value = formatZAR(tender.value.amount)
           }
 
-          // Extract dates
           const publishDate = release.date || tender.tenderPeriod?.startDate || new Date().toISOString()
           const closeDate = tender.tenderPeriod?.endDate || tender.submissionDeadline || publishDate
 
-          // Extract category
           const category = tender.mainProcurementCategory || tender.classification?.description || "General"
 
           const documents = (tender.documents || [])
@@ -163,7 +148,7 @@ export async function POST(request: Request) {
               format: doc.format || "application/pdf",
               description: doc.description,
             }))
-            .filter((doc: any) => doc.url) // Only include documents with valid URLs
+            .filter((doc: any) => doc.url)
 
           console.log("[v0] Extracted documents for tender:", tender.title, "- Count:", documents.length)
 
@@ -177,11 +162,10 @@ export async function POST(request: Request) {
             category: category,
             description: tender.description || tender.title,
             url: release.url || `https://etenders.gov.za/tender/${release.ocid}`,
-            documents: documents, // Include documents in tender data
+            documents: documents,
           }
         })
         .filter((tender: any) => {
-          // Filter by search query
           const searchLower = query.toLowerCase()
           return (
             tender.title.toLowerCase().includes(searchLower) ||

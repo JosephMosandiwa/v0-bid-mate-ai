@@ -349,10 +349,10 @@ export default function NewTenderPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="value">Tender Value</Label>
+                <Label htmlFor="value">Tender Value (ZAR)</Label>
                 <Input
                   id="value"
-                  placeholder="e.g., R 2,500,000"
+                  placeholder="e.g., R 2,500,000 or 2500000"
                   value={formData.value}
                   onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                   required
