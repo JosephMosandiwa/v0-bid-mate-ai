@@ -2,38 +2,38 @@ import { generateObject } from "ai"
 import { z } from "zod"
 
 const tenderAnalysisSchema = z.object({
-  summary: z.string().describe("Brief executive summary of the tender (2-3 sentences)"),
-  keyRequirements: z.array(z.string()).describe("List of key requirements from the tender document"),
-  deadlines: z.array(z.string()).describe("Important deadlines and submission dates"),
-  evaluationCriteria: z.array(z.string()).describe("Criteria used to evaluate bids"),
-  recommendations: z.array(z.string()).describe("Strategic recommendations for bidding"),
-  complianceChecklist: z.array(z.string()).describe("Compliance items that must be met"),
+  summary: z.string().default("No summary available"),
+  keyRequirements: z.array(z.string()).default([]),
+  deadlines: z.array(z.string()).default([]),
+  evaluationCriteria: z.array(z.string()).default([]),
+  recommendations: z.array(z.string()).default([]),
+  complianceChecklist: z.array(z.string()).default([]),
   actionableTasks: z
     .array(
       z.object({
-        task: z.string().describe("Task description"),
-        priority: z.enum(["high", "medium", "low"]).describe("Task priority"),
-        category: z.enum(["documentation", "technical", "financial", "compliance", "other"]).describe("Task category"),
-        deadline: z.string().nullable().describe("Task deadline if specified"),
+        task: z.string(),
+        priority: z.enum(["high", "medium", "low"]).catch("medium"),
+        category: z.enum(["documentation", "technical", "financial", "compliance", "other"]).catch("other"),
+        deadline: z.string().nullable().optional(),
       }),
     )
-    .describe("Actionable tasks with priorities"),
+    .default([]),
   formFields: z
     .array(
       z.object({
-        id: z.string().describe("Unique field identifier"),
-        label: z.string().describe("Field label"),
+        id: z.string(),
+        label: z.string(),
         type: z
           .enum(["text", "email", "tel", "number", "date", "textarea", "select", "checkbox", "radio", "file"])
-          .describe("Input type"),
-        required: z.boolean().describe("Whether field is required"),
-        placeholder: z.string().optional().describe("Placeholder text"),
-        description: z.string().optional().describe("Field description or help text"),
-        section: z.string().describe("Form section this field belongs to"),
-        options: z.array(z.string()).optional().describe("Options for select/radio fields"),
+          .catch("text"),
+        required: z.boolean().default(false),
+        placeholder: z.string().optional(),
+        description: z.string().optional(),
+        section: z.string().default("General Information"),
+        options: z.array(z.string()).optional(),
       }),
     )
-    .describe("Form fields extracted from the tender"),
+    .default([]),
 })
 
 export async function POST(request: Request) {
