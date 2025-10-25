@@ -235,17 +235,18 @@ export default function SearchPage() {
   }
 
   return (
-    <div className="p-6 md:p-8 space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Search Tenders</h1>
-        <p className="text-muted-foreground">Find relevant government tenders from 100+ sources</p>
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Search Tenders</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Find relevant government tenders from 100+ sources</p>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <Button
           variant={searchMode === "basic" ? "default" : "outline"}
           onClick={() => setSearchMode("basic")}
           className={searchMode !== "basic" ? "bg-transparent" : ""}
+          size="sm"
         >
           <Search className="h-4 w-4 mr-2" />
           Basic Search
@@ -254,6 +255,7 @@ export default function SearchPage() {
           variant={searchMode === "ai" ? "default" : "outline"}
           onClick={() => setSearchMode("ai")}
           className={searchMode !== "ai" ? "bg-transparent" : ""}
+          size="sm"
         >
           <Sparkles className="h-4 w-4 mr-2" />
           AI Assistant
@@ -263,19 +265,21 @@ export default function SearchPage() {
       {searchMode === "basic" ? (
         <Card className="border-border">
           <CardHeader>
-            <CardTitle>Basic Search</CardTitle>
-            <CardDescription>Search for tenders by keywords, category, or organization</CardDescription>
+            <CardTitle className="text-lg md:text-xl">Basic Search</CardTitle>
+            <CardDescription className="text-sm">
+              Search for tenders by keywords, category, or organization
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleBasicSearch} className="space-y-4">
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
-                  placeholder="e.g., medical supplies, IT services, construction..."
+                  placeholder="e.g., medical supplies, IT services..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="flex-1"
                 />
-                <Button type="submit" disabled={searching}>
+                <Button type="submit" disabled={searching} className="w-full sm:w-auto">
                   {searching ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -290,9 +294,9 @@ export default function SearchPage() {
                 </Button>
               </div>
 
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                 <Select value={levelFilter} onValueChange={setLevelFilter}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Filter by level" />
                   </SelectTrigger>
                   <SelectContent>
@@ -306,7 +310,7 @@ export default function SearchPage() {
                 </Select>
 
                 <Select value={provinceFilter} onValueChange={setProvinceFilter}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Filter by province" />
                   </SelectTrigger>
                   <SelectContent>
@@ -377,7 +381,7 @@ export default function SearchPage() {
       {tenders.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-foreground">
+            <h2 className="text-lg md:text-xl font-semibold text-foreground">
               {searchQuery || levelFilter !== "all" || provinceFilter !== "all"
                 ? `Found ${tenders.length} ${tenders.length === 1 ? "Tender" : "Tenders"}`
                 : `All Tenders (${tenders.length})`}
@@ -393,64 +397,79 @@ export default function SearchPage() {
 
               return (
                 <Card key={tender.id} className="border-border hover:border-primary transition-colors">
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <Link href={`/dashboard/scraped-tenders/${tender.id}`}>
-                            <CardTitle className="text-lg hover:text-primary transition-colors cursor-pointer">
+                  <CardHeader className="p-4 md:p-6">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start gap-2 mb-2 flex-wrap">
+                          <Link href={`/dashboard/scraped-tenders/${tender.id}`} className="flex-1 min-w-0">
+                            <CardTitle className="text-base md:text-lg hover:text-primary transition-colors cursor-pointer break-words">
                               {tender.title}
                             </CardTitle>
                           </Link>
-                          <Badge className="bg-primary/10 text-primary">{tender.category || "General"}</Badge>
-                          {tender.source_level && <Badge variant="outline">{tender.source_level}</Badge>}
-                          {tender.source_province && <Badge variant="secondary">{tender.source_province}</Badge>}
                         </div>
-                        <CardDescription className="space-y-1">
-                          <div className="flex items-center gap-4 flex-wrap">
+                        <div className="flex items-center gap-2 mb-3 flex-wrap">
+                          <Badge className="bg-primary/10 text-primary text-xs">{tender.category || "General"}</Badge>
+                          {tender.source_level && (
+                            <Badge variant="outline" className="text-xs">
+                              {tender.source_level}
+                            </Badge>
+                          )}
+                          {tender.source_province && (
+                            <Badge variant="secondary" className="text-xs">
+                              {tender.source_province}
+                            </Badge>
+                          )}
+                        </div>
+                        <CardDescription className="space-y-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-wrap text-xs md:text-sm">
                             <span className="flex items-center gap-1">
-                              <Building2 className="h-4 w-4" />
-                              {organization}
+                              <Building2 className="h-4 w-4 flex-shrink-0" />
+                              <span className="truncate">{organization}</span>
                             </span>
                             {closeDate && (
                               <span className="flex items-center gap-1">
-                                <Calendar className="h-4 w-4" />
+                                <Calendar className="h-4 w-4 flex-shrink-0" />
                                 Closes: {new Date(closeDate).toLocaleDateString()}
                               </span>
                             )}
                             {value && (
                               <span className="flex items-center gap-1">
-                                <DollarSign className="h-4 w-4" />
+                                <DollarSign className="h-4 w-4 flex-shrink-0" />
                                 {value}
                               </span>
                             )}
                           </div>
-                          <p className="text-sm mt-2">{tender.description}</p>
-                          <div className="mt-2 flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">
+                          <p className="text-xs md:text-sm line-clamp-2">{tender.description}</p>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-xs md:text-sm text-muted-foreground">
                               {tender.document_count ?? 0}{" "}
                               {(tender.document_count ?? 0) === 1 ? "document" : "documents"}
                             </span>
                           </div>
                         </CardDescription>
                       </div>
-                      <div className="flex gap-2 flex-wrap">
-                        <Button size="sm" variant="outline" asChild className="bg-transparent">
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Button size="sm" variant="outline" asChild className="bg-transparent w-full sm:w-auto">
                           <Link href={`/dashboard/scraped-tenders/${tender.id}`}>
                             <FileText className="h-4 w-4 mr-2" />
                             View Details
                           </Link>
                         </Button>
                         {url && (
-                          <Button variant="outline" size="sm" asChild className="bg-transparent">
+                          <Button variant="outline" size="sm" asChild className="bg-transparent w-full sm:w-auto">
                             <a href={url} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="h-4 w-4 mr-2" />
                               Original Listing
                             </a>
                           </Button>
                         )}
-                        <Button size="sm" onClick={() => handleAddTender(tender)} disabled={addingTender === tender.id}>
+                        <Button
+                          size="sm"
+                          onClick={() => handleAddTender(tender)}
+                          disabled={addingTender === tender.id}
+                          className="w-full sm:w-auto"
+                        >
                           {addingTender === tender.id ? (
                             <>
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -477,8 +496,8 @@ export default function SearchPage() {
         <Card className="border-border">
           <CardContent className="p-12 text-center">
             <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">No Tenders Found</h3>
-            <p className="text-muted-foreground">
+            <h3 className="text-lg md:text-xl font-semibold text-foreground mb-2">No Tenders Found</h3>
+            <p className="text-sm md:text-base text-muted-foreground">
               {searchQuery || levelFilter !== "all" || provinceFilter !== "all"
                 ? "Try adjusting your search terms or filters"
                 : "No tenders available yet. Please run the scraper to populate the database."}
