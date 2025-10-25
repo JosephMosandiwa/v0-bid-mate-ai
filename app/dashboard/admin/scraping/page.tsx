@@ -124,16 +124,22 @@ export default function ScrapingAdminPage() {
   }
 
   const handleScrapeSource = async (sourceId: number) => {
+    console.log("[v0] Starting scrape for source:", sourceId)
     setScraping(sourceId)
     try {
+      console.log("[v0] Getting Supabase session...")
       const {
         data: { session },
       } = await supabase.auth.getSession()
 
+      console.log("[v0] Session retrieved:", session ? "authenticated" : "not authenticated")
+
       if (!session) {
+        console.error("[v0] No session found - user not authenticated")
         throw new Error("Not authenticated")
       }
 
+      console.log("[v0] Making API request to /api/scraping/trigger")
       const response = await fetch("/api/scraping/trigger", {
         method: "POST",
         headers: {
@@ -143,9 +149,16 @@ export default function ScrapingAdminPage() {
         body: JSON.stringify({ sourceId }),
       })
 
-      if (!response.ok) throw new Error("Failed to trigger scraping")
+      console.log("[v0] API response status:", response.status)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("[v0] API error response:", errorText)
+        throw new Error("Failed to trigger scraping")
+      }
 
       const result = await response.json()
+      console.log("[v0] Scraping result:", result)
 
       toast({
         title: "Scraping Complete",
@@ -154,6 +167,7 @@ export default function ScrapingAdminPage() {
 
       loadData()
     } catch (error) {
+      console.error("[v0] Error in handleScrapeSource:", error)
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to scrape source",
@@ -165,16 +179,22 @@ export default function ScrapingAdminPage() {
   }
 
   const handleScrapeAll = async () => {
+    console.log("[v0] Starting scrape all sources")
     setScraping(-1)
     try {
+      console.log("[v0] Getting Supabase session...")
       const {
         data: { session },
       } = await supabase.auth.getSession()
 
+      console.log("[v0] Session retrieved:", session ? "authenticated" : "not authenticated")
+
       if (!session) {
+        console.error("[v0] No session found - user not authenticated")
         throw new Error("Not authenticated")
       }
 
+      console.log("[v0] Making API request to /api/scraping/trigger for all sources")
       const response = await fetch("/api/scraping/trigger", {
         method: "POST",
         headers: {
@@ -184,9 +204,16 @@ export default function ScrapingAdminPage() {
         body: JSON.stringify({ scrapeAll: true }),
       })
 
-      if (!response.ok) throw new Error("Failed to trigger scraping")
+      console.log("[v0] API response status:", response.status)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("[v0] API error response:", errorText)
+        throw new Error("Failed to trigger scraping")
+      }
 
       const result = await response.json()
+      console.log("[v0] Scraping result:", result)
 
       toast({
         title: "Scraping Complete",
@@ -195,6 +222,7 @@ export default function ScrapingAdminPage() {
 
       loadData()
     } catch (error) {
+      console.error("[v0] Error in handleScrapeAll:", error)
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to scrape all sources",
