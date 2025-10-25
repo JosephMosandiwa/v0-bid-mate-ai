@@ -9,7 +9,7 @@ interface GoogleAddressAutocompleteProps {
   onChange: (value: string, placeDetails?: any) => void
   placeholder?: string
   className?: string
-  apiKey: string // API key passed as prop instead of reading from env
+  apiKey: string
 }
 
 export function GoogleAddressAutocomplete({
@@ -17,12 +17,17 @@ export function GoogleAddressAutocomplete({
   onChange,
   placeholder = "Start typing an address...",
   className,
-  apiKey, // Receive API key as prop
+  apiKey,
 }: GoogleAddressAutocompleteProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const autocompleteRef = useRef<any | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const autocompleteElementRef = useRef<any | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [inputValue, setInputValue] = useState(value)
+
+  useEffect(() => {
+    setInputValue(value)
+  }, [value])
 
   useEffect(() => {
     if (!apiKey) {
@@ -31,11 +36,10 @@ export function GoogleAddressAutocomplete({
       return
     }
 
-    // Load Google Maps script
     const loadGoogleMaps = () => {
       if (typeof window !== "undefined" && !(window as any).google) {
         const script = document.createElement("script")
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`
         script.async = true
         script.defer = true
         script.onload = initAutocomplete
@@ -49,23 +53,42 @@ export function GoogleAddressAutocomplete({
       }
     }
 
-    const initAutocomplete = () => {
-      if (!inputRef.current) return
+    const initAutocomplete = async () => {
+      if (!containerRef.current) return
 
       try {
         const google = (window as any).google
-        // Initialize autocomplete with South African bias
-        autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
+
+        const { PlaceAutocompleteElement } = await google.maps.importLibrary("places")
+
+        // Create the autocomplete element
+        const autocompleteElement = new PlaceAutocompleteElement({
           componentRestrictions: { country: "za" }, // Restrict to South Africa
           fields: ["address_components", "formatted_address", "geometry"],
           types: ["address"],
         })
 
+        // Clear container and append the new element
+        containerRef.current.innerHTML = ""
+        containerRef.current.appendChild(autocompleteElement)
+        autocompleteElementRef.current = autocompleteElement
+
         // Listen for place selection
-        autocompleteRef.current.addListener("place_changed", () => {
-          const place = autocompleteRef.current?.getPlace()
-          if (place && place.formatted_address) {
-            onChange(place.formatted_address, place)
+        autocompleteElement.addEventListener("gmp-placeselect", async (event: any) => {
+          const place = event.place
+          if (place) {
+            await place.fetchFields({
+              fields: ["address_components", "formatted_address", "geometry"],
+            })
+
+            if (place.formattedAddress) {
+              setInputValue(place.formattedAddress)
+              onChange(place.formattedAddress, {
+                address_components: place.addressComponents,
+                formatted_address: place.formattedAddress,
+                geometry: place.location,
+              })
+            }
           }
         })
 
@@ -81,20 +104,21 @@ export function GoogleAddressAutocomplete({
 
     return () => {
       // Cleanup
-      if (autocompleteRef.current && (window as any).google) {
-        const google = (window as any).google
-        google.maps.event.clearInstanceListeners(autocompleteRef.current)
+      if (containerRef.current) {
+        containerRef.current.innerHTML = ""
       }
     }
-  }, [apiKey])
+  }, [apiKey, onChange])
 
   if (error) {
     return (
       <div className="space-y-2">
         <Input
-          ref={inputRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          value={inputValue}
+          onChange={(e) => {
+            setInputValue(e.target.value)
+            onChange(e.target.value)
+          }}
           placeholder={placeholder}
           className={className}
         />
@@ -106,20 +130,17 @@ export function GoogleAddressAutocomplete({
   }
 
   return (
-    <div className="relative">
-      <Input
-        ref={inputRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={className}
-        disabled={isLoading}
-      />
+    <div className="space-y-2">
       {isLoading && (
-        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+        <div className="flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Loading address autocomplete...</span>
         </div>
       )}
+      <div
+        ref={containerRef}
+        className={`${isLoading ? "hidden" : ""} [&_input]:w-full [&_input]:rounded-md [&_input]:border [&_input]:border-input [&_input]:bg-background [&_input]:px-3 [&_input]:py-2 [&_input]:text-sm [&_input]:ring-offset-background [&_input]:placeholder:text-muted-foreground [&_input]:focus-visible:outline-none [&_input]:focus-visible:ring-2 [&_input]:focus-visible:ring-ring [&_input]:focus-visible:ring-offset-2 [&_input]:disabled:cursor-not-allowed [&_input]:disabled:opacity-50 ${className}`}
+      />
     </div>
   )
 }
