@@ -19,7 +19,13 @@ export async function GET(request: NextRequest) {
     // Build query
     let dbQuery = supabase
       .from("scraped_tenders")
-      .select("*", { count: "exact" })
+      .select(
+        `
+        *,
+        documents:tender_documents(count)
+      `,
+        { count: "exact" },
+      )
       .eq("is_active", isActive)
       .order("scraped_at", { ascending: false })
       .range(offset, offset + limit - 1)
@@ -62,8 +68,15 @@ export async function GET(request: NextRequest) {
       console.log("[v0] No tenders found in database. The scraped_tenders table may be empty.")
     }
 
+    const tendersWithDocCount =
+      tenders?.map((tender) => ({
+        ...tender,
+        document_count: tender.documents?.[0]?.count || 0,
+        documents: undefined, // Remove the nested documents object
+      })) || []
+
     return Response.json({
-      tenders: tenders || [],
+      tenders: tendersWithDocCount,
       total: count || 0,
       limit,
       offset,

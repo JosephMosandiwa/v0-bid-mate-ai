@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   ArrowLeft,
   Building2,
@@ -17,8 +18,13 @@ import {
   Loader2,
   ExternalLink,
   MapPin,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  ClipboardList,
 } from "lucide-react"
 import Link from "next/link"
+import { DynamicTenderForm } from "@/components/dynamic-tender-form"
 
 interface ScrapedTender {
   id: string
@@ -46,6 +52,32 @@ interface TenderDocument {
   created_at: string
 }
 
+interface TenderAnalysis {
+  summary: string
+  keyRequirements: string[]
+  deadlines: string[]
+  evaluationCriteria: string[]
+  recommendations: string[]
+  complianceChecklist: string[]
+  actionableTasks: {
+    task: string
+    priority: "high" | "medium" | "low"
+    category: string
+    deadline: string | null
+  }[]
+  formFields?: {
+    id: string
+    label: string
+    type: string
+    required: boolean
+    placeholder?: string
+    description?: string
+    options?: string[]
+    validation?: any
+    section?: string
+  }[]
+}
+
 export default function ScrapedTenderDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -55,10 +87,20 @@ export default function ScrapedTenderDetailPage() {
   const [documents, setDocuments] = useState<TenderDocument[]>([])
   const [loading, setLoading] = useState(true)
   const [analyzing, setAnalyzing] = useState<string | null>(null)
+  const [analysis, setAnalysis] = useState<TenderAnalysis | null>(null)
+  const [analysisLoading, setAnalysisLoading] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
+  const [analysisCached, setAnalysisCached] = useState(false)
 
   useEffect(() => {
     loadTenderDetails()
   }, [id])
+
+  useEffect(() => {
+    if (documents.length > 0 && !analysis && !analysisLoading) {
+      checkAndLoadAnalysis()
+    }
+  }, [documents])
 
   const loadTenderDetails = async () => {
     try {
@@ -91,7 +133,6 @@ export default function ScrapedTenderDetailPage() {
     try {
       console.log("[v0] Analyzing document:", doc.document_name)
 
-      // Fetch the document from Blob storage
       const response = await fetch(doc.blob_url)
       if (!response.ok) {
         throw new Error("Failed to fetch document")
@@ -100,7 +141,6 @@ export default function ScrapedTenderDetailPage() {
       const blob = await response.blob()
       const file = new File([blob], doc.document_name, { type: `application/${doc.document_type}` })
 
-      // Extract text from PDF
       const formData = new FormData()
       formData.append("file", file)
 
@@ -115,7 +155,6 @@ export default function ScrapedTenderDetailPage() {
 
       const { text } = await extractResponse.json()
 
-      // Analyze the text
       const analyzeResponse = await fetch("/api/analyze-tender", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -135,6 +174,142 @@ export default function ScrapedTenderDetailPage() {
       alert(error.message || "Failed to analyze document")
     } finally {
       setAnalyzing(null)
+    }
+  }
+
+  const analyzeAllDocuments = async () => {
+    setAnalysisLoading(true)
+    setAnalysisError(null)
+
+    try {
+      console.log("[v0] Starting automatic analysis of", documents.length, "documents")
+
+      const pdfDocuments = documents.filter((doc) => doc.document_type === "pdf")
+
+      if (pdfDocuments.length === 0) {
+        setAnalysisError("No PDF documents available for analysis")
+        setAnalysisLoading(false)
+        return
+      }
+
+      console.log("[v0] Analyzing", pdfDocuments.length, "PDF documents")
+
+      const extractedTexts: string[] = []
+
+      for (const doc of pdfDocuments) {
+        try {
+          console.log("[v0] Extracting text from:", doc.document_name)
+
+          const response = await fetch(doc.blob_url)
+          if (!response.ok) {
+            console.warn("[v0] Failed to fetch document:", doc.document_name)
+            continue
+          }
+
+          const blob = await response.blob()
+          const file = new File([blob], doc.document_name, { type: "application/pdf" })
+
+          const formData = new FormData()
+          formData.append("file", file)
+
+          const extractResponse = await fetch("/api/extract-pdf", {
+            method: "POST",
+            body: formData,
+          })
+
+          if (extractResponse.ok) {
+            const { text } = await extractResponse.json()
+            extractedTexts.push(text)
+            console.log("[v0] Extracted", text.length, "characters from", doc.document_name)
+          } else {
+            console.warn("[v0] Failed to extract text from:", doc.document_name)
+          }
+        } catch (error) {
+          console.error("[v0] Error extracting text from", doc.document_name, error)
+        }
+      }
+
+      if (extractedTexts.length === 0) {
+        setAnalysisError("Could not extract text from any documents")
+        setAnalysisLoading(false)
+        return
+      }
+
+      const combinedText = extractedTexts.join("\n\n--- NEXT DOCUMENT ---\n\n")
+      console.log("[v0] Combined text length:", combinedText.length, "characters")
+
+      console.log("[v0] Sending combined text to AI for analysis")
+      const analyzeResponse = await fetch("/api/analyze-tender", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentText: combinedText }),
+      })
+
+      if (!analyzeResponse.ok) {
+        const errorData = await analyzeResponse.json()
+        throw new Error(errorData.error || "Failed to analyze documents")
+      }
+
+      const analysisResult = await analyzeResponse.json()
+      console.log("[v0] Analysis complete:", analysisResult)
+
+      setAnalysis(analysisResult)
+      setAnalysisCached(false)
+
+      console.log("[v0] Saving analysis to database")
+      await fetch(`/api/tenders/scraped/${id}/analysis`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ analysis: analysisResult }),
+      })
+      console.log("[v0] Analysis saved successfully")
+    } catch (error: any) {
+      console.error("[v0] Error analyzing documents:", error)
+      setAnalysisError(error.message || "Failed to analyze documents")
+    } finally {
+      setAnalysisLoading(false)
+    }
+  }
+
+  const checkAndLoadAnalysis = async () => {
+    setAnalysisLoading(true)
+    setAnalysisError(null)
+
+    try {
+      console.log("[v0] Checking for cached analysis")
+
+      const checkResponse = await fetch(`/api/tenders/scraped/${id}/analysis`)
+
+      if (checkResponse.ok) {
+        const { analysis: cachedAnalysis, cached } = await checkResponse.json()
+
+        if (cachedAnalysis) {
+          console.log("[v0] Found cached analysis, using it")
+          setAnalysis(cachedAnalysis)
+          setAnalysisCached(true)
+          setAnalysisLoading(false)
+          return
+        }
+      }
+
+      console.log("[v0] No cached analysis found, analyzing documents")
+      await analyzeAllDocuments()
+    } catch (error) {
+      console.error("[v0] Error checking cached analysis:", error)
+      await analyzeAllDocuments()
+    }
+  }
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "high":
+        return "bg-red-500/10 text-red-500 border-red-500/20"
+      case "medium":
+        return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+      case "low":
+        return "bg-green-500/10 text-green-500 border-green-500/20"
+      default:
+        return "bg-gray-500/10 text-gray-500 border-gray-500/20"
     }
   }
 
@@ -210,8 +385,27 @@ export default function ScrapedTenderDetailPage() {
         )}
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
+      <Tabs defaultValue="analysis" className="space-y-6">
         <TabsList>
+          <TabsTrigger value="analysis">
+            <Sparkles className="h-4 w-4 mr-2" />
+            AI Analysis
+            {analysisLoading && <Loader2 className="h-3 w-3 ml-2 animate-spin" />}
+            {analysisCached && (
+              <Badge variant="secondary" className="ml-2 text-xs">
+                Cached
+              </Badge>
+            )}
+          </TabsTrigger>
+          {analysis?.formFields && analysis.formFields.length > 0 && (
+            <TabsTrigger value="form">
+              <ClipboardList className="h-4 w-4 mr-2" />
+              Application Form
+              <Badge variant="secondary" className="ml-2">
+                {analysis.formFields.length}
+              </Badge>
+            </TabsTrigger>
+          )}
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="documents">
             Documents
@@ -222,6 +416,212 @@ export default function ScrapedTenderDetailPage() {
             )}
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="analysis" className="space-y-6">
+          {analysisLoading && (
+            <Card className="border-border">
+              <CardContent className="p-12 text-center">
+                <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  {analysisCached ? "Loading cached analysis..." : "Analyzing tender documents with AI..."}
+                </p>
+                {!analysisCached && (
+                  <p className="text-sm text-muted-foreground mt-2">This may take a minute for large documents</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {analysisError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{analysisError}</AlertDescription>
+            </Alert>
+          )}
+
+          {!analysisLoading && !analysisError && !analysis && (
+            <Card className="border-border">
+              <CardContent className="p-12 text-center">
+                <Sparkles className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground">No analysis available yet</p>
+                <Button onClick={analyzeAllDocuments} className="mt-4">
+                  Analyze Documents
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {analysis && (
+            <>
+              <Card className="border-border bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    Executive Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-foreground leading-relaxed">{analysis.summary}</p>
+                </CardContent>
+              </Card>
+
+              {analysis.actionableTasks && analysis.actionableTasks.length > 0 && (
+                <Card className="border-border">
+                  <CardHeader>
+                    <CardTitle>Action Items</CardTitle>
+                    <CardDescription>Tasks you need to complete for this tender</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {analysis.actionableTasks.map((task, index) => (
+                        <div
+                          key={index}
+                          className="flex items-start gap-3 p-4 rounded-lg border border-border hover:border-primary transition-colors"
+                        >
+                          <div className="mt-1">
+                            <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <p className="font-medium text-foreground">{task.task}</p>
+                              <Badge className={getPriorityColor(task.priority)}>{task.priority}</Badge>
+                              <Badge variant="outline">{task.category}</Badge>
+                            </div>
+                            {task.deadline && (
+                              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {task.deadline}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {analysis.keyRequirements && analysis.keyRequirements.length > 0 && (
+                <Card className="border-border">
+                  <CardHeader>
+                    <CardTitle>Key Requirements</CardTitle>
+                    <CardDescription>Eligibility criteria and mandatory requirements</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {analysis.keyRequirements.map((req, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary mt-2" />
+                          <span className="text-muted-foreground">{req}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+
+              {analysis.deadlines && analysis.deadlines.length > 0 && (
+                <Card className="border-border">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5" />
+                      Important Deadlines
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {analysis.deadlines.map((deadline, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-red-500 mt-2" />
+                          <span className="text-muted-foreground">{deadline}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+
+              {analysis.evaluationCriteria && analysis.evaluationCriteria.length > 0 && (
+                <Card className="border-border">
+                  <CardHeader>
+                    <CardTitle>Evaluation Criteria</CardTitle>
+                    <CardDescription>How your bid will be assessed</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {analysis.evaluationCriteria.map((criteria, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary mt-2" />
+                          <span className="text-muted-foreground">{criteria}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+
+              {analysis.complianceChecklist && analysis.complianceChecklist.length > 0 && (
+                <Card className="border-border">
+                  <CardHeader>
+                    <CardTitle>Compliance Checklist</CardTitle>
+                    <CardDescription>Mandatory documents and compliance items</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {analysis.complianceChecklist.map((item, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <span className="text-muted-foreground">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+
+              {analysis.recommendations && analysis.recommendations.length > 0 && (
+                <Card className="border-border">
+                  <CardHeader>
+                    <CardTitle>Strategic Recommendations</CardTitle>
+                    <CardDescription>AI-powered insights to improve your bid</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {analysis.recommendations.map((rec, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary mt-2" />
+                          <span className="text-muted-foreground">{rec}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="form" className="space-y-6">
+          {analysis?.formFields && analysis.formFields.length > 0 ? (
+            <>
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  This form was automatically generated from the tender documents. Fill in all required fields and save
+                  your progress as you go.
+                </AlertDescription>
+              </Alert>
+              <DynamicTenderForm tenderId={id} formFields={analysis.formFields} />
+            </>
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <ClipboardList className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground">No form fields extracted from documents</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">
           <Card className="border-border">

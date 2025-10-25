@@ -41,6 +41,7 @@ interface Tender {
   tender_url?: string
   source_level?: string
   source_province?: string
+  document_count?: number // Added document_count field
   documents?: Array<{
     id?: string
     title: string
@@ -425,11 +426,11 @@ export default function SearchPage() {
                             )}
                           </div>
                           <p className="text-sm mt-2">{tender.description}</p>
-                          {tender.documents && tender.documents.length > 0 && (
+                          {(tender.document_count ?? 0) > 0 && (
                             <div className="mt-2 flex items-center gap-2">
                               <FileText className="h-4 w-4 text-primary" />
                               <span className="text-sm text-primary font-medium">
-                                {tender.documents.length} {tender.documents.length === 1 ? "document" : "documents"}{" "}
+                                {tender.document_count} {tender.document_count === 1 ? "document" : "documents"}{" "}
                                 available
                               </span>
                             </div>

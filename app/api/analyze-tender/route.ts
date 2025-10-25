@@ -30,8 +30,38 @@ export async function POST(request: Request) {
       "category": "documentation|compliance|preparation|submission",
       "deadline": "Deadline if mentioned, or null"
     }
+  ],
+  "formFields": [
+    {
+      "id": "unique_field_id",
+      "label": "Field label as it appears in the document",
+      "type": "text|email|tel|number|date|textarea|select|checkbox|radio|file",
+      "required": true|false,
+      "placeholder": "Helpful placeholder text",
+      "description": "Additional context or instructions for this field",
+      "options": ["Option 1", "Option 2"] (only for select, checkbox, radio types),
+      "validation": {
+        "min": number (for number/date types),
+        "max": number (for number/date types),
+        "pattern": "regex pattern" (for text types),
+        "maxLength": number (for text/textarea)
+      },
+      "section": "Section name to group related fields"
+    }
   ]
 }
+
+Extract ALL fields that need to be filled in from the tender document. This includes:
+- Company information (name, registration number, address, contact details)
+- Financial information (turnover, bank details, tax numbers)
+- Technical specifications and requirements
+- Pricing and cost breakdowns
+- Certifications and compliance documents
+- Experience and qualifications
+- References and past projects
+- Any other information requested in the tender
+
+For each field, determine the most appropriate input type and validation rules. Group related fields into logical sections.
 
 Extract specific actionable tasks that the bidder needs to complete. These should be concrete, measurable actions like:
 - "Obtain tax clearance certificate"
