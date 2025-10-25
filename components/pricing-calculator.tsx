@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -9,6 +9,7 @@ import { formatZAR } from "@/lib/utils/currency"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export function PricingCalculator() {
+  const [mounted, setMounted] = useState(false)
   const [aiAnalyses, setAiAnalyses] = useState(500)
   const [scrapingCredits, setScrapingCredits] = useState(100000)
   const [storageGB, setStorageGB] = useState(10)
@@ -70,6 +71,25 @@ export function PricingCalculator() {
   }
 
   const suggestedPricePerCustomer = costPerCustomer * 3
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Loading Calculator...</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-96 flex items-center justify-center">
+            <div className="animate-pulse text-muted-foreground">Loading pricing calculator...</div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Tabs defaultValue="calculator" className="w-full">
