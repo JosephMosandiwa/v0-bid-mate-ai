@@ -3,8 +3,7 @@
 import type React from "react"
 import Link from "next/link"
 import { FileText } from "lucide-react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -65,10 +64,51 @@ export default function SearchPage() {
   const { toast } = useToast()
   const [addingTender, setAddingTender] = useState<string | null>(null)
 
+  useEffect(() => {
+    loadAllTenders()
+  }, [])
+
+  const loadAllTenders = async () => {
+    setSearching(true)
+    setError("")
+
+    try {
+      const params = new URLSearchParams({
+        q: "", // Empty query to get all tenders
+        limit: "50",
+      })
+
+      console.log("[v0] Loading all tenders")
+
+      const response = await fetch(`/api/tenders/search?${params.toString()}`)
+
+      console.log("[v0] Load all tenders response status:", response.status)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error("[v0] Load all tenders error response:", errorData)
+        throw new Error(errorData.details || "Failed to load tenders")
+      }
+
+      const results = await response.json()
+      console.log("[v0] Load all tenders results:", results)
+
+      if (results.total === 0) {
+        setError("No tenders available yet. The database may need to be populated with scraped tenders.")
+      }
+
+      setTenders(results.tenders || [])
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load tenders. Please try again."
+      setError(errorMessage)
+      console.error("[v0] Load all tenders error:", err)
+    } finally {
+      setSearching(false)
+    }
+  }
+
   const handleBasicSearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!searchQuery.trim()) return
-
     setSearching(true)
     setError("")
     setTenders([])
@@ -200,7 +240,6 @@ export default function SearchPage() {
         <p className="text-muted-foreground">Find relevant government tenders from 100+ sources</p>
       </div>
 
-      {/* Search Mode Toggle */}
       <div className="flex gap-2">
         <Button
           variant={searchMode === "basic" ? "default" : "outline"}
@@ -220,7 +259,6 @@ export default function SearchPage() {
         </Button>
       </div>
 
-      {/* Search Interface */}
       {searchMode === "basic" ? (
         <Card className="border-border">
           <CardHeader>
@@ -236,7 +274,7 @@ export default function SearchPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="flex-1"
                 />
-                <Button type="submit" disabled={searching || !searchQuery.trim()}>
+                <Button type="submit" disabled={searching}>
                   {searching ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -335,12 +373,13 @@ export default function SearchPage() {
         </Card>
       )}
 
-      {/* Results */}
       {tenders.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-foreground">
-              Found {tenders.length} {tenders.length === 1 ? "Tender" : "Tenders"}
+              {searchQuery || levelFilter !== "all" || provinceFilter !== "all"
+                ? `Found ${tenders.length} ${tenders.length === 1 ? "Tender" : "Tenders"}`
+                : `All Tenders (${tenders.length})`}
             </h2>
           </div>
 
@@ -434,23 +473,15 @@ export default function SearchPage() {
         </div>
       )}
 
-      {!searching && tenders.length === 0 && (searchQuery || aiQuery) && (
+      {!searching && tenders.length === 0 && (
         <Card className="border-border">
           <CardContent className="p-12 text-center">
             <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-2">No Tenders Found</h3>
-            <p className="text-muted-foreground">Try adjusting your search terms or using different keywords</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {!searching && tenders.length === 0 && !searchQuery && !aiQuery && (
-        <Card className="border-border border-dashed">
-          <CardContent className="p-12 text-center">
-            <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">Start Your Search</h3>
             <p className="text-muted-foreground">
-              Use basic search for quick keyword matching or try our AI assistant for intelligent tender discovery
+              {searchQuery || levelFilter !== "all" || provinceFilter !== "all"
+                ? "Try adjusting your search terms or filters"
+                : "No tenders available yet. Please run the scraper to populate the database."}
             </p>
           </CardContent>
         </Card>
