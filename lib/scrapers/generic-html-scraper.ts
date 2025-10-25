@@ -23,10 +23,11 @@ export class GenericHtmlScraper extends BaseScraper {
 
       const scrapingApiKey = process.env.SCRAPING_API_KEY
       let url = this.sourceUrl
+      let usingScraperApi = false
 
       if (scrapingApiKey) {
-        // Use ScraperAPI service (or similar) to handle the request
         url = `http://api.scraperapi.com?api_key=${scrapingApiKey}&url=${encodeURIComponent(this.sourceUrl)}`
+        usingScraperApi = true
         console.log(`[v0] GenericHtmlScraper: Using ScraperAPI service`)
       } else {
         console.log(`[v0] GenericHtmlScraper: No SCRAPING_API_KEY found, using direct fetch`)
@@ -37,13 +38,24 @@ export class GenericHtmlScraper extends BaseScraper {
       const response = await fetch(url, {
         headers: {
           "User-Agent": "BidMateAI-TenderBot/1.0 (Tender Aggregation Service)",
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.8,*/*;q=0.8",
         },
       })
 
       console.log(`[v0] GenericHtmlScraper: Response status: ${response.status}`)
 
       if (!response.ok) {
+        if (response.status === 401) {
+          if (usingScraperApi) {
+            throw new Error(
+              `ScraperAPI returned 401 Unauthorized. Please check your SCRAPING_API_KEY is valid and has sufficient credits. Visit https://www.scraperapi.com/dashboard to verify your account.`,
+            )
+          } else {
+            throw new Error(
+              `Website returned 401 Unauthorized. The website ${this.sourceName} requires authentication. Consider using a scraping API service by setting SCRAPING_API_KEY environment variable.`,
+            )
+          }
+        }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
