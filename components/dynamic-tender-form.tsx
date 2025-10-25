@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Save, CheckCircle2 } from "lucide-react"
+import { GoogleAddressAutocomplete } from "@/components/google-address-autocomplete"
 
 interface FormField {
   id: string
@@ -32,9 +33,10 @@ interface FormField {
 interface DynamicTenderFormProps {
   tenderId: string
   formFields: FormField[]
+  googleMapsApiKey?: string // Added Google Maps API key prop
 }
 
-export function DynamicTenderForm({ tenderId, formFields }: DynamicTenderFormProps) {
+export function DynamicTenderForm({ tenderId, formFields, googleMapsApiKey }: DynamicTenderFormProps) {
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -130,9 +132,26 @@ export function DynamicTenderForm({ tenderId, formFields }: DynamicTenderFormPro
     }
   }
 
+  const isAddressField = (field: FormField): boolean => {
+    const addressKeywords = ["address", "street", "location", "physical address", "postal address"]
+    const label = field.label.toLowerCase()
+    return addressKeywords.some((keyword) => label.includes(keyword))
+  }
+
   const renderField = (field: FormField) => {
     const value = formData[field.id] || ""
     const error = errors[field.id]
+
+    if (isAddressField(field) && googleMapsApiKey && field.type === "text") {
+      return (
+        <GoogleAddressAutocomplete
+          value={value}
+          onChange={(address) => handleChange(field.id, address)}
+          placeholder={field.placeholder || "Start typing an address..."}
+          apiKey={googleMapsApiKey}
+        />
+      )
+    }
 
     switch (field.type) {
       case "textarea":

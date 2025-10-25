@@ -7,30 +7,30 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { GoogleAddressAutocomplete } from "@/components/google-address-autocomplete"
 import { createClient } from "@/lib/supabase/client"
 import { User, Building2, Save, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { getGoogleMapsApiKey } from "@/lib/actions/get-google-maps-key"
 
 export default function ProfilePage() {
-  const router = useRouter()
   const supabase = createClient()
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [user, setUser] = useState<any>(null)
-
-  // Personal Information State
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState("")
   const [profile, setProfile] = useState({
     full_name: "",
     email: "",
     phone: "",
     job_title: "",
   })
-
-  // Company Information State
   const [company, setCompany] = useState({
     company_name: "",
     registration_number: "",
     tax_number: "",
+    bee_status: "",
+    vat_number: "",
     industry: "",
     company_size: "",
     address_line1: "",
@@ -42,25 +42,28 @@ export default function ProfilePage() {
     website: "",
   })
 
+  const {
+    data: { user },
+  } = supabase.auth.getUser()
+
   useEffect(() => {
-    loadUserData()
-  }, [])
+    if (!user) {
+      router.push("/login")
+    } else {
+      loadUserData()
+      loadGoogleMapsKey()
+    }
+  }, [user, router])
+
+  const loadGoogleMapsKey = async () => {
+    const key = await getGoogleMapsApiKey()
+    setGoogleMapsApiKey(key)
+  }
 
   const loadUserData = async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
-        router.push("/login")
-        return
-      }
-
-      setUser(user)
-
-      // Load profile
-      const { data: profileData } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+      const supabaseClient = createClient()
+      const { data: profileData } = await supabaseClient.from("profiles").select("*").eq("id", user.id).single()
 
       if (profileData) {
         setProfile({
@@ -73,14 +76,15 @@ export default function ProfilePage() {
         setProfile((prev) => ({ ...prev, email: user.email || "" }))
       }
 
-      // Load company
-      const { data: companyData } = await supabase.from("companies").select("*").eq("user_id", user.id).single()
+      const { data: companyData } = await supabaseClient.from("companies").select("*").eq("user_id", user.id).single()
 
       if (companyData) {
         setCompany({
           company_name: companyData.company_name || "",
           registration_number: companyData.registration_number || "",
           tax_number: companyData.tax_number || "",
+          bee_status: companyData.bee_status || "",
+          vat_number: companyData.vat_number || "",
           industry: companyData.industry || "",
           company_size: companyData.company_size || "",
           address_line1: companyData.address_line1 || "",
@@ -104,7 +108,8 @@ export default function ProfilePage() {
 
     setSaving(true)
     try {
-      const { error } = await supabase.from("profiles").upsert({
+      const supabaseClient = createClient()
+      const { error } = await supabaseClient.from("profiles").upsert({
         id: user.id,
         email: profile.email,
         full_name: profile.full_name,
@@ -127,7 +132,8 @@ export default function ProfilePage() {
 
     setSaving(true)
     try {
-      const { error } = await supabase.from("companies").upsert({
+      const supabaseClient = createClient()
+      const { error } = await supabaseClient.from("companies").upsert({
         user_id: user.id,
         ...company,
       })
@@ -139,6 +145,25 @@ export default function ProfilePage() {
       alert("Failed to save company information. Please try again.")
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleAddressChange = (address: string, placeDetails?: any) => {
+    setCompany({ ...company, address_line1: address })
+
+    if (placeDetails?.address_components) {
+      const components = placeDetails.address_components
+      const city = components.find((c: any) => c.types.includes("locality"))?.long_name
+      const province = components.find((c: any) => c.types.includes("administrative_area_level_1"))?.long_name
+      const postalCode = components.find((c: any) => c.types.includes("postal_code"))?.long_name
+
+      setCompany((prev) => ({
+        ...prev,
+        address_line1: address,
+        ...(city && { city }),
+        ...(province && { province: province.toLowerCase().replace(/\s+/g, "-") }),
+        ...(postalCode && { postal_code: postalCode }),
+      }))
     }
   }
 
@@ -270,6 +295,35 @@ export default function ProfilePage() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
+                  <Label htmlFor="bee_status">BEE Status</Label>
+                  <Select
+                    value={company.bee_status}
+                    onValueChange={(value) => setCompany({ ...company, bee_status: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select BEE level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="level-1">Level 1</SelectItem>
+                      <SelectItem value="level-2">Level 2</SelectItem>
+                      <SelectItem value="level-3">Level 3</SelectItem>
+                      <SelectItem value="not-rated">Not Rated</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="vat_number">VAT Number</Label>
+                  <Input
+                    id="vat_number"
+                    value={company.vat_number}
+                    onChange={(e) => setCompany({ ...company, vat_number: e.target.value })}
+                    placeholder="4123456789"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
                   <Label htmlFor="tax_number">Tax Number</Label>
                   <Input
                     id="tax_number"
@@ -333,12 +387,15 @@ export default function ProfilePage() {
 
               <div className="space-y-2">
                 <Label htmlFor="address_line1">Address Line 1</Label>
-                <Input
-                  id="address_line1"
+                <GoogleAddressAutocomplete
                   value={company.address_line1}
-                  onChange={(e) => setCompany({ ...company, address_line1: e.target.value })}
-                  placeholder="123 Main Street"
+                  onChange={handleAddressChange}
+                  placeholder="Start typing your address..."
+                  apiKey={googleMapsApiKey}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Start typing to search for your address. City, province, and postal code will be auto-filled.
+                </p>
               </div>
 
               <div className="space-y-2">
