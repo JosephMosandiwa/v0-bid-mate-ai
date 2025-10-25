@@ -129,15 +129,22 @@ export class ScrapingService {
   }
 
   private async updateSourceStats(sourceId: number, result: any) {
+    // First get current count
+    const { data: currentSource } = await this.supabase
+      .from("tender_sources")
+      .select("total_tenders_scraped")
+      .eq("id", sourceId)
+      .single()
+
+    const newCount = (currentSource?.total_tenders_scraped || 0) + (result.scrapedCount || 0)
+
     const { error } = await this.supabase
       .from("tender_sources")
       .update({
         last_scraped_at: new Date().toISOString(),
         last_scrape_status: result.success ? "success" : "failed",
         last_scrape_error: result.error || null,
-        total_tenders_scraped: result.success
-          ? this.supabase.raw(`total_tenders_scraped + ${result.scrapedCount}`)
-          : this.supabase.raw("total_tenders_scraped"),
+        total_tenders_scraped: result.success ? newCount : currentSource?.total_tenders_scraped || 0,
       })
       .eq("id", sourceId)
 

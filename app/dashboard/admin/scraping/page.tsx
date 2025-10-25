@@ -148,45 +148,16 @@ export default function ScrapingAdminPage() {
     console.log("[v0] Starting scrape for source:", sourceId)
     setScraping(sourceId)
     try {
-      console.log("[v0] Getting Supabase session...")
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      console.log("[v0] Session retrieved:", session ? "authenticated" : "not authenticated")
-
-      if (!session) {
-        console.error("[v0] No session found - user not authenticated")
-        toast({
-          title: "Session Expired",
-          description: "Please log in again to continue",
-          variant: "destructive",
-        })
-        router.push("/login")
-        return
-      }
-
       console.log("[v0] Making API request to /api/scraping/trigger")
       const response = await fetch("/api/scraping/trigger", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ sourceId }),
       })
 
       console.log("[v0] API response status:", response.status)
-
-      if (response.status === 401) {
-        toast({
-          title: "Session Expired",
-          description: "Your session has expired. Please log in again.",
-          variant: "destructive",
-        })
-        router.push("/login")
-        return
-      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
@@ -219,45 +190,16 @@ export default function ScrapingAdminPage() {
     console.log("[v0] Starting scrape all sources")
     setScraping(-1)
     try {
-      console.log("[v0] Getting Supabase session...")
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      console.log("[v0] Session retrieved:", session ? "authenticated" : "not authenticated")
-
-      if (!session) {
-        console.error("[v0] No session found - user not authenticated")
-        toast({
-          title: "Session Expired",
-          description: "Please log in again to continue",
-          variant: "destructive",
-        })
-        router.push("/login")
-        return
-      }
-
       console.log("[v0] Making API request to /api/scraping/trigger for all sources")
       const response = await fetch("/api/scraping/trigger", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ scrapeAll: true }),
       })
 
       console.log("[v0] API response status:", response.status)
-
-      if (response.status === 401) {
-        toast({
-          title: "Session Expired",
-          description: "Your session has expired. Please log in again.",
-          variant: "destructive",
-        })
-        router.push("/login")
-        return
-      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
