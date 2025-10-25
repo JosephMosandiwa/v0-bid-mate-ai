@@ -62,12 +62,20 @@ export default function SearchPage() {
   const [searchMode, setSearchMode] = useState<"basic" | "ai">("basic")
   const [levelFilter, setLevelFilter] = useState<string>("all")
   const [provinceFilter, setProvinceFilter] = useState<string>("all")
+  const [dateFrom, setDateFrom] = useState<string>("")
+  const [dateTo, setDateTo] = useState<string>("")
   const { toast } = useToast()
   const [addingTender, setAddingTender] = useState<string | null>(null)
 
   useEffect(() => {
     loadAllTenders()
   }, [])
+
+  useEffect(() => {
+    if (searchMode === "basic") {
+      handleBasicSearch()
+    }
+  }, [levelFilter, provinceFilter, dateFrom, dateTo])
 
   const loadAllTenders = async () => {
     setSearching(true)
@@ -108,8 +116,8 @@ export default function SearchPage() {
     }
   }
 
-  const handleBasicSearch = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleBasicSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
     setSearching(true)
     setError("")
     setTenders([])
@@ -128,6 +136,14 @@ export default function SearchPage() {
         params.append("province", provinceFilter)
       }
 
+      if (dateFrom) {
+        params.append("dateFrom", dateFrom)
+      }
+
+      if (dateTo) {
+        params.append("dateTo", dateTo)
+      }
+
       console.log("[v0] Searching with params:", params.toString())
 
       const response = await fetch(`/api/tenders/search?${params.toString()}`)
@@ -143,7 +159,14 @@ export default function SearchPage() {
       const results = await response.json()
       console.log("[v0] Search results:", results)
 
-      if (results.total === 0 && !searchQuery && levelFilter === "all" && provinceFilter === "all") {
+      if (
+        results.total === 0 &&
+        !searchQuery &&
+        levelFilter === "all" &&
+        provinceFilter === "all" &&
+        !dateFrom &&
+        !dateTo
+      ) {
         setError("No tenders available yet. The database may need to be populated with scraped tenders.")
       }
 
@@ -294,9 +317,9 @@ export default function SearchPage() {
                 </Button>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
                 <Select value={levelFilter} onValueChange={setLevelFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Filter by level" />
                   </SelectTrigger>
                   <SelectContent>
@@ -310,7 +333,7 @@ export default function SearchPage() {
                 </Select>
 
                 <Select value={provinceFilter} onValueChange={setProvinceFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Filter by province" />
                   </SelectTrigger>
                   <SelectContent>
@@ -326,7 +349,50 @@ export default function SearchPage() {
                     <SelectItem value="North West">North West</SelectItem>
                   </SelectContent>
                 </Select>
+
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="dateFrom" className="text-xs text-muted-foreground">
+                    Closing From
+                  </label>
+                  <Input
+                    id="dateFrom"
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="dateTo" className="text-xs text-muted-foreground">
+                    Closing To
+                  </label>
+                  <Input
+                    id="dateTo"
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
               </div>
+
+              {(levelFilter !== "all" || provinceFilter !== "all" || dateFrom || dateTo) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setLevelFilter("all")
+                    setProvinceFilter("all")
+                    setDateFrom("")
+                    setDateTo("")
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  Clear Filters
+                </Button>
+              )}
 
               {error && <p className="text-sm text-destructive">{error}</p>}
             </form>
@@ -382,7 +448,7 @@ export default function SearchPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg md:text-xl font-semibold text-foreground">
-              {searchQuery || levelFilter !== "all" || provinceFilter !== "all"
+              {searchQuery || levelFilter !== "all" || provinceFilter !== "all" || dateFrom || dateTo
                 ? `Found ${tenders.length} ${tenders.length === 1 ? "Tender" : "Tenders"}`
                 : `All Tenders (${tenders.length})`}
             </h2>
@@ -498,7 +564,7 @@ export default function SearchPage() {
             <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg md:text-xl font-semibold text-foreground mb-2">No Tenders Found</h3>
             <p className="text-sm md:text-base text-muted-foreground">
-              {searchQuery || levelFilter !== "all" || provinceFilter !== "all"
+              {searchQuery || levelFilter !== "all" || provinceFilter !== "all" || dateFrom || dateTo
                 ? "Try adjusting your search terms or filters"
                 : "No tenders available yet. Please run the scraper to populate the database."}
             </p>

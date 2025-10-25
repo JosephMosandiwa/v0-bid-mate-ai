@@ -11,8 +11,10 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get("active") !== "false"
     const limit = Number.parseInt(searchParams.get("limit") || "50")
     const offset = Number.parseInt(searchParams.get("offset") || "0")
+    const dateFrom = searchParams.get("dateFrom")
+    const dateTo = searchParams.get("dateTo")
 
-    console.log("[v0] Search params:", { query, level, province, category, isActive, limit, offset })
+    console.log("[v0] Search params:", { query, level, province, category, isActive, limit, offset, dateFrom, dateTo })
 
     const supabase = await createClient()
 
@@ -41,6 +43,14 @@ export async function GET(request: NextRequest) {
 
     if (category) {
       dbQuery = dbQuery.eq("category", category)
+    }
+
+    if (dateFrom) {
+      dbQuery = dbQuery.gte("close_date", dateFrom)
+    }
+
+    if (dateTo) {
+      dbQuery = dbQuery.lte("close_date", dateTo)
     }
 
     if (query && query.trim()) {
