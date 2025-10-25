@@ -426,15 +426,13 @@ export default function SearchPage() {
                             )}
                           </div>
                           <p className="text-sm mt-2">{tender.description}</p>
-                          {(tender.document_count ?? 0) > 0 && (
-                            <div className="mt-2 flex items-center gap-2">
-                              <FileText className="h-4 w-4 text-primary" />
-                              <span className="text-sm text-primary font-medium">
-                                {tender.document_count} {tender.document_count === 1 ? "document" : "documents"}{" "}
-                                available
-                              </span>
-                            </div>
-                          )}
+                          <div className="mt-2 flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">
+                              {tender.document_count ?? 0}{" "}
+                              {(tender.document_count ?? 0) === 1 ? "document" : "documents"}
+                            </span>
+                          </div>
                         </CardDescription>
                       </div>
                       <div className="flex gap-2 flex-wrap">
