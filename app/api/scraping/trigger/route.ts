@@ -6,8 +6,6 @@ export async function POST(request: NextRequest) {
   try {
     console.log("[v0] Scraping trigger API called")
 
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-
     const authHeader = request.headers.get("authorization")
     if (!authHeader) {
       console.log("[v0] No authorization header")
@@ -15,10 +13,14 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.replace("Bearer ", "")
+
+    // Create client with anon key for authentication
+    const authClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser(token)
+    } = await authClient.auth.getUser(token)
 
     if (authError || !user) {
       console.log("[v0] Auth error:", authError)
