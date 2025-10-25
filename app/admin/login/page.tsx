@@ -2,6 +2,8 @@ import { AdminAuthService } from "@/lib/services/admin-auth-service"
 import { redirect } from "next/navigation"
 import { AdminLoginForm } from "@/components/admin-login-form"
 
+export const dynamic = "force-dynamic"
+
 export default async function AdminLoginPage() {
   // Check if already logged in
   const admin = await AdminAuthService.getCurrentAdmin()

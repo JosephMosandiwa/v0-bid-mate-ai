@@ -3,6 +3,8 @@ import { AdminAuthService } from "@/lib/services/admin-auth-service"
 import { redirect } from "next/navigation"
 import { AdminNav } from "@/components/admin-nav"
 
+export const dynamic = "force-dynamic"
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await AdminAuthService.getCurrentAdmin()
 

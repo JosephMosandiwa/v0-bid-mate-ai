@@ -2,6 +2,8 @@ import { AdminAuthService } from "@/lib/services/admin-auth-service"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Shield, Users, Database, TrendingUp } from "lucide-react"
 
+export const dynamic = "force-dynamic"
+
 export default async function AdminDashboardPage() {
   const admin = await AdminAuthService.requireAdmin()
 
