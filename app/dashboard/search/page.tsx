@@ -444,9 +444,10 @@ export default function SearchPage() {
                           </Link>
                         </Button>
                         {url && (
-                          <Button variant="outline" size="icon" asChild className="bg-transparent">
+                          <Button variant="outline" size="sm" asChild className="bg-transparent">
                             <a href={url} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="h-4 w-4" />
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              Original Listing
                             </a>
                           </Button>
                         )}
