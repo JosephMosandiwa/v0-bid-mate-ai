@@ -10,10 +10,10 @@ export async function POST(request: Request) {
       return Response.json({ error: "Document text is required" }, { status: 400 })
     }
 
-    console.log("[v0] Calling AI model for analysis...")
+    console.log("[v0] Calling AI Gateway for analysis...")
 
     const { text } = await generateText({
-      model: "openai/gpt-4o",
+      model: "openai/gpt-4o", // Use AI Gateway - requires credit card on Vercel account
       prompt: `You are an expert tender analyst. Analyze the following tender document and provide a comprehensive analysis in JSON format with the following structure:
 
 {
@@ -119,14 +119,14 @@ IMPORTANT: Respond with ONLY valid JSON. Do not include markdown code blocks, ex
       stack: error?.stack?.substring(0, 500),
     })
 
-    if (error?.message?.includes("API key") || error?.message?.includes("authentication")) {
+    if (error?.message?.includes("credit card") || error?.message?.includes("payment")) {
       return Response.json(
         {
           error:
-            "AI service authentication failed. The Vercel AI Gateway may be experiencing issues. Please try again later.",
-          errorType: "ai_service_error",
+            "AI Gateway requires a valid credit card. Please add a payment method to your Vercel account at: vercel.com/account/billing",
+          errorType: "payment_required",
         },
-        { status: 503 },
+        { status: 402 },
       )
     }
 
