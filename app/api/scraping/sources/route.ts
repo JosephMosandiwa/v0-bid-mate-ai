@@ -3,12 +3,16 @@ import type { NextRequest } from "next/server"
 
 export async function GET(request: NextRequest) {
   try {
+    console.log("[v0] Fetching tender sources...")
     const searchParams = request.nextUrl.searchParams
     const level = searchParams.get("level")
     const province = searchParams.get("province")
     const active = searchParams.get("active")
 
+    console.log("[v0] Query params:", { level, province, active })
+
     const supabase = await createClient()
+    console.log("[v0] Supabase client created")
 
     let query = supabase.from("tender_sources").select("*").order("name")
 
@@ -24,17 +28,27 @@ export async function GET(request: NextRequest) {
       query = query.eq("is_active", active === "true")
     }
 
+    console.log("[v0] Executing query...")
     const { data: sources, error } = await query
 
     if (error) {
-      console.error("[API] Error fetching sources:", error)
-      return Response.json({ error: "Failed to fetch sources" }, { status: 500 })
+      console.error("[v0] Error fetching sources:", error)
+      console.error("[v0] Error details:", JSON.stringify(error, null, 2))
+      return Response.json({ error: "Failed to fetch sources", details: error.message }, { status: 500 })
     }
 
+    console.log("[v0] Sources fetched successfully:", sources?.length || 0, "sources")
     return Response.json({ sources: sources || [] })
   } catch (error) {
-    console.error("[API] Sources fetch error:", error)
-    return Response.json({ error: "Failed to fetch sources" }, { status: 500 })
+    console.error("[v0] Sources fetch error:", error)
+    console.error("[v0] Error stack:", error instanceof Error ? error.stack : "No stack trace")
+    return Response.json(
+      {
+        error: "Failed to fetch sources",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }
 
