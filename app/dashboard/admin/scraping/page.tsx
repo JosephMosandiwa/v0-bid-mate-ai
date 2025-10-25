@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -59,11 +60,31 @@ export default function ScrapingAdminPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [levelFilter, setLevelFilter] = useState<string>("all")
   const { toast } = useToast()
+  const router = useRouter()
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
+
+  useEffect(() => {
+    checkAuth()
+  }, [])
+
+  const checkAuth = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to access the scraping admin panel",
+        variant: "destructive",
+      })
+      router.push("/login")
+    }
+  }
 
   useEffect(() => {
     loadData()
@@ -136,7 +157,13 @@ export default function ScrapingAdminPage() {
 
       if (!session) {
         console.error("[v0] No session found - user not authenticated")
-        throw new Error("Not authenticated")
+        toast({
+          title: "Session Expired",
+          description: "Please log in again to continue",
+          variant: "destructive",
+        })
+        router.push("/login")
+        return
       }
 
       console.log("[v0] Making API request to /api/scraping/trigger")
@@ -151,10 +178,20 @@ export default function ScrapingAdminPage() {
 
       console.log("[v0] API response status:", response.status)
 
+      if (response.status === 401) {
+        toast({
+          title: "Session Expired",
+          description: "Your session has expired. Please log in again.",
+          variant: "destructive",
+        })
+        router.push("/login")
+        return
+      }
+
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error("[v0] API error response:", errorText)
-        throw new Error("Failed to trigger scraping")
+        const errorData = await response.json().catch(() => ({}))
+        console.error("[v0] API error response:", errorData)
+        throw new Error(errorData.error || "Failed to trigger scraping")
       }
 
       const result = await response.json()
@@ -191,7 +228,13 @@ export default function ScrapingAdminPage() {
 
       if (!session) {
         console.error("[v0] No session found - user not authenticated")
-        throw new Error("Not authenticated")
+        toast({
+          title: "Session Expired",
+          description: "Please log in again to continue",
+          variant: "destructive",
+        })
+        router.push("/login")
+        return
       }
 
       console.log("[v0] Making API request to /api/scraping/trigger for all sources")
@@ -206,10 +249,20 @@ export default function ScrapingAdminPage() {
 
       console.log("[v0] API response status:", response.status)
 
+      if (response.status === 401) {
+        toast({
+          title: "Session Expired",
+          description: "Your session has expired. Please log in again.",
+          variant: "destructive",
+        })
+        router.push("/login")
+        return
+      }
+
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error("[v0] API error response:", errorText)
-        throw new Error("Failed to trigger scraping")
+        const errorData = await response.json().catch(() => ({}))
+        console.error("[v0] API error response:", errorData)
+        throw new Error(errorData.error || "Failed to trigger scraping")
       }
 
       const result = await response.json()
