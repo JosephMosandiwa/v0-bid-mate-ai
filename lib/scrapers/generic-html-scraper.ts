@@ -136,6 +136,8 @@ export class GenericHtmlScraper extends BaseScraper {
       // Try to find reference number
       const reference = this.extractReference($, element)
 
+      const documentUrls = this.extractDocumentUrls($, element)
+
       return {
         title: this.cleanText(title),
         description: description ? this.cleanText(description) : undefined,
@@ -143,6 +145,7 @@ export class GenericHtmlScraper extends BaseScraper {
         tender_url: link ? this.makeAbsoluteUrl(link, this.sourceUrl) : undefined,
         publish_date: dates.publishDate,
         close_date: dates.closeDate,
+        document_urls: documentUrls.length > 0 ? documentUrls : undefined, // Add document URLs
         raw_data: {
           html: element.html()?.substring(0, 500), // Store first 500 chars for debugging
         },
@@ -236,5 +239,41 @@ export class GenericHtmlScraper extends BaseScraper {
 
   private parseDate(date: string): string {
     return new Date(date).toISOString()
+  }
+
+  private extractDocumentUrls($: cheerio.CheerioAPI, element: cheerio.Cheerio<cheerio.Element>): string[] {
+    const documentUrls: string[] = []
+
+    // Common document file extensions
+    const docExtensions = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".zip", ".rar"]
+
+    // Find all links in the element
+    element.find("a").each((_, linkEl) => {
+      const href = $(linkEl).attr("href")
+      if (!href) return
+
+      // Check if the link points to a document
+      const isDocument = docExtensions.some((ext) => href.toLowerCase().includes(ext))
+
+      // Also check for common document keywords in the link text or href
+      const linkText = $(linkEl).text().toLowerCase()
+      const hasDocKeyword =
+        linkText.includes("download") ||
+        linkText.includes("document") ||
+        linkText.includes("attachment") ||
+        linkText.includes("file") ||
+        href.toLowerCase().includes("document") ||
+        href.toLowerCase().includes("attachment")
+
+      if (isDocument || hasDocKeyword) {
+        const absoluteUrl = this.makeAbsoluteUrl(href, this.sourceUrl)
+        if (!documentUrls.includes(absoluteUrl)) {
+          documentUrls.push(absoluteUrl)
+          console.log(`[v0] GenericHtmlScraper: Found document URL: ${absoluteUrl}`)
+        }
+      }
+    })
+
+    return documentUrls
   }
 }

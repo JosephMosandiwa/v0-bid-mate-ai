@@ -1,6 +1,8 @@
 "use client"
 
 import type React from "react"
+import Link from "next/link"
+import { FileText } from "lucide-react"
 
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -355,7 +357,11 @@ export default function SearchPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <CardTitle className="text-lg">{tender.title}</CardTitle>
+                          <Link href={`/dashboard/scraped-tenders/${tender.id}`}>
+                            <CardTitle className="text-lg hover:text-primary transition-colors cursor-pointer">
+                              {tender.title}
+                            </CardTitle>
+                          </Link>
                           <Badge className="bg-primary/10 text-primary">{tender.category || "General"}</Badge>
                           {tender.source_level && <Badge variant="outline">{tender.source_level}</Badge>}
                           {tender.source_province && <Badge variant="secondary">{tender.source_province}</Badge>}
@@ -381,27 +387,23 @@ export default function SearchPage() {
                           </div>
                           <p className="text-sm mt-2">{tender.description}</p>
                           {tender.documents && tender.documents.length > 0 && (
-                            <div className="mt-2">
-                              <h3 className="text-sm font-medium text-foreground">Documents</h3>
-                              <ul className="list-disc pl-6">
-                                {tender.documents.map((doc, idx) => (
-                                  <li key={doc.id || idx}>
-                                    <a
-                                      href={doc.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-primary hover:underline"
-                                    >
-                                      {doc.title}
-                                    </a>
-                                  </li>
-                                ))}
-                              </ul>
+                            <div className="mt-2 flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-primary" />
+                              <span className="text-sm text-primary font-medium">
+                                {tender.documents.length} {tender.documents.length === 1 ? "document" : "documents"}{" "}
+                                available
+                              </span>
                             </div>
                           )}
                         </CardDescription>
                       </div>
                       <div className="flex gap-2 flex-wrap">
+                        <Button size="sm" variant="outline" asChild className="bg-transparent">
+                          <Link href={`/dashboard/scraped-tenders/${tender.id}`}>
+                            <FileText className="h-4 w-4 mr-2" />
+                            View Details
+                          </Link>
+                        </Button>
                         {url && (
                           <Button variant="outline" size="icon" asChild className="bg-transparent">
                             <a href={url} target="_blank" rel="noopener noreferrer">

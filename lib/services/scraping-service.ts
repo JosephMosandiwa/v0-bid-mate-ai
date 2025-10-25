@@ -1,13 +1,16 @@
 import { createClient } from "@supabase/supabase-js"
 import { ScraperFactory } from "../scrapers/scraper-factory"
 import type { ScrapedTender } from "../scrapers/base-scraper"
+import { DocumentService } from "./document-service" // Import DocumentService
 
 export class ScrapingService {
   private supabase
+  private documentService // Add document service
 
   constructor() {
     // Use service role key for server-side operations
     this.supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+    this.documentService = new DocumentService() // Initialize document service
   }
 
   async scrapeSource(sourceId: number) {
@@ -50,8 +53,13 @@ export class ScrapingService {
       // Save tenders to database
       if (result.success && result.tenders.length > 0) {
         console.log(`[ScrapingService] Saving ${result.tenders.length} tenders to database`)
-        await this.saveTenders(sourceId, source, result.tenders)
+        const savedTenders = await this.saveTenders(sourceId, source, result.tenders) // Get saved tenders
         console.log(`[ScrapingService] Tenders saved successfully`)
+
+        if (savedTenders && savedTenders.length > 0) {
+          console.log(`[ScrapingService] Starting document download for ${savedTenders.length} tenders`)
+          await this.downloadTenderDocuments(savedTenders)
+        }
       } else {
         console.log(`[ScrapingService] No tenders to save`)
       }
@@ -115,10 +123,13 @@ export class ScrapingService {
     console.log(`[ScrapingService] Sample tender data:`, tendersToInsert[0])
 
     // Insert tenders (upsert based on source_id + tender_reference or title)
-    const { error } = await this.supabase.from("scraped_tenders").upsert(tendersToInsert, {
-      onConflict: "source_id,title",
-      ignoreDuplicates: false,
-    })
+    const { data, error } = await this.supabase
+      .from("scraped_tenders")
+      .upsert(tendersToInsert, {
+        onConflict: "source_id,title",
+        ignoreDuplicates: false,
+      })
+      .select()
 
     if (error) {
       console.error("[ScrapingService] Error saving tenders:", error)
@@ -126,6 +137,26 @@ export class ScrapingService {
     }
 
     console.log(`[ScrapingService] Successfully saved ${tenders.length} tenders`)
+    return data // Return saved tenders with IDs
+  }
+
+  private async downloadTenderDocuments(tenders: any[]) {
+    const scraperApiKey = process.env.SCRAPING_API_KEY
+
+    for (const tender of tenders) {
+      if (tender.document_urls && Array.isArray(tender.document_urls) && tender.document_urls.length > 0) {
+        console.log(
+          `[ScrapingService] Downloading ${tender.document_urls.length} documents for tender: ${tender.title}`,
+        )
+
+        try {
+          await this.documentService.downloadTenderDocuments(tender.document_urls, tender.id, scraperApiKey)
+        } catch (error) {
+          console.error(`[ScrapingService] Error downloading documents for tender ${tender.id}:`, error)
+          // Continue with other tenders even if one fails
+        }
+      }
+    }
   }
 
   private async updateSourceStats(sourceId: number, result: any) {
