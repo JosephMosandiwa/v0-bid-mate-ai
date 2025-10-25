@@ -13,12 +13,15 @@ import { User, Building2, Save, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { getGoogleMapsApiKey } from "@/lib/actions/get-google-maps-key"
 
+export const dynamic = "force-dynamic"
+
 export default function ProfilePage() {
   const supabase = createClient()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState("")
+  const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState({
     full_name: "",
     email: "",
@@ -42,41 +45,50 @@ export default function ProfilePage() {
     website: "",
   })
 
-  const {
-    data: { user },
-  } = supabase.auth.getUser()
-
   useEffect(() => {
-    if (!user) {
-      router.push("/login")
-    } else {
-      loadUserData()
-      loadGoogleMapsKey()
+    const checkUser = async () => {
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser()
+
+      if (!currentUser) {
+        router.push("/login")
+      } else {
+        setUser(currentUser)
+        loadUserData(currentUser)
+        loadGoogleMapsKey()
+      }
     }
-  }, [user, router])
+
+    checkUser()
+  }, [router])
 
   const loadGoogleMapsKey = async () => {
     const key = await getGoogleMapsApiKey()
     setGoogleMapsApiKey(key)
   }
 
-  const loadUserData = async () => {
+  const loadUserData = async (currentUser: any) => {
     try {
       const supabaseClient = createClient()
-      const { data: profileData } = await supabaseClient.from("profiles").select("*").eq("id", user.id).single()
+      const { data: profileData } = await supabaseClient.from("profiles").select("*").eq("id", currentUser.id).single()
 
       if (profileData) {
         setProfile({
           full_name: profileData.full_name || "",
-          email: profileData.email || user.email || "",
+          email: profileData.email || currentUser.email || "",
           phone: profileData.phone || "",
           job_title: profileData.job_title || "",
         })
       } else {
-        setProfile((prev) => ({ ...prev, email: user.email || "" }))
+        setProfile((prev) => ({ ...prev, email: currentUser.email || "" }))
       }
 
-      const { data: companyData } = await supabaseClient.from("companies").select("*").eq("user_id", user.id).single()
+      const { data: companyData } = await supabaseClient
+        .from("companies")
+        .select("*")
+        .eq("user_id", currentUser.id)
+        .single()
 
       if (companyData) {
         setCompany({
