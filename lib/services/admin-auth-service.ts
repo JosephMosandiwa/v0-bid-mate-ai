@@ -129,8 +129,19 @@ export class AdminAuthService {
         .gt("expires_at", new Date().toISOString())
         .single()
 
-      if (sessionError || !session) {
-        // Clean up invalid session
+      if (sessionError) {
+        // Check if error is due to missing table
+        if (sessionError.message?.includes("relation") || sessionError.message?.includes("does not exist")) {
+          console.log("[AdminAuth] Admin tables not found. Please run script 018 to create admin tables.")
+          return null
+        }
+
+        // Clean up invalid session for other errors
+        cookieStore.delete("admin_session")
+        return null
+      }
+
+      if (!session) {
         cookieStore.delete("admin_session")
         return null
       }
