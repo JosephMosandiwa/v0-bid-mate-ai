@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import bcrypt from "bcryptjs"
+import crypto from "crypto"
 
 export interface AdminUser {
   id: string
@@ -39,7 +40,18 @@ export class AdminAuthService {
         .eq("is_active", true)
         .single()
 
-      if (userError || !adminUser) {
+      if (userError) {
+        if (userError.message?.includes("relation") || userError.message?.includes("does not exist")) {
+          console.log("[AdminAuth] Admin tables not found. Please run script 018 to create admin tables.")
+          return {
+            success: false,
+            error: "Admin system not set up. Please run script 018 to create the admin authentication tables.",
+          }
+        }
+        return { success: false, error: "Invalid credentials" }
+      }
+
+      if (!adminUser) {
         return { success: false, error: "Invalid credentials" }
       }
 
@@ -90,6 +102,13 @@ export class AdminAuthService {
       }
     } catch (error) {
       console.error("[AdminAuth] Login error:", error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      if (errorMessage.includes("relation") || errorMessage.includes("does not exist")) {
+        return {
+          success: false,
+          error: "Admin system not set up. Please run script 018 to create the admin authentication tables.",
+        }
+      }
       return { success: false, error: "An error occurred during login" }
     }
   }
