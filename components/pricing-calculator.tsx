@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
 import { formatZAR } from "@/lib/utils/currency"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
 
 export function PricingCalculator() {
   const [mounted, setMounted] = useState(false)
@@ -15,21 +16,18 @@ export function PricingCalculator() {
   const [storageGB, setStorageGB] = useState(10)
   const [teamSeats, setTeamSeats] = useState(1)
   const [expectedCustomers, setExpectedCustomers] = useState(10)
+  const [customPricePerCustomer, setCustomPricePerCustomer] = useState(0)
 
-  // Calculate costs
   const vercelProCost = 20
   const teamSeatsCost = (teamSeats - 1) * 20
   const supabaseProCost = 25
 
-  // AI Gateway: $0.02 per analysis, first $5 free (250 analyses)
   const freeAiAnalyses = 250
   const paidAiAnalyses = Math.max(0, aiAnalyses - freeAiAnalyses)
   const aiCost = paidAiAnalyses * 0.02
 
-  // Blob Storage: $0.023 per GB
   const storageCost = storageGB * 0.023
 
-  // ScraperAPI tiers
   let scrapingCost = 0
   let scrapingPlan = "None"
   if (scrapingCredits > 0) {
@@ -53,24 +51,13 @@ export function PricingCalculator() {
 
   const costPerCustomer = expectedCustomers > 0 ? totalMonthlyZAR / expectedCustomers : 0
 
-  // Per-user breakdown
-  const perUserCosts = {
-    vercel: (vercelProCost * 18) / expectedCustomers,
-    teamSeats: (teamSeatsCost * 18) / expectedCustomers,
-    supabase: (supabaseProCost * 18) / expectedCustomers,
-    ai: (aiCost * 18) / expectedCustomers,
-    storage: (storageCost * 18) / expectedCustomers,
-    scraping: (scrapingCost * 18) / expectedCustomers,
-  }
-
-  // Per-user usage
-  const perUserUsage = {
-    aiAnalyses: expectedCustomers > 0 ? aiAnalyses / expectedCustomers : 0,
-    storageGB: expectedCustomers > 0 ? storageGB / expectedCustomers : 0,
-    scrapingCredits: expectedCustomers > 0 ? scrapingCredits / expectedCustomers : 0,
-  }
-
   const suggestedPricePerCustomer = costPerCustomer * 3
+
+  const priceToUse = customPricePerCustomer > 0 ? customPricePerCustomer : suggestedPricePerCustomer
+  const profitPerCustomer = priceToUse - costPerCustomer
+  const profitMargin = costPerCustomer > 0 ? (profitPerCustomer / priceToUse) * 100 : 0
+  const totalRevenue = priceToUse * expectedCustomers
+  const totalProfit = totalRevenue - totalMonthlyZAR
 
   useEffect(() => {
     setMounted(true)
@@ -168,6 +155,21 @@ export function PricingCalculator() {
                   min={1}
                 />
               </div>
+
+              <div className="space-y-2 border-t pt-4">
+                <Label htmlFor="customPrice">Your Subscription Price (ZAR/month)</Label>
+                <Input
+                  id="customPrice"
+                  type="number"
+                  value={customPricePerCustomer || ""}
+                  onChange={(e) => setCustomPricePerCustomer(Number(e.target.value))}
+                  placeholder={`Suggested: ${formatZAR(suggestedPricePerCustomer)}`}
+                  min={0}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Leave empty to use suggested price ({formatZAR(suggestedPricePerCustomer)})
+                </p>
+              </div>
             </CardContent>
           </Card>
 
@@ -221,19 +223,78 @@ export function PricingCalculator() {
                     <span>Cost per Customer</span>
                     <span>{formatZAR(costPerCustomer)}</span>
                   </div>
-                  <div className="flex justify-between text-sm font-semibold text-green-600">
-                    <span>Suggested Price (3x markup)</span>
-                    <span>{formatZAR(suggestedPricePerCustomer)}/month</span>
-                  </div>
+                  {customPricePerCustomer > 0 ? (
+                    <div className="flex justify-between text-sm font-semibold text-primary">
+                      <span>Your Price</span>
+                      <span>{formatZAR(customPricePerCustomer)}/month</span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between text-sm font-semibold text-green-600">
+                      <span>Suggested Price (3x markup)</span>
+                      <span>{formatZAR(suggestedPricePerCustomer)}/month</span>
+                    </div>
+                  )}
                 </div>
 
-                <div className="bg-muted p-4 rounded-lg mt-4">
-                  <p className="text-sm font-medium mb-2">Pricing Recommendation</p>
-                  <p className="text-xs text-muted-foreground">
-                    With {expectedCustomers} customers at {formatZAR(suggestedPricePerCustomer)}/month, you would
-                    generate {formatZAR(suggestedPricePerCustomer * expectedCustomers)}/month in revenue with{" "}
-                    {formatZAR(suggestedPricePerCustomer * expectedCustomers - totalMonthlyZAR)} profit.
-                  </p>
+                <div className="bg-muted p-4 rounded-lg mt-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Profitability Analysis</p>
+                    {profitMargin >= 60 ? (
+                      <Badge variant="default" className="bg-green-600">
+                        Healthy
+                      </Badge>
+                    ) : profitMargin >= 40 ? (
+                      <Badge variant="default" className="bg-yellow-600">
+                        Moderate
+                      </Badge>
+                    ) : profitMargin > 0 ? (
+                      <Badge variant="default" className="bg-orange-600">
+                        Low
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive">Unprofitable</Badge>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Revenue per customer:</span>
+                      <span className="font-medium">{formatZAR(priceToUse)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Cost per customer:</span>
+                      <span className="font-medium">{formatZAR(costPerCustomer)}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2">
+                      <span className="text-muted-foreground">Profit per customer:</span>
+                      <span className={`font-medium ${profitPerCustomer > 0 ? "text-green-600" : "text-red-600"}`}>
+                        {formatZAR(profitPerCustomer)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Profit margin:</span>
+                      <span className={`font-medium ${profitMargin > 0 ? "text-green-600" : "text-red-600"}`}>
+                        {profitMargin.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-3 space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total monthly revenue:</span>
+                      <span className="font-semibold">{formatZAR(totalRevenue)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total monthly costs:</span>
+                      <span className="font-semibold">{formatZAR(totalMonthlyZAR)}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2">
+                      <span className="text-muted-foreground">Total monthly profit:</span>
+                      <span className={`font-semibold text-lg ${totalProfit > 0 ? "text-green-600" : "text-red-600"}`}>
+                        {formatZAR(totalProfit)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -252,29 +313,29 @@ export function PricingCalculator() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-sm">
                   <span>Vercel Hosting</span>
-                  <span className="font-medium">{formatZAR(perUserCosts.vercel)}</span>
+                  <span className="font-medium">{formatZAR((vercelProCost * 18) / expectedCustomers)}</span>
                 </div>
-                {perUserCosts.teamSeats > 0 && (
+                {teamSeats > 1 && (
                   <div className="flex justify-between items-center text-sm">
                     <span>Team Seats</span>
-                    <span className="font-medium">{formatZAR(perUserCosts.teamSeats)}</span>
+                    <span className="font-medium">{formatZAR((teamSeatsCost * 18) / expectedCustomers)}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center text-sm">
                   <span>Database (Supabase)</span>
-                  <span className="font-medium">{formatZAR(perUserCosts.supabase)}</span>
+                  <span className="font-medium">{formatZAR((supabaseProCost * 18) / expectedCustomers)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span>AI Document Analysis</span>
-                  <span className="font-medium">{formatZAR(perUserCosts.ai)}</span>
+                  <span className="font-medium">{formatZAR((aiCost * 18) / expectedCustomers)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span>Document Storage</span>
-                  <span className="font-medium">{formatZAR(perUserCosts.storage)}</span>
+                  <span className="font-medium">{formatZAR((storageCost * 18) / expectedCustomers)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span>Web Scraping</span>
-                  <span className="font-medium">{formatZAR(perUserCosts.scraping)}</span>
+                  <span className="font-medium">{formatZAR((scrapingCost * 18) / expectedCustomers)}</span>
                 </div>
 
                 <div className="border-t pt-3 mt-3">
@@ -293,18 +354,20 @@ export function PricingCalculator() {
                     <span className="font-medium">{formatZAR(costPerCustomer)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Suggested price (3x):</span>
-                    <span className="font-medium text-green-600">{formatZAR(suggestedPricePerCustomer)}</span>
+                    <span>{customPricePerCustomer > 0 ? "Your price:" : "Suggested price (3x):"}:</span>
+                    <span className="font-medium text-green-600">{formatZAR(priceToUse)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Profit per user:</span>
-                    <span className="font-medium text-green-600">
-                      {formatZAR(suggestedPricePerCustomer - costPerCustomer)}
+                    <span className={`font-medium ${profitPerCustomer > 0 ? "text-green-600" : "text-red-600"}`}>
+                      {formatZAR(profitPerCustomer)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Profit margin:</span>
-                    <span className="font-medium">66.7%</span>
+                    <span className={`font-medium ${profitMargin > 0 ? "" : "text-red-600"}`}>
+                      {profitMargin.toFixed(1)}%
+                    </span>
                   </div>
                 </div>
               </div>
@@ -321,13 +384,17 @@ export function PricingCalculator() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">AI Document Analyses</span>
-                    <span className="text-sm text-muted-foreground">{perUserUsage.aiAnalyses.toFixed(1)}/month</span>
+                    <span className="text-sm text-muted-foreground">
+                      {(aiAnalyses / expectedCustomers).toFixed(1)}/month
+                    </span>
                   </div>
-                  <div className="text-xs text-muted-foreground">Cost: {formatZAR(perUserCosts.ai)} per user</div>
+                  <div className="text-xs text-muted-foreground">
+                    Cost: {formatZAR((aiCost * 18) / expectedCustomers)} per user
+                  </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full bg-blue-500"
-                      style={{ width: `${Math.min((perUserUsage.aiAnalyses / 100) * 100, 100)}%` }}
+                      style={{ width: `${Math.min((aiAnalyses / 100) * 100, 100)}%` }}
                     />
                   </div>
                 </div>
@@ -335,13 +402,17 @@ export function PricingCalculator() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Document Storage</span>
-                    <span className="text-sm text-muted-foreground">{perUserUsage.storageGB.toFixed(2)} GB</span>
+                    <span className="text-sm text-muted-foreground">
+                      {(storageGB / expectedCustomers).toFixed(2)} GB
+                    </span>
                   </div>
-                  <div className="text-xs text-muted-foreground">Cost: {formatZAR(perUserCosts.storage)} per user</div>
+                  <div className="text-xs text-muted-foreground">
+                    Cost: {formatZAR((storageCost * 18) / expectedCustomers)} per user
+                  </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full bg-green-500"
-                      style={{ width: `${Math.min((perUserUsage.storageGB / 10) * 100, 100)}%` }}
+                      style={{ width: `${Math.min((storageGB / 10) * 100, 100)}%` }}
                     />
                   </div>
                 </div>
@@ -350,14 +421,16 @@ export function PricingCalculator() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Scraping Credits</span>
                     <span className="text-sm text-muted-foreground">
-                      {perUserUsage.scrapingCredits.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      {(scrapingCredits / expectedCustomers).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </span>
                   </div>
-                  <div className="text-xs text-muted-foreground">Cost: {formatZAR(perUserCosts.scraping)} per user</div>
+                  <div className="text-xs text-muted-foreground">
+                    Cost: {formatZAR((scrapingCost * 18) / expectedCustomers)} per user
+                  </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full bg-purple-500"
-                      style={{ width: `${Math.min((perUserUsage.scrapingCredits / 10000) * 100, 100)}%` }}
+                      style={{ width: `${Math.min((scrapingCredits / 10000) * 100, 100)}%` }}
                     />
                   </div>
                 </div>
