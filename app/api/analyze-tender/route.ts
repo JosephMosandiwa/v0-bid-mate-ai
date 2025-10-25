@@ -13,68 +13,54 @@ export async function POST(request: Request) {
     console.log("[v0] Calling AI Gateway for analysis...")
 
     const { text } = await generateText({
-      model: "openai/gpt-4o", // Use AI Gateway - requires credit card on Vercel account
-      prompt: `You are an expert tender analyst. Analyze the following tender document and provide a comprehensive analysis in JSON format with the following structure:
+      model: "openai/gpt-4o",
+      system:
+        "You are a JSON API that analyzes tender documents. You MUST respond with ONLY valid JSON. Never include explanations, apologies, or any text outside the JSON object. If you cannot analyze the document, return a JSON object with an error field.",
+      prompt: `Analyze this tender document and return a JSON object with this exact structure:
 
 {
-  "summary": "A brief executive summary of the tender (2-3 sentences)",
-  "keyRequirements": ["List of key requirements and eligibility criteria"],
-  "deadlines": ["Important dates and deadlines"],
-  "evaluationCriteria": ["How the tender will be evaluated and scored"],
-  "recommendations": ["Strategic recommendations for the bidder"],
-  "complianceChecklist": ["Mandatory documents and compliance items needed"],
+  "summary": "Brief executive summary (2-3 sentences)",
+  "keyRequirements": ["requirement 1", "requirement 2"],
+  "deadlines": ["deadline 1", "deadline 2"],
+  "evaluationCriteria": ["criteria 1", "criteria 2"],
+  "recommendations": ["recommendation 1", "recommendation 2"],
+  "complianceChecklist": ["item 1", "item 2"],
   "actionableTasks": [
     {
       "task": "Task description",
-      "priority": "high|medium|low",
-      "category": "documentation|compliance|preparation|submission",
-      "deadline": "Deadline if mentioned, or null"
+      "priority": "high",
+      "category": "documentation",
+      "deadline": "2024-01-01 or null"
     }
   ],
   "formFields": [
     {
-      "id": "unique_field_id",
-      "label": "Field label as it appears in the document",
-      "type": "text|email|tel|number|date|textarea|select|checkbox|radio|file",
-      "required": true|false,
-      "placeholder": "Helpful placeholder text",
-      "description": "Additional context or instructions for this field",
-      "options": ["Option 1", "Option 2"] (only for select, checkbox, radio types),
-      "validation": {
-        "min": number (for number/date types),
-        "max": number (for number/date types),
-        "pattern": "regex pattern" (for text types),
-        "maxLength": number (for text/textarea)
-      },
-      "section": "Section name to group related fields"
+      "id": "company_name",
+      "label": "Company Name",
+      "type": "text",
+      "required": true,
+      "placeholder": "Enter company name",
+      "description": "Legal registered company name",
+      "section": "Company Information"
     }
   ]
 }
 
-Extract ALL fields that need to be filled in from the tender document. This includes:
-- Company information (name, registration number, address, contact details)
-- Financial information (turnover, bank details, tax numbers)
-- Technical specifications and requirements
-- Pricing and cost breakdowns
-- Certifications and compliance documents
+Extract ALL fields from the tender that need to be filled:
+- Company info (name, registration, address, contacts)
+- Financial info (turnover, bank details, tax numbers)
+- Technical specifications
+- Pricing breakdowns
+- Certifications and compliance
 - Experience and qualifications
 - References and past projects
-- Any other information requested in the tender
 
-For each field, determine the most appropriate input type and validation rules. Group related fields into logical sections.
-
-Extract specific actionable tasks that the bidder needs to complete. These should be concrete, measurable actions like:
-- "Obtain tax clearance certificate"
-- "Prepare company profile document"
-- "Complete BEE verification"
-- "Submit financial statements for last 3 years"
-
-Prioritize tasks based on complexity and importance. Include deadlines if mentioned in the document.
+For formFields, use these types: text, email, tel, number, date, textarea, select, checkbox, radio, file
 
 Tender Document:
-${documentText}
+${documentText.substring(0, 15000)}
 
-IMPORTANT: Respond with ONLY valid JSON. Do not include markdown code blocks, explanations, or any text outside the JSON object.`,
+Return ONLY the JSON object, no other text.`,
     })
 
     console.log("[v0] AI response received, length:", text.length)
@@ -82,11 +68,22 @@ IMPORTANT: Respond with ONLY valid JSON. Do not include markdown code blocks, ex
 
     let cleanedText = text.trim()
 
-    // Remove markdown code blocks if present
-    if (cleanedText.startsWith("```json")) {
-      cleanedText = cleanedText.replace(/^```json\s*/, "").replace(/\s*```$/, "")
-    } else if (cleanedText.startsWith("```")) {
-      cleanedText = cleanedText.replace(/^```\s*/, "").replace(/\s*```$/, "")
+    // Remove markdown code blocks
+    if (cleanedText.includes("```")) {
+      const jsonMatch = cleanedText.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/)
+      if (jsonMatch) {
+        cleanedText = jsonMatch[1]
+      } else {
+        cleanedText = cleanedText.replace(/```(?:json)?\s*/g, "").replace(/```/g, "")
+      }
+    }
+
+    // Remove any text before the first { or after the last }
+    const firstBrace = cleanedText.indexOf("{")
+    const lastBrace = cleanedText.lastIndexOf("}")
+
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      cleanedText = cleanedText.substring(firstBrace, lastBrace + 1)
     }
 
     cleanedText = cleanedText.trim()
@@ -97,17 +94,35 @@ IMPORTANT: Respond with ONLY valid JSON. Do not include markdown code blocks, ex
     try {
       analysis = JSON.parse(cleanedText)
       console.log("[v0] Successfully parsed JSON analysis")
+
+      if (!analysis.summary || !analysis.formFields) {
+        console.warn("[v0] Missing required fields in analysis, using defaults")
+        analysis = {
+          summary: analysis.summary || "Unable to generate summary",
+          keyRequirements: analysis.keyRequirements || [],
+          deadlines: analysis.deadlines || [],
+          evaluationCriteria: analysis.evaluationCriteria || [],
+          recommendations: analysis.recommendations || [],
+          complianceChecklist: analysis.complianceChecklist || [],
+          actionableTasks: analysis.actionableTasks || [],
+          formFields: analysis.formFields || [],
+        }
+      }
     } catch (parseError) {
       console.error("[v0] JSON parse error:", parseError)
       console.error("[v0] Failed to parse text:", cleanedText.substring(0, 500))
 
-      return Response.json(
-        {
-          error: "Failed to parse AI response as JSON. The AI returned invalid JSON format.",
-          details: parseError instanceof Error ? parseError.message : "Unknown parse error",
-        },
-        { status: 500 },
-      )
+      return Response.json({
+        summary: "Unable to analyze document. The AI response was not in the expected format.",
+        keyRequirements: ["Please review the document manually"],
+        deadlines: [],
+        evaluationCriteria: [],
+        recommendations: ["Manual review recommended"],
+        complianceChecklist: [],
+        actionableTasks: [],
+        formFields: [],
+        error: "AI returned invalid JSON format",
+      })
     }
 
     return Response.json(analysis)
