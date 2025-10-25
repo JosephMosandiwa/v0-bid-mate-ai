@@ -30,9 +30,11 @@ export class AdminAuthService {
 
   static async login(email: string, password: string): Promise<{ success: boolean; error?: string; user?: AdminUser }> {
     try {
+      console.log("[v0] Admin login attempt for:", email)
       const supabase = await this.getSupabase()
 
       // Get admin user by email
+      console.log("[v0] Querying admin_users table...")
       const { data: adminUser, error: userError } = await supabase
         .from("admin_users")
         .select("*")
@@ -41,6 +43,7 @@ export class AdminAuthService {
         .single()
 
       if (userError) {
+        console.log("[v0] User query error:", userError)
         if (userError.message?.includes("relation") || userError.message?.includes("does not exist")) {
           console.log("[AdminAuth] Admin tables not found. Please run script 018 to create admin tables.")
           return {
@@ -52,15 +55,19 @@ export class AdminAuthService {
       }
 
       if (!adminUser) {
+        console.log("[v0] No admin user found")
         return { success: false, error: "Invalid credentials" }
       }
 
+      console.log("[v0] Admin user found, verifying password...")
       // Verify password
       const passwordMatch = await bcrypt.compare(password, adminUser.password_hash)
       if (!passwordMatch) {
+        console.log("[v0] Password mismatch")
         return { success: false, error: "Invalid credentials" }
       }
 
+      console.log("[v0] Password verified, creating session...")
       // Generate session token
       const sessionToken = crypto.randomUUID()
       const expiresAt = new Date()
@@ -74,12 +81,15 @@ export class AdminAuthService {
       })
 
       if (sessionError) {
+        console.log("[v0] Session creation error:", sessionError)
         return { success: false, error: "Failed to create session" }
       }
 
+      console.log("[v0] Session created, updating last login...")
       // Update last login
       await supabase.from("admin_users").update({ last_login_at: new Date().toISOString() }).eq("id", adminUser.id)
 
+      console.log("[v0] Setting session cookie...")
       // Set session cookie
       const cookieStore = await cookies()
       cookieStore.set("admin_session", sessionToken, {
@@ -90,6 +100,7 @@ export class AdminAuthService {
         path: "/",
       })
 
+      console.log("[v0] Login successful!")
       return {
         success: true,
         user: {
@@ -101,6 +112,7 @@ export class AdminAuthService {
         },
       }
     } catch (error) {
+      console.error("[v0] Login error:", error)
       console.error("[AdminAuth] Login error:", error)
       const errorMessage = error instanceof Error ? error.message : String(error)
       if (errorMessage.includes("relation") || errorMessage.includes("does not exist")) {
