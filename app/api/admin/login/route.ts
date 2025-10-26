@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { createServerClient } from "@supabase/ssr"
 import bcrypt from "bcryptjs"
 import { cookies } from "next/headers"
 
@@ -9,11 +9,20 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] API: Admin login attempt for:", email)
 
-    // Create Supabase client with service role
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
+    const cookieStore = await cookies()
+
+    const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          } catch {
+            // Ignore errors from Server Components
+          }
+        },
       },
     })
 
@@ -43,7 +52,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "No admin user found with this email",
-          hint: "Make sure script 019 has been run to create the admin user",
+          hint: "Run script 019 to create the admin user, or visit /admin/setup",
         },
         { status: 401 },
       )
@@ -83,7 +92,6 @@ export async function POST(request: NextRequest) {
     console.log("[v0] API: Session created, setting cookie...")
 
     // Set cookie
-    const cookieStore = await cookies()
     cookieStore.set("admin_session", sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -101,7 +109,7 @@ export async function POST(request: NextRequest) {
       {
         error: "An error occurred during login",
         details: error instanceof Error ? error.message : "Unknown error",
-        hint: "Please ensure scripts 018 and 019 have been run",
+        hint: "Please ensure scripts 018 and 019 have been run, or visit /admin/setup",
       },
       { status: 500 },
     )
