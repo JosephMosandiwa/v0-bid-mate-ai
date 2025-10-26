@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export interface UsageStats {
   aiAnalyses: {
@@ -28,7 +28,7 @@ export class UsageTrackingService {
     inputTokens: number
     outputTokens: number
   }) {
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
 
     // Calculate cost based on GPT-4o pricing
     // Input: $2.50 per 1M tokens, Output: $10 per 1M tokens
@@ -61,7 +61,7 @@ export class UsageTrackingService {
     success: boolean
     errorMessage?: string
   }) {
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
 
     const { error } = await supabase.from("scraping_usage_logs").insert({
       source_id: params.sourceId,
@@ -79,74 +79,86 @@ export class UsageTrackingService {
 
   // Get current month usage stats
   static async getCurrentMonthUsage(): Promise<UsageStats> {
-    const supabase = await createClient()
-    const now = new Date()
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    try {
+      const supabase = createAdminClient()
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-    // Get AI usage
-    const { data: aiData, error: aiError } = await supabase
-      .from("ai_usage_logs")
-      .select("input_tokens, output_tokens, estimated_cost_usd")
-      .gte("created_at", monthStart.toISOString())
+      // Get AI usage
+      const { data: aiData, error: aiError } = await supabase
+        .from("ai_usage_logs")
+        .select("input_tokens, output_tokens, estimated_cost_usd")
+        .gte("created_at", monthStart.toISOString())
 
-    // If table doesn't exist, return default values
-    if (aiError && aiError.code === "42P01") {
-      console.log("[v0] Usage tracking tables not found. Please run script 017 to create them.")
+      if (aiError) {
+        console.error("[v0] Error fetching AI usage:", aiError)
+      }
+
+      const aiCount = aiData?.length || 0
+      const aiTotalCost = aiData?.reduce((sum, log) => sum + Number(log.estimated_cost_usd), 0) || 0
+      const aiAvgCost = aiCount > 0 ? aiTotalCost / aiCount : 0
+
+      // Get scraping usage
+      const { data: scrapingData, error: scrapingError } = await supabase
+        .from("scraping_usage_logs")
+        .select("api_credits_used, success")
+        .gte("created_at", monthStart.toISOString())
+
+      if (scrapingError) {
+        console.error("[v0] Error fetching scraping usage:", scrapingError)
+      }
+
+      const scrapingCount = scrapingData?.length || 0
+      const scrapingCredits = scrapingData?.reduce((sum, log) => sum + log.api_credits_used, 0) || 0
+      const scrapingSuccess = scrapingData?.filter((log) => log.success).length || 0
+      const scrapingSuccessRate = scrapingCount > 0 ? (scrapingSuccess / scrapingCount) * 100 : 0
+
+      // Get storage usage
+      const { data: storageData, error: storageError } = await supabase
+        .from("storage_usage_snapshots")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single()
+
+      if (storageError && storageError.code !== "PGRST116") {
+        // PGRST116 is "no rows returned", which is fine
+        console.error("[v0] Error fetching storage usage:", storageError)
+      }
+
+      const storageSizeGB = storageData?.total_size_gb || 0
+      const storageCost = storageSizeGB * 0.023 // $0.023 per GB
+
+      // Calculate total monthly cost
+      const monthlyTotal = aiTotalCost + storageCost
+
+      return {
+        aiAnalyses: {
+          count: aiCount,
+          totalCost: aiTotalCost,
+          avgCostPerAnalysis: aiAvgCost,
+        },
+        scraping: {
+          count: scrapingCount,
+          creditsUsed: scrapingCredits,
+          successRate: scrapingSuccessRate,
+        },
+        storage: {
+          totalFiles: storageData?.total_files || 0,
+          totalSizeGB: storageSizeGB,
+          estimatedCost: storageCost,
+        },
+        monthlyTotal,
+      }
+    } catch (error) {
+      console.error("[v0] Error in getCurrentMonthUsage:", error)
       return this.getDefaultStats()
-    }
-
-    const aiCount = aiData?.length || 0
-    const aiTotalCost = aiData?.reduce((sum, log) => sum + Number(log.estimated_cost_usd), 0) || 0
-    const aiAvgCost = aiCount > 0 ? aiTotalCost / aiCount : 0
-
-    // Get scraping usage
-    const { data: scrapingData } = await supabase
-      .from("scraping_usage_logs")
-      .select("api_credits_used, success")
-      .gte("created_at", monthStart.toISOString())
-
-    const scrapingCount = scrapingData?.length || 0
-    const scrapingCredits = scrapingData?.reduce((sum, log) => sum + log.api_credits_used, 0) || 0
-    const scrapingSuccess = scrapingData?.filter((log) => log.success).length || 0
-    const scrapingSuccessRate = scrapingCount > 0 ? (scrapingSuccess / scrapingCount) * 100 : 0
-
-    // Get storage usage
-    const { data: storageData } = await supabase
-      .from("storage_usage_snapshots")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single()
-
-    const storageSizeGB = storageData?.total_size_gb || 0
-    const storageCost = storageSizeGB * 0.023 // $0.023 per GB
-
-    // Calculate total monthly cost
-    const monthlyTotal = aiTotalCost + storageCost
-
-    return {
-      aiAnalyses: {
-        count: aiCount,
-        totalCost: aiTotalCost,
-        avgCostPerAnalysis: aiAvgCost,
-      },
-      scraping: {
-        count: scrapingCount,
-        creditsUsed: scrapingCredits,
-        successRate: scrapingSuccessRate,
-      },
-      storage: {
-        totalFiles: storageData?.total_files || 0,
-        totalSizeGB: storageSizeGB,
-        estimatedCost: storageCost,
-      },
-      monthlyTotal,
     }
   }
 
   // Update storage snapshot
   static async updateStorageSnapshot() {
-    const supabase = await createClient()
+    const supabase = await createAdminClient()
 
     // Get total document count and size
     const { data: documents } = await supabase.from("tender_documents").select("file_size")
