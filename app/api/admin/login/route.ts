@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createServerClient } from "@supabase/ssr"
+import { createClient } from "@supabase/supabase-js"
 import bcrypt from "bcryptjs"
 import { cookies } from "next/headers"
 
@@ -9,20 +9,10 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] API: Admin login attempt for:", email)
 
-    const cookieStore = await cookies()
-
-    const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-          } catch {
-            // Ignore errors from Server Components
-          }
-        },
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
       },
     })
 
@@ -31,7 +21,7 @@ export async function POST(request: NextRequest) {
     const { data: admin, error: queryError } = await supabase
       .from("admin_users")
       .select("*")
-      .eq("email", email)
+      .eq("email", email.toLowerCase())
       .eq("is_active", true)
       .single()
 
@@ -41,7 +31,7 @@ export async function POST(request: NextRequest) {
         {
           error: "Database query failed",
           details: queryError.message,
-          hint: "Make sure script 018 has been run to create admin tables",
+          hint: "Make sure script 018 has been run to create admin tables, and script 021 to disable RLS",
         },
         { status: 500 },
       )
@@ -92,6 +82,7 @@ export async function POST(request: NextRequest) {
     console.log("[v0] API: Session created, setting cookie...")
 
     // Set cookie
+    const cookieStore = await cookies()
     cookieStore.set("admin_session", sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -109,7 +100,7 @@ export async function POST(request: NextRequest) {
       {
         error: "An error occurred during login",
         details: error instanceof Error ? error.message : "Unknown error",
-        hint: "Please ensure scripts 018 and 019 have been run, or visit /admin/setup",
+        hint: "Please ensure scripts 018, 019, and 021 have been run, or visit /admin/setup",
       },
       { status: 500 },
     )

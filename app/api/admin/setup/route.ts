@@ -17,8 +17,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 })
     }
 
-    // Create Supabase client with service role
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
 
     // Check if any admin users already exist
     const { data: existingAdmins, error: checkError } = await supabase.from("admin_users").select("id").limit(1)
@@ -26,7 +30,7 @@ export async function POST(request: NextRequest) {
     if (checkError) {
       console.error("[v0] Error checking existing admins:", checkError)
       return NextResponse.json(
-        { error: "Database error. Make sure script 018 has been run to create admin tables." },
+        { error: "Database error: " + checkError.message + ". Make sure script 018 and 021 have been run." },
         { status: 500 },
       )
     }
@@ -66,6 +70,9 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("[v0] Admin setup error:", error)
-    return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 })
+    return NextResponse.json(
+      { error: "An unexpected error occurred: " + (error instanceof Error ? error.message : "Unknown") },
+      { status: 500 },
+    )
   }
 }
