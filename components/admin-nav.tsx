@@ -5,26 +5,54 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Shield, Database, TrendingUp, LogOut, Menu } from "lucide-react"
 import { logoutAdmin } from "@/app/admin/login/actions"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
-interface AdminNavProps {
-  admin: {
-    email: string
-    full_name: string | null
-    role: string
-  }
+interface AdminData {
+  email: string
+  full_name: string | null
+  role: string
 }
 
-export function AdminNav({ admin }: AdminNavProps) {
+export function AdminNav() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const [admin, setAdmin] = useState<AdminData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchAdminData() {
+      try {
+        const response = await fetch("/api/admin/me")
+        if (response.ok) {
+          const data = await response.json()
+          setAdmin(data)
+        }
+      } catch (error) {
+        console.error("[v0] Failed to fetch admin data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAdminData()
+  }, [])
 
   const navItems = [
     { href: "/admin/dashboard", label: "Dashboard", icon: TrendingUp },
     { href: "/admin/scraping", label: "Scraping", icon: Database },
     { href: "/admin/usage", label: "Usage & Billing", icon: TrendingUp },
   ]
+
+  if (loading) {
+    return (
+      <div className="hidden lg:block fixed left-0 top-0 h-full w-64 border-r bg-background">
+        <div className="flex items-center gap-2 px-4 py-3 border-b">
+          <Shield className="h-5 w-5 text-primary" />
+          <span className="font-semibold">Admin Panel</span>
+        </div>
+      </div>
+    )
+  }
 
   const NavContent = () => (
     <>
@@ -53,18 +81,20 @@ export function AdminNav({ admin }: AdminNavProps) {
         })}
       </nav>
 
-      <div className="p-4 border-t">
-        <div className="mb-3 px-3">
-          <p className="text-sm font-medium">{admin.full_name || admin.email}</p>
-          <p className="text-xs text-muted-foreground">{admin.role}</p>
+      {admin && (
+        <div className="p-4 border-t">
+          <div className="mb-3 px-3">
+            <p className="text-sm font-medium">{admin.full_name || admin.email}</p>
+            <p className="text-xs text-muted-foreground">{admin.role}</p>
+          </div>
+          <form action={logoutAdmin}>
+            <Button variant="outline" className="w-full bg-transparent" type="submit">
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </form>
         </div>
-        <form action={logoutAdmin}>
-          <Button variant="outline" className="w-full bg-transparent" type="submit">
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
-        </form>
-      </div>
+      )}
     </>
   )
 
