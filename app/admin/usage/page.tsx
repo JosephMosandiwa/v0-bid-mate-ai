@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PricingCalculator } from "@/components/pricing-calculator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, DollarSign, FileText, Database, TrendingUp } from "lucide-react"
 import { AdminNav } from "@/components/admin-nav"
 
 export const dynamic = "force-dynamic"
@@ -30,7 +30,7 @@ async function UsageStats() {
     return (
       <>
         {tablesNotSetup && (
-          <Alert className="mb-4">
+          <Alert className="mb-6">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Usage Tracking Not Set Up</AlertTitle>
             <AlertDescription>
@@ -40,50 +40,64 @@ async function UsageStats() {
           </Alert>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="border-l-4 border-l-blue-500">
             <CardHeader className="pb-3">
-              <CardDescription>AI Analyses This Month</CardDescription>
-              <CardTitle className="text-3xl">{stats.aiAnalyses.count}</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardDescription>AI Analyses This Month</CardDescription>
+                <FileText className="h-4 w-4 text-blue-500" />
+              </div>
+              <CardTitle className="text-3xl font-bold">{stats.aiAnalyses.count}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-sm text-muted-foreground">Total cost: ${stats.aiAnalyses.totalCost.toFixed(2)}</div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-xs text-muted-foreground mt-1">
                 Avg: ${stats.aiAnalyses.avgCostPerAnalysis.toFixed(4)} per analysis
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-green-500">
             <CardHeader className="pb-3">
-              <CardDescription>Scraping Requests</CardDescription>
-              <CardTitle className="text-3xl">{stats.scraping.count}</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardDescription>Scraping Requests</CardDescription>
+                <TrendingUp className="h-4 w-4 text-green-500" />
+              </div>
+              <CardTitle className="text-3xl font-bold">{stats.scraping.count}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-sm text-muted-foreground">
                 Credits used: {stats.scraping.creditsUsed.toLocaleString()}
               </div>
-              <div className="text-sm text-muted-foreground">
+              <div className="text-xs text-muted-foreground mt-1">
                 Success rate: {stats.scraping.successRate.toFixed(1)}%
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-purple-500">
             <CardHeader className="pb-3">
-              <CardDescription>Document Storage</CardDescription>
-              <CardTitle className="text-3xl">{stats.storage.totalFiles}</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardDescription>Document Storage</CardDescription>
+                <Database className="h-4 w-4 text-purple-500" />
+              </div>
+              <CardTitle className="text-3xl font-bold">{stats.storage.totalFiles}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-sm text-muted-foreground">Size: {stats.storage.totalSizeGB.toFixed(2)} GB</div>
-              <div className="text-sm text-muted-foreground">Cost: ${stats.storage.estimatedCost.toFixed(2)}/month</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Cost: ${stats.storage.estimatedCost.toFixed(2)}/month
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-orange-500">
             <CardHeader className="pb-3">
-              <CardDescription>Total Monthly Cost</CardDescription>
-              <CardTitle className="text-3xl">${stats.monthlyTotal.toFixed(2)}</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardDescription>Total Monthly Cost</CardDescription>
+                <DollarSign className="h-4 w-4 text-orange-500" />
+              </div>
+              <CardTitle className="text-3xl font-bold">${stats.monthlyTotal.toFixed(2)}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-sm text-muted-foreground">Approximately R{(stats.monthlyTotal * 18).toFixed(2)}</div>
@@ -111,23 +125,26 @@ export default function UsageMonitoringPage() {
   return (
     <div className="min-h-screen bg-background">
       <AdminNav />
-      <div className="space-y-6 p-6">
-        <div>
-          <h1 className="text-3xl font-bold">Usage Monitoring</h1>
-          <p className="text-muted-foreground">Track your infrastructure costs and plan your pricing</p>
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold tracking-tight">Usage Monitoring</h1>
+          <p className="text-lg text-muted-foreground">
+            Track your infrastructure costs and plan your pricing strategy
+          </p>
         </div>
 
         <Suspense
           fallback={
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
               {[...Array(4)].map((_, i) => (
                 <Card key={i}>
                   <CardHeader>
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-8 w-16" />
+                    <Skeleton className="h-4 w-32 mb-2" />
+                    <Skeleton className="h-10 w-20" />
                   </CardHeader>
                   <CardContent>
-                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-40 mb-2" />
+                    <Skeleton className="h-3 w-36" />
                   </CardContent>
                 </Card>
               ))}
@@ -137,8 +154,13 @@ export default function UsageMonitoringPage() {
           <UsageStats />
         </Suspense>
 
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold mb-4">Pricing Calculator</h2>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold tracking-tight">Pricing Calculator</h2>
+            <p className="text-muted-foreground">
+              Calculate your costs and determine optimal pricing for your customers
+            </p>
+          </div>
           <PricingCalculator />
         </div>
       </div>
