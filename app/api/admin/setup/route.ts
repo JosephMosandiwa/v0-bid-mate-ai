@@ -24,8 +24,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Check if any admin users already exist
-    const { data: existingAdmins, error: checkError } = await supabase.from("admin_users").select("id").limit(1)
+    const { data: existingAdmins, error: checkError } = await supabase.from("admin_users").select("*")
 
     if (checkError) {
       console.error("[v0] Error checking existing admins:", checkError)
@@ -35,8 +34,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log("[v0] Existing admins found:", existingAdmins?.length || 0)
     if (existingAdmins && existingAdmins.length > 0) {
-      return NextResponse.json({ error: "Admin user already exists. Please use the login page." }, { status: 400 })
+      console.log(
+        "[v0] Existing admin details:",
+        existingAdmins.map((a) => ({ email: a.email, is_active: a.is_active })),
+      )
+
+      console.log("[v0] Deleting existing admins to allow recreation...")
+      const { error: deleteError } = await supabase
+        .from("admin_users")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000")
+
+      if (deleteError) {
+        console.error("[v0] Error deleting existing admins:", deleteError)
+        return NextResponse.json({ error: "Failed to reset admin users: " + deleteError.message }, { status: 500 })
+      }
+
+      console.log("[v0] Existing admins deleted successfully")
     }
 
     // Hash password
