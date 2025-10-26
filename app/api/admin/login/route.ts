@@ -26,9 +26,27 @@ export async function POST(request: NextRequest) {
       .eq("is_active", true)
       .single()
 
-    if (queryError || !admin) {
-      console.log("[v0] API: Admin not found or query error:", queryError)
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
+    if (queryError) {
+      console.log("[v0] API: Query error:", queryError)
+      return NextResponse.json(
+        {
+          error: "Database query failed",
+          details: queryError.message,
+          hint: "Make sure script 018 has been run to create admin tables",
+        },
+        { status: 500 },
+      )
+    }
+
+    if (!admin) {
+      console.log("[v0] API: Admin not found with email:", email)
+      return NextResponse.json(
+        {
+          error: "No admin user found with this email",
+          hint: "Make sure script 019 has been run to create the admin user",
+        },
+        { status: 401 },
+      )
     }
 
     console.log("[v0] API: Admin found, verifying password...")
@@ -37,8 +55,8 @@ export async function POST(request: NextRequest) {
     const isValidPassword = await bcrypt.compare(password, admin.password_hash)
 
     if (!isValidPassword) {
-      console.log("[v0] API: Invalid password")
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
+      console.log("[v0] API: Invalid password for:", email)
+      return NextResponse.json({ error: "Incorrect password" }, { status: 401 })
     }
 
     console.log("[v0] API: Password valid, creating session...")
@@ -80,7 +98,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[v0] API: Login error:", error)
     return NextResponse.json(
-      { error: "An error occurred during login. Please ensure script 018 has been run." },
+      {
+        error: "An error occurred during login",
+        details: error instanceof Error ? error.message : "Unknown error",
+        hint: "Please ensure scripts 018 and 019 have been run",
+      },
       { status: 500 },
     )
   }
