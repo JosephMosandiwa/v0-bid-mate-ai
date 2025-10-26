@@ -123,47 +123,49 @@ async function UsageStats() {
 
 export default function UsageMonitoringPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background">
       <AdminNav />
-      <div className="container mx-auto px-4 py-8 space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight">Usage Monitoring</h1>
-          <p className="text-lg text-muted-foreground">
-            Track your infrastructure costs and plan your pricing strategy
-          </p>
-        </div>
-
-        <Suspense
-          fallback={
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {[...Array(4)].map((_, i) => (
-                <Card key={i}>
-                  <CardHeader>
-                    <Skeleton className="h-4 w-32 mb-2" />
-                    <Skeleton className="h-10 w-20" />
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-4 w-40 mb-2" />
-                    <Skeleton className="h-3 w-36" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          }
-        >
-          <UsageStats />
-        </Suspense>
-
-        <div className="space-y-4">
+      <main className="flex-1 lg:ml-0">
+        <div className="container mx-auto px-4 py-8 space-y-8 max-w-7xl">
           <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tight">Pricing Calculator</h2>
-            <p className="text-muted-foreground">
-              Calculate your costs and determine optimal pricing for your customers
+            <h1 className="text-4xl font-bold tracking-tight">Usage Monitoring</h1>
+            <p className="text-lg text-muted-foreground">
+              Track your infrastructure costs and plan your pricing strategy
             </p>
           </div>
-          <PricingCalculator />
+
+          <Suspense
+            fallback={
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                {[...Array(4)].map((_, i) => (
+                  <Card key={i}>
+                    <CardHeader>
+                      <Skeleton className="h-4 w-32 mb-2" />
+                      <Skeleton className="h-10 w-20" />
+                    </CardHeader>
+                    <CardContent>
+                      <Skeleton className="h-4 w-40 mb-2" />
+                      <Skeleton className="h-3 w-36" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            }
+          >
+            <UsageStats />
+          </Suspense>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <h2 className="text-3xl font-bold tracking-tight">Pricing Calculator</h2>
+              <p className="text-muted-foreground">
+                Calculate your costs and determine optimal pricing for your customers
+              </p>
+            </div>
+            <PricingCalculator />
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

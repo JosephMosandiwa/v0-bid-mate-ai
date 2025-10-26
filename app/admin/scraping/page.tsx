@@ -201,235 +201,242 @@ export default function ScrapingAdminPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex min-h-screen bg-background">
+        <AdminNav />
+        <main className="flex-1 lg:ml-0">
+          <div className="flex items-center justify-center h-96">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        </main>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background">
       <AdminNav />
-      <div className="p-6 md:p-8 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Scraping Administration</h1>
-          <p className="text-muted-foreground">Manage tender sources and scraping operations</p>
-        </div>
-
-        {/* Statistics Cards */}
-        {stats && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Sources</CardTitle>
-                <Database className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalSources}</div>
-                <p className="text-xs text-muted-foreground">{stats.activeSources} active</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Tenders</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalTenders}</div>
-                <p className="text-xs text-muted-foreground">{stats.activeTenders} active</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Recent Scrapes</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.recentScrapes.length}</div>
-                <p className="text-xs text-muted-foreground">Last 10 operations</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
-                <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {stats.recentScrapes.length > 0
-                    ? Math.round(
-                        (stats.recentScrapes.filter((s) => s.last_scrape_status === "success").length /
-                          stats.recentScrapes.length) *
-                          100,
-                      )
-                    : 0}
-                  %
-                </div>
-                <p className="text-xs text-muted-foreground">From recent scrapes</p>
-              </CardContent>
-            </Card>
+      <main className="flex-1 lg:ml-0">
+        <div className="container mx-auto px-4 py-8 space-y-6 max-w-7xl">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Scraping Administration</h1>
+            <p className="text-muted-foreground">Manage tender sources and scraping operations</p>
           </div>
-        )}
 
-        {/* Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Scraping Actions</CardTitle>
-            <CardDescription>Trigger scraping operations for all or individual sources</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={handleScrapeAll} disabled={scraping !== null} size="lg">
-              {scraping === -1 ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Scraping All Sources...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Scrape All Active Sources
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+          {/* Statistics Cards */}
+          {stats && (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Sources</CardTitle>
+                  <Database className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.totalSources}</div>
+                  <p className="text-xs text-muted-foreground">{stats.activeSources} active</p>
+                </CardContent>
+              </Card>
 
-        {/* Sources Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Tender Sources</CardTitle>
-            <CardDescription>Manage individual tender sources and their scraping configuration</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Filters */}
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Input
-                  placeholder="Search sources..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="max-w-sm"
-                />
-              </div>
-              <Select value={levelFilter} onValueChange={setLevelFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Levels</SelectItem>
-                  <SelectItem value="National">National</SelectItem>
-                  <SelectItem value="Provincial">Provincial</SelectItem>
-                  <SelectItem value="Metro">Metro</SelectItem>
-                  <SelectItem value="SOE">SOE</SelectItem>
-                  <SelectItem value="Public Entity">Public Entity</SelectItem>
-                </SelectContent>
-              </Select>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Tenders</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.totalTenders}</div>
+                  <p className="text-xs text-muted-foreground">{stats.activeTenders} active</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Recent Scrapes</CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.recentScrapes.length}</div>
+                  <p className="text-xs text-muted-foreground">Last 10 operations</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+                  <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {stats.recentScrapes.length > 0
+                      ? Math.round(
+                          (stats.recentScrapes.filter((s) => s.last_scrape_status === "success").length /
+                            stats.recentScrapes.length) *
+                            100,
+                        )
+                      : 0}
+                    %
+                  </div>
+                  <p className="text-xs text-muted-foreground">From recent scrapes</p>
+                </CardContent>
+              </Card>
             </div>
+          )}
 
-            {/* Table */}
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Level</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Last Scraped</TableHead>
-                    <TableHead>Tenders</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSources.map((source) => (
-                    <TableRow key={source.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{source.name}</div>
-                          <div className="text-sm text-muted-foreground">{source.province || "All"}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{source.level}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {source.scraping_enabled ? (
-                            <Badge className="bg-green-500/10 text-green-500">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Enabled
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">
-                              <Pause className="h-3 w-3 mr-1" />
-                              Disabled
-                            </Badge>
-                          )}
-                          {source.last_scrape_status === "success" && (
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          )}
-                          {source.last_scrape_status === "failed" && <XCircle className="h-4 w-4 text-red-500" />}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {source.last_scraped_at ? new Date(source.last_scraped_at).toLocaleString() : "Never"}
-                      </TableCell>
-                      <TableCell>{source.total_tenders_scraped}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleToggleScraping(source.id, !source.scraping_enabled)}
-                          >
-                            {source.scraping_enabled ? (
-                              <>
-                                <Pause className="h-3 w-3 mr-1" />
-                                Disable
-                              </>
-                            ) : (
-                              <>
-                                <Play className="h-3 w-3 mr-1" />
-                                Enable
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleScrapeSource(source.id)}
-                            disabled={scraping === source.id || !source.scraping_enabled}
-                          >
-                            {scraping === source.id ? (
-                              <>
-                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                Scraping...
-                              </>
-                            ) : (
-                              <>
-                                <RefreshCw className="h-3 w-3 mr-1" />
-                                Scrape
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </TableCell>
+          {/* Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Scraping Actions</CardTitle>
+              <CardDescription>Trigger scraping operations for all or individual sources</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={handleScrapeAll} disabled={scraping !== null} size="lg">
+                {scraping === -1 ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Scraping All Sources...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Scrape All Active Sources
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Sources Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Tender Sources</CardTitle>
+              <CardDescription>Manage individual tender sources and their scraping configuration</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Filters */}
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Search sources..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="max-w-sm"
+                  />
+                </div>
+                <Select value={levelFilter} onValueChange={setLevelFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Levels</SelectItem>
+                    <SelectItem value="National">National</SelectItem>
+                    <SelectItem value="Provincial">Provincial</SelectItem>
+                    <SelectItem value="Metro">Metro</SelectItem>
+                    <SelectItem value="SOE">SOE</SelectItem>
+                    <SelectItem value="Public Entity">Public Entity</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Table */}
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Source</TableHead>
+                      <TableHead>Level</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Last Scraped</TableHead>
+                      <TableHead>Tenders</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            {filteredSources.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No sources found matching your filters</p>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSources.map((source) => (
+                      <TableRow key={source.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{source.name}</div>
+                            <div className="text-sm text-muted-foreground">{source.province || "All"}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{source.level}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {source.scraping_enabled ? (
+                              <Badge className="bg-green-500/10 text-green-500">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Enabled
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">
+                                <Pause className="h-3 w-3 mr-1" />
+                                Disabled
+                              </Badge>
+                            )}
+                            {source.last_scrape_status === "success" && (
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            )}
+                            {source.last_scrape_status === "failed" && <XCircle className="h-4 w-4 text-red-500" />}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {source.last_scraped_at ? new Date(source.last_scraped_at).toLocaleString() : "Never"}
+                        </TableCell>
+                        <TableCell>{source.total_tenders_scraped}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleToggleScraping(source.id, !source.scraping_enabled)}
+                            >
+                              {source.scraping_enabled ? (
+                                <>
+                                  <Pause className="h-3 w-3 mr-1" />
+                                  Disable
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="h-3 w-3 mr-1" />
+                                  Enable
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleScrapeSource(source.id)}
+                              disabled={scraping === source.id || !source.scraping_enabled}
+                            >
+                              {scraping === source.id ? (
+                                <>
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                  Scraping...
+                                </>
+                              ) : (
+                                <>
+                                  <RefreshCw className="h-3 w-3 mr-1" />
+                                  Scrape
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+
+              {filteredSources.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No sources found matching your filters</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </main>
     </div>
   )
 }
