@@ -36,8 +36,31 @@ export default function RootLayout({
                   event.preventDefault();
                   return;
                 }
+                
+                // Log fetch errors with more detail
+                if (event.reason?.message?.includes('fetch') || event.reason?.message?.includes('Failed to fetch')) {
+                  console.error('[v0] Fetch error details:', {
+                    message: event.reason?.message,
+                    stack: event.reason?.stack,
+                    url: event.reason?.url || 'unknown'
+                  });
+                  // Prevent the error from breaking the app
+                  event.preventDefault();
+                  return;
+                }
+                
                 console.error('[v0] Unhandled promise rejection:', event.reason);
               });
+              
+              // Intercept fetch to log all requests
+              const originalFetch = window.fetch;
+              window.fetch = function(...args) {
+                console.log('[v0] Fetch request:', args[0]);
+                return originalFetch.apply(this, args).catch(error => {
+                  console.error('[v0] Fetch failed for:', args[0], error);
+                  throw error;
+                });
+              };
             `,
           }}
         />
