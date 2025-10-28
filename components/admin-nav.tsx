@@ -3,10 +3,11 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Shield, Database, TrendingUp, LogOut, Menu } from "lucide-react"
+import { Shield, Database, TrendingUp, LogOut, Menu, LayoutDashboard, Users, Settings, FileText } from "lucide-react"
 import { logoutAdmin } from "@/app/admin/login/actions"
 import { useState, useEffect } from "react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 interface AdminData {
   email: string
@@ -38,17 +39,20 @@ export function AdminNav() {
   }, [])
 
   const navItems = [
-    { href: "/admin/dashboard", label: "Dashboard", icon: TrendingUp },
+    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/scraping", label: "Scraping", icon: Database },
     { href: "/admin/usage", label: "Usage & Billing", icon: TrendingUp },
+    { href: "/admin/users", label: "Users", icon: Users },
+    { href: "/admin/logs", label: "Activity Logs", icon: FileText },
+    { href: "/admin/settings", label: "Settings", icon: Settings },
   ]
 
   if (loading) {
     return (
-      <div className="hidden lg:block fixed left-0 top-0 h-full w-64 border-r bg-background">
-        <div className="flex items-center gap-2 px-4 py-3 border-b">
-          <Shield className="h-5 w-5 text-primary" />
-          <span className="font-semibold">Admin Panel</span>
+      <div className="hidden lg:block fixed left-0 top-0 h-full w-64 border-r bg-card">
+        <div className="flex items-center gap-2 px-6 py-4 border-b">
+          <Shield className="h-6 w-6 text-primary" />
+          <span className="font-bold text-lg">Admin Panel</span>
         </div>
       </div>
     )
@@ -56,12 +60,12 @@ export function AdminNav() {
 
   const NavContent = () => (
     <>
-      <div className="flex items-center gap-2 px-4 py-3 border-b">
-        <Shield className="h-5 w-5 text-primary" />
-        <span className="font-semibold">Admin Panel</span>
+      <div className="flex items-center gap-2 px-6 py-4 border-b bg-primary/5">
+        <Shield className="h-6 w-6 text-primary" />
+        <span className="font-bold text-lg">Admin Panel</span>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href
@@ -70,25 +74,34 @@ export function AdminNav() {
               key={item.href}
               href={item.href}
               onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                isActive
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "hover:bg-muted text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Icon className="h-4 w-4" />
-              <span>{item.label}</span>
+              <Icon className="h-5 w-5" />
+              <span className="font-medium">{item.label}</span>
             </Link>
           )
         })}
       </nav>
 
       {admin && (
-        <div className="p-4 border-t">
-          <div className="mb-3 px-3">
-            <p className="text-sm font-medium">{admin.full_name || admin.email}</p>
-            <p className="text-xs text-muted-foreground">{admin.role}</p>
+        <div className="p-4 border-t bg-muted/30">
+          <div className="flex items-center gap-3 mb-4 px-2">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback className="bg-primary text-primary-foreground">
+                {admin.full_name?.charAt(0) || admin.email.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold truncate">{admin.full_name || admin.email}</p>
+              <p className="text-xs text-muted-foreground capitalize">{admin.role}</p>
+            </div>
           </div>
           <form action={logoutAdmin}>
-            <Button variant="outline" className="w-full bg-transparent" type="submit">
+            <Button variant="outline" className="w-full bg-transparent" type="submit" size="sm">
               <LogOut className="h-4 w-4 mr-2" />
               Logout
             </Button>
@@ -101,11 +114,11 @@ export function AdminNav() {
   return (
     <>
       {/* Mobile Navigation */}
-      <div className="lg:hidden border-b bg-background">
+      <div className="lg:hidden border-b bg-card sticky top-0 z-50">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
-            <span className="font-semibold">Admin Panel</span>
+            <span className="font-bold">Admin Panel</span>
           </div>
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
@@ -123,7 +136,7 @@ export function AdminNav() {
       </div>
 
       {/* Desktop Navigation */}
-      <div className="hidden lg:block fixed left-0 top-0 h-full w-64 border-r bg-background">
+      <div className="hidden lg:block fixed left-0 top-0 h-full w-64 border-r bg-card shadow-sm">
         <div className="flex flex-col h-full">
           <NavContent />
         </div>

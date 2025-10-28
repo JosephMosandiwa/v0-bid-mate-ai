@@ -1,8 +1,9 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle2, FileText, Search, Sparkles, TrendingUp, Users, Zap } from "lucide-react"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { FileText, Search, Sparkles, TrendingUp, Users, Zap } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { PricingPlans } from "@/components/pricing-plans"
 
 export default function LandingPage() {
   return (
@@ -177,121 +178,11 @@ export default function LandingPage() {
             Flexible pricing for businesses of all sizes
           </p>
         </div>
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {/* Starter Plan */}
-          <Card className="border-border">
-            <CardHeader>
-              <CardTitle>Starter</CardTitle>
-              <CardDescription>Perfect for small businesses</CardDescription>
-              <div className="mt-4">
-                <span className="text-4xl font-bold text-foreground">R499</span>
-                <span className="text-muted-foreground">/month</span>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-                  <span className="text-sm text-muted-foreground">5 tender analyses per month</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-                  <span className="text-sm text-muted-foreground">Basic AI assistance</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-                  <span className="text-sm text-muted-foreground">Tender search access</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-                  <span className="text-sm text-muted-foreground">Email support</span>
-                </li>
-              </ul>
-              <Button className="w-full mt-6 bg-transparent" variant="outline" asChild>
-                <Link href="/signup?plan=starter">Get Started</Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Professional Plan */}
-          <Card className="border-primary border-2 relative">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-primary-foreground text-xs font-medium rounded-full">
-              Most Popular
-            </div>
-            <CardHeader>
-              <CardTitle>Professional</CardTitle>
-              <CardDescription>For growing businesses</CardDescription>
-              <div className="mt-4">
-                <span className="text-4xl font-bold text-foreground">R1,499</span>
-                <span className="text-muted-foreground">/month</span>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-                  <span className="text-sm text-muted-foreground">25 tender analyses per month</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-                  <span className="text-sm text-muted-foreground">Advanced AI assistance</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-                  <span className="text-sm text-muted-foreground">Unlimited tender searches</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-                  <span className="text-sm text-muted-foreground">Team collaboration (5 users)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-                  <span className="text-sm text-muted-foreground">Priority support</span>
-                </li>
-              </ul>
-              <Button className="w-full mt-6" asChild>
-                <Link href="/signup?plan=professional">Get Started</Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Enterprise Plan */}
-          <Card className="border-border">
-            <CardHeader>
-              <CardTitle>Enterprise</CardTitle>
-              <CardDescription>For large organizations</CardDescription>
-              <div className="mt-4">
-                <span className="text-4xl font-bold text-foreground">Custom</span>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-                  <span className="text-sm text-muted-foreground">Unlimited tender analyses</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-                  <span className="text-sm text-muted-foreground">Custom AI training</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-                  <span className="text-sm text-muted-foreground">Unlimited users</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-                  <span className="text-sm text-muted-foreground">Dedicated account manager</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-secondary shrink-0 mt-0.5" />
-                  <span className="text-sm text-muted-foreground">24/7 phone support</span>
-                </li>
-              </ul>
-              <Button className="w-full mt-6 bg-transparent" variant="outline" asChild>
-                <Link href="/contact">Contact Sales</Link>
-              </Button>
-            </CardContent>
-          </Card>
+        <PricingPlans />
+        <div className="mt-8 text-center">
+          <Link href="/pricing" className="text-primary hover:underline text-sm">
+            View detailed pricing comparison →
+          </Link>
         </div>
       </section>
 
