@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Save, CheckCircle2, Download } from "lucide-react"
+import { Loader2, Save, CheckCircle2, Download, Eye } from "lucide-react"
 import { GoogleAddressAutocomplete } from "@/components/google-address-autocomplete"
 import { formatZAR } from "@/lib/utils/currency"
 
@@ -147,6 +147,35 @@ export function DynamicTenderForm({ tenderId, formFields, googleMapsApiKey }: Dy
       console.error("[v0] Error saving responses:", error)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handlePreviewFilledPdf = async (documentId: string) => {
+    setFillingPdf(true)
+    try {
+      const response = await fetch(`/api/tenders/scraped/${tenderId}/fill-pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to fill PDF")
+      }
+
+      // Open PDF in new tab for preview
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      window.open(url, "_blank")
+
+      // Clean up after a delay to allow the new tab to load
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+    } catch (error: any) {
+      console.error("[v0] Error previewing filled PDF:", error)
+      alert(error.message || "Failed to preview filled PDF")
+    } finally {
+      setFillingPdf(false)
     }
   }
 
@@ -335,6 +364,64 @@ export function DynamicTenderForm({ tenderId, formFields, googleMapsApiKey }: Dy
 
   return (
     <div className="space-y-6">
+      {availableDocuments.length > 0 && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="text-lg">Document Progress</CardTitle>
+            <CardDescription>
+              Preview or download your tender document with the information you've filled in so far
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button
+                onClick={() => handlePreviewFilledPdf(availableDocuments[0].id)}
+                disabled={fillingPdf}
+                size="lg"
+                variant="default"
+              >
+                {fillingPdf ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Preview Progress
+                  </>
+                )}
+              </Button>
+
+              <Button
+                onClick={() => handleDownloadFilledPdf(availableDocuments[0].id)}
+                disabled={fillingPdf}
+                size="lg"
+                variant="outline"
+              >
+                {fillingPdf ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download PDF
+                  </>
+                )}
+              </Button>
+
+              <p className="text-sm text-muted-foreground">
+                {Object.keys(formData).length > 0
+                  ? `${Object.keys(formData).length} field${Object.keys(formData).length === 1 ? "" : "s"} filled`
+                  : "No fields filled yet"}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {sections.map((section) => {
         const sectionFields = formFields.filter((f) => (f.section || "General Information") === section)
 
@@ -375,27 +462,6 @@ export function DynamicTenderForm({ tenderId, formFields, googleMapsApiKey }: Dy
             </>
           )}
         </Button>
-
-        {availableDocuments.length > 0 && (
-          <Button
-            onClick={() => handleDownloadFilledPdf(availableDocuments[0].id)}
-            disabled={fillingPdf}
-            size="lg"
-            variant="outline"
-          >
-            {fillingPdf ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Filling PDF...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4 mr-2" />
-                Download Filled PDF
-              </>
-            )}
-          </Button>
-        )}
 
         {saved && (
           <Alert className="flex-1 bg-green-500/10 border-green-500/20">
