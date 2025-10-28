@@ -7,10 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, Loader2 } from "lucide-react"
 import { PRODUCTS, formatPrice } from "@/lib/products"
 import { createCheckoutSession } from "@/app/actions/stripe"
-import { createPayFastSubscription } from "@/app/actions/payfast"
 import { useRouter } from "next/navigation"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 
 interface PricingPlansProps {
   currentPlan?: string
@@ -20,13 +17,6 @@ interface PricingPlansProps {
 export function PricingPlans({ currentPlan, showCurrentPlan = false }: PricingPlansProps) {
   const router = useRouter()
   const [loading, setLoading] = useState<string | null>(null)
-  const [usePayFast, setUsePayFast] = useState(false)
-
-  const usdToZar = 18.5 // Approximate exchange rate
-  const formatPriceInZar = (priceInCents: number) => {
-    const zarAmount = (priceInCents / 100) * usdToZar
-    return `R${Math.round(zarAmount)}`
-  }
 
   const handleSubscribe = async (productId: string) => {
     if (productId === "enterprise") {
@@ -36,31 +26,8 @@ export function PricingPlans({ currentPlan, showCurrentPlan = false }: PricingPl
 
     setLoading(productId)
     try {
-      if (usePayFast) {
-        const subscriptionData = await createPayFastSubscription(productId)
-
-        // Create a form and submit it to PayFast
-        const form = document.createElement("form")
-        form.method = "POST"
-        form.action =
-          process.env.NODE_ENV === "production"
-            ? "https://www.payfast.co.za/eng/process"
-            : "https://sandbox.payfast.co.za/eng/process"
-
-        Object.entries(subscriptionData).forEach(([key, value]) => {
-          const input = document.createElement("input")
-          input.type = "hidden"
-          input.name = key
-          input.value = value
-          form.appendChild(input)
-        })
-
-        document.body.appendChild(form)
-        form.submit()
-      } else {
-        const checkoutUrl = await createCheckoutSession(productId)
-        window.location.href = checkoutUrl
-      }
+      const checkoutUrl = await createCheckoutSession(productId)
+      window.location.href = checkoutUrl
     } catch (error) {
       console.error("[v0] Failed to create checkout session:", error)
       alert("Failed to start checkout. Please try again.")
@@ -70,16 +37,6 @@ export function PricingPlans({ currentPlan, showCurrentPlan = false }: PricingPl
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-center gap-4 p-4 bg-muted/50 rounded-lg">
-        <Label htmlFor="payment-gateway" className="text-sm font-medium">
-          International Payment (USD)
-        </Label>
-        <Switch id="payment-gateway" checked={usePayFast} onCheckedChange={setUsePayFast} />
-        <Label htmlFor="payment-gateway" className="text-sm font-medium">
-          South African Payment (ZAR)
-        </Label>
-      </div>
-
       <div className="grid md:grid-cols-3 gap-6">
         {PRODUCTS.map((product) => {
           const isCurrentPlan = showCurrentPlan && currentPlan === product.id
@@ -111,9 +68,7 @@ export function PricingPlans({ currentPlan, showCurrentPlan = false }: PricingPl
                     <span className="text-4xl font-bold text-foreground">Custom</span>
                   ) : (
                     <>
-                      <span className="text-4xl font-bold text-foreground">
-                        {usePayFast ? formatPriceInZar(product.priceInCents) : formatPrice(product.priceInCents)}
-                      </span>
+                      <span className="text-4xl font-bold text-foreground">{formatPrice(product.priceInCents)}</span>
                       <span className="text-muted-foreground">/month</span>
                     </>
                   )}
@@ -144,7 +99,7 @@ export function PricingPlans({ currentPlan, showCurrentPlan = false }: PricingPl
                   ) : isEnterprise ? (
                     "Contact Sales"
                   ) : (
-                    `Subscribe with ${usePayFast ? "PayFast" : "Stripe"}`
+                    "Subscribe with Stripe"
                   )}
                 </Button>
               </CardContent>
