@@ -218,3 +218,83 @@ export async function deleteTender(tenderId: string) {
   revalidatePath("/dashboard/tenders")
   return { success: true }
 }
+
+export async function saveScrapedTenderToUser(scrapedTender: {
+  id: string
+  title: string
+  source_name: string
+  description?: string
+  publish_date?: string
+  close_date?: string
+  estimated_value?: string
+  category?: string
+  tender_url?: string
+}) {
+  const supabase = await createClient()
+
+  // Get current user
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser()
+
+  if (userError || !user) {
+    return { success: false, error: "Not authenticated" }
+  }
+
+  // Check if tender already exists for this user
+  const { data: existing } = await supabase
+    .from("user_tenders")
+    .select("id, status")
+    .eq("user_id", user.id)
+    .eq("tender_id", scrapedTender.id)
+    .single()
+
+  if (existing) {
+    // If already exists and is draft, update to in-progress
+    if (existing.status === "draft") {
+      const { error: updateError } = await supabase
+        .from("user_tenders")
+        .update({ status: "in-progress" })
+        .eq("id", existing.id)
+
+      if (updateError) {
+        console.error("[v0] Error updating tender status:", updateError)
+        return { success: false, error: "Failed to update tender status" }
+      }
+
+      revalidatePath("/dashboard/tenders")
+      return { success: true, message: "Tender status updated to in-progress", isNew: false }
+    }
+
+    // Already exists and not draft, no need to update
+    return { success: true, message: "Tender already in your list", isNew: false }
+  }
+
+  // Insert new tender with in-progress status
+  const { data, error } = await supabase
+    .from("user_tenders")
+    .insert({
+      user_id: user.id,
+      tender_id: scrapedTender.id,
+      title: scrapedTender.title,
+      organization: scrapedTender.source_name,
+      publish_date: scrapedTender.publish_date,
+      close_date: scrapedTender.close_date,
+      value: scrapedTender.estimated_value,
+      category: scrapedTender.category,
+      description: scrapedTender.description,
+      url: scrapedTender.tender_url,
+      status: "in-progress",
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error("[v0] Error saving tender:", error)
+    return { success: false, error: "Failed to save tender" }
+  }
+
+  revalidatePath("/dashboard/tenders")
+  return { success: true, message: "Tender saved to My Tenders", isNew: true, data }
+}

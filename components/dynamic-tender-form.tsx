@@ -13,6 +13,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Save, CheckCircle2, Download, Eye } from "lucide-react"
 import { GoogleAddressAutocomplete } from "@/components/google-address-autocomplete"
 import { formatZAR } from "@/lib/utils/currency"
+import { saveScrapedTenderToUser } from "@/app/actions/tender-actions"
+import { useToast } from "@/hooks/use-toast"
 
 interface FormField {
   id: string
@@ -34,36 +36,44 @@ interface FormField {
 interface DynamicTenderFormProps {
   tenderId: string
   formFields: FormField[]
-  googleMapsApiKey?: string // Added Google Maps API key prop
+  googleMapsApiKey?: string
+  documents?: any[]
+  tenderData?: {
+    id: string
+    title: string
+    source_name: string
+    description?: string
+    publish_date?: string
+    close_date?: string
+    estimated_value?: string
+    category?: string
+    tender_url?: string
+  }
 }
 
-export function DynamicTenderForm({ tenderId, formFields, googleMapsApiKey }: DynamicTenderFormProps) {
+export function DynamicTenderForm({
+  tenderId,
+  formFields,
+  googleMapsApiKey,
+  documents = [],
+  tenderData,
+}: DynamicTenderFormProps) {
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [fillingPdf, setFillingPdf] = useState(false)
-  const [availableDocuments, setAvailableDocuments] = useState<any[]>([])
+  const [hasAutoSaved, setHasAutoSaved] = useState(false)
+  const { toast } = useToast()
+
+  const availableDocuments = documents.filter(
+    (doc: any) => doc.document_type === "application/pdf" || doc.file_type === "application/pdf",
+  )
 
   useEffect(() => {
     loadSavedResponses()
-    loadDocuments()
   }, [tenderId])
-
-  const loadDocuments = async () => {
-    try {
-      const response = await fetch(`/api/tenders/documents/${tenderId}`)
-      if (response.ok) {
-        const { documents } = await response.json()
-        // Filter only PDF documents
-        const pdfDocs = documents.filter((doc: any) => doc.file_type === "application/pdf")
-        setAvailableDocuments(pdfDocs)
-      }
-    } catch (error) {
-      console.error("[v0] Error loading documents:", error)
-    }
-  }
 
   const loadSavedResponses = async () => {
     try {
@@ -81,10 +91,33 @@ export function DynamicTenderForm({ tenderId, formFields, googleMapsApiKey }: Dy
     }
   }
 
+  const handleAutoSave = async () => {
+    if (!tenderData || hasAutoSaved) return
+
+    try {
+      const result = await saveScrapedTenderToUser(tenderData)
+      if (result.success) {
+        setHasAutoSaved(true)
+        if (result.isNew) {
+          toast({
+            title: "Tender Saved",
+            description: "This tender has been added to 'My Tenders' with status 'In Progress'",
+          })
+        }
+      }
+    } catch (error) {
+      console.error("[v0] Error auto-saving tender:", error)
+    }
+  }
+
   const handleChange = (fieldId: string, value: any) => {
     setFormData((prev) => ({ ...prev, [fieldId]: value }))
     setErrors((prev) => ({ ...prev, [fieldId]: "" }))
     setSaved(false)
+
+    if (Object.keys(formData).length === 0 && !hasAutoSaved) {
+      handleAutoSave()
+    }
   }
 
   const validateField = (field: FormField, value: any): string | null => {
@@ -164,12 +197,10 @@ export function DynamicTenderForm({ tenderId, formFields, googleMapsApiKey }: Dy
         throw new Error(error.error || "Failed to fill PDF")
       }
 
-      // Open PDF in new tab for preview
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       window.open(url, "_blank")
 
-      // Clean up after a delay to allow the new tab to load
       setTimeout(() => window.URL.revokeObjectURL(url), 1000)
     } catch (error: any) {
       console.error("[v0] Error previewing filled PDF:", error)
@@ -193,7 +224,6 @@ export function DynamicTenderForm({ tenderId, formFields, googleMapsApiKey }: Dy
         throw new Error(error.error || "Failed to fill PDF")
       }
 
-      // Download the filled PDF
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement("a")

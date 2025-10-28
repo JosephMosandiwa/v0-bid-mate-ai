@@ -437,7 +437,27 @@ export function ScrapedTenderDetailClient({ googleMapsApiKey }: ScrapedTenderDet
                   your progress as you go.
                 </AlertDescription>
               </Alert>
-              <DynamicTenderForm tenderId={id} formFields={analysis.formFields} googleMapsApiKey={googleMapsApiKey} />
+              <DynamicTenderForm
+                tenderId={id}
+                formFields={analysis.formFields}
+                googleMapsApiKey={googleMapsApiKey}
+                documents={documents}
+                tenderData={
+                  tender
+                    ? {
+                        id: tender.id,
+                        title: tender.title,
+                        source_name: tender.source_name,
+                        description: tender.description,
+                        publish_date: tender.publish_date,
+                        close_date: tender.close_date,
+                        estimated_value: tender.estimated_value,
+                        category: tender.category,
+                        tender_url: tender.tender_url,
+                      }
+                    : undefined
+                }
+              />
             </>
           ) : (
             <Card>
