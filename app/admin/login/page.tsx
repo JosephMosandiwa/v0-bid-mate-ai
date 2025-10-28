@@ -3,7 +3,6 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -14,7 +13,6 @@ import { Shield, Loader2 } from "lucide-react"
 export default function AdminLoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -43,8 +41,7 @@ export default function AdminLoginPage() {
       }
 
       console.log("[v0] Login successful, redirecting...")
-      router.push("/admin/dashboard")
-      router.refresh()
+      window.location.href = "/admin/dashboard"
     } catch (err) {
       console.error("[v0] Login error:", err)
       setError("An error occurred during login")
