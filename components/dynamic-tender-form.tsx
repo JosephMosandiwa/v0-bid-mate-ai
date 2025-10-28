@@ -379,7 +379,7 @@ export function DynamicTenderForm({ tenderId, formFields, googleMapsApiKey }: Dy
         {availableDocuments.length > 0 && (
           <Button
             onClick={() => handleDownloadFilledPdf(availableDocuments[0].id)}
-            disabled={fillingPdf || Object.keys(formData).length === 0}
+            disabled={fillingPdf}
             size="lg"
             variant="outline"
           >

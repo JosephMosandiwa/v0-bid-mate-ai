@@ -22,11 +22,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return Response.json({ error: "Failed to fetch form responses" }, { status: 500 })
     }
 
-    if (!responseData || !responseData.response_data) {
-      return Response.json({ error: "No form responses found. Please fill out the form first." }, { status: 400 })
-    }
-
-    const formResponses = responseData.response_data
+    const formResponses = responseData?.response_data || {}
 
     const { data: docData, error: docError } = await supabase
       .from("tender_documents")
@@ -60,62 +56,64 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     console.log("[v0] PDF has", fields.length, "form fields")
 
     let filledCount = 0
-    for (const [fieldId, value] of Object.entries(formResponses)) {
-      try {
-        // Try to find a matching field in the PDF
-        // We'll try multiple strategies to match field names
-        const possibleNames = [
-          fieldId,
-          fieldId.toLowerCase(),
-          fieldId.replace(/_/g, " "),
-          fieldId.replace(/-/g, " "),
-          fieldId.replace(/([A-Z])/g, " $1").trim(),
-        ]
+    if (Object.keys(formResponses).length > 0) {
+      for (const [fieldId, value] of Object.entries(formResponses)) {
+        try {
+          // Try to find a matching field in the PDF
+          // We'll try multiple strategies to match field names
+          const possibleNames = [
+            fieldId,
+            fieldId.toLowerCase(),
+            fieldId.replace(/_/g, " "),
+            fieldId.replace(/-/g, " "),
+            fieldId.replace(/([A-Z])/g, " $1").trim(),
+          ]
 
-        let fieldFound = false
-        for (const name of possibleNames) {
-          try {
-            const field = form.getField(name)
-            if (field) {
-              // Handle different field types
-              const fieldType = field.constructor.name
-              console.log("[v0] Found field:", name, "Type:", fieldType, "Value:", value)
+          let fieldFound = false
+          for (const name of possibleNames) {
+            try {
+              const field = form.getField(name)
+              if (field) {
+                // Handle different field types
+                const fieldType = field.constructor.name
+                console.log("[v0] Found field:", name, "Type:", fieldType, "Value:", value)
 
-              if (fieldType === "PDFTextField") {
-                field.setText(String(value || ""))
-                filledCount++
-                fieldFound = true
-                break
-              } else if (fieldType === "PDFCheckBox") {
-                if (value === true || value === "true" || value === "yes") {
-                  field.check()
+                if (fieldType === "PDFTextField") {
+                  field.setText(String(value || ""))
+                  filledCount++
+                  fieldFound = true
+                  break
+                } else if (fieldType === "PDFCheckBox") {
+                  if (value === true || value === "true" || value === "yes") {
+                    field.check()
+                    filledCount++
+                    fieldFound = true
+                    break
+                  }
+                } else if (fieldType === "PDFRadioGroup") {
+                  field.select(String(value))
+                  filledCount++
+                  fieldFound = true
+                  break
+                } else if (fieldType === "PDFDropdown") {
+                  field.select(String(value))
                   filledCount++
                   fieldFound = true
                   break
                 }
-              } else if (fieldType === "PDFRadioGroup") {
-                field.select(String(value))
-                filledCount++
-                fieldFound = true
-                break
-              } else if (fieldType === "PDFDropdown") {
-                field.select(String(value))
-                filledCount++
-                fieldFound = true
-                break
               }
+            } catch (fieldError) {
+              // Field not found with this name, try next
+              continue
             }
-          } catch (fieldError) {
-            // Field not found with this name, try next
-            continue
           }
-        }
 
-        if (!fieldFound) {
-          console.log("[v0] Could not find PDF field for:", fieldId)
+          if (!fieldFound) {
+            console.log("[v0] Could not find PDF field for:", fieldId)
+          }
+        } catch (error) {
+          console.error("[v0] Error filling field:", fieldId, error)
         }
-      } catch (error) {
-        console.error("[v0] Error filling field:", fieldId, error)
       }
     }
 
