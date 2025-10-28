@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Save, CheckCircle2 } from "lucide-react"
+import { Loader2, Save, CheckCircle2, Download } from "lucide-react"
 import { GoogleAddressAutocomplete } from "@/components/google-address-autocomplete"
 import { formatZAR } from "@/lib/utils/currency"
 
@@ -43,10 +43,27 @@ export function DynamicTenderForm({ tenderId, formFields, googleMapsApiKey }: Dy
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [fillingPdf, setFillingPdf] = useState(false)
+  const [availableDocuments, setAvailableDocuments] = useState<any[]>([])
 
   useEffect(() => {
     loadSavedResponses()
+    loadDocuments()
   }, [tenderId])
+
+  const loadDocuments = async () => {
+    try {
+      const response = await fetch(`/api/tenders/documents/${tenderId}`)
+      if (response.ok) {
+        const { documents } = await response.json()
+        // Filter only PDF documents
+        const pdfDocs = documents.filter((doc: any) => doc.file_type === "application/pdf")
+        setAvailableDocuments(pdfDocs)
+      }
+    } catch (error) {
+      console.error("[v0] Error loading documents:", error)
+    }
+  }
 
   const loadSavedResponses = async () => {
     try {
@@ -130,6 +147,38 @@ export function DynamicTenderForm({ tenderId, formFields, googleMapsApiKey }: Dy
       console.error("[v0] Error saving responses:", error)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleDownloadFilledPdf = async (documentId: string) => {
+    setFillingPdf(true)
+    try {
+      const response = await fetch(`/api/tenders/scraped/${tenderId}/fill-pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to fill PDF")
+      }
+
+      // Download the filled PDF
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `filled_tender_${tenderId}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error: any) {
+      console.error("[v0] Error downloading filled PDF:", error)
+      alert(error.message || "Failed to download filled PDF")
+    } finally {
+      setFillingPdf(false)
     }
   }
 
@@ -312,7 +361,7 @@ export function DynamicTenderForm({ tenderId, formFields, googleMapsApiKey }: Dy
         )
       })}
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <Button onClick={handleSave} disabled={saving} size="lg">
           {saving ? (
             <>
@@ -326,6 +375,27 @@ export function DynamicTenderForm({ tenderId, formFields, googleMapsApiKey }: Dy
             </>
           )}
         </Button>
+
+        {availableDocuments.length > 0 && (
+          <Button
+            onClick={() => handleDownloadFilledPdf(availableDocuments[0].id)}
+            disabled={fillingPdf || Object.keys(formData).length === 0}
+            size="lg"
+            variant="outline"
+          >
+            {fillingPdf ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Filling PDF...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Download Filled PDF
+              </>
+            )}
+          </Button>
+        )}
 
         {saved && (
           <Alert className="flex-1 bg-green-500/10 border-green-500/20">

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation"
 import { AdminAuthService } from "@/lib/services/admin-auth-service"
 import { AdminNav } from "@/components/admin-nav"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -6,11 +7,15 @@ import { Shield, Users, Database, TrendingUp } from "lucide-react"
 export const dynamic = "force-dynamic"
 
 export default async function AdminDashboardPage() {
-  const admin = await AdminAuthService.requireAdmin()
+  const admin = await AdminAuthService.getCurrentAdmin()
+
+  if (!admin) {
+    redirect("/admin/login")
+  }
 
   return (
     <div className="flex min-h-screen">
-      <AdminNav admin={admin} />
+      <AdminNav />
       <div className="flex-1 p-6 lg:ml-64 space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
