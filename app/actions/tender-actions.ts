@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
+import { put } from "@vercel/blob"
 
 export interface TenderDocument {
   id?: string
@@ -309,6 +310,14 @@ export async function createCustomTender(tenderData: {
   uploadedFile?: File
   analysis?: any
 }) {
+  console.log("[v0] createCustomTender called with data:", {
+    title: tenderData.title,
+    organization: tenderData.organization,
+    deadline: tenderData.deadline,
+    hasFile: !!tenderData.uploadedFile,
+    hasAnalysis: !!tenderData.analysis,
+  })
+
   const supabase = await createClient()
 
   // Get current user
@@ -318,88 +327,89 @@ export async function createCustomTender(tenderData: {
   } = await supabase.auth.getUser()
 
   if (userError || !user) {
+    console.error("[v0] Auth error:", userError)
     return { success: false, error: "Not authenticated" }
   }
 
+  console.log("[v0] User authenticated:", user.id)
+
   try {
-    // 1. Create custom tender record
-    const { data: customTender, error: tenderError } = await supabase
-      .from("user_custom_tenders")
+    console.log("[v0] Creating user tender record...")
+
+    // Generate a unique tender ID for custom tenders
+    const customTenderId = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+    const { data: userTender, error: userTenderError } = await supabase
+      .from("user_tenders")
       .insert({
         user_id: user.id,
+        tender_id: customTenderId,
         title: tenderData.title,
         organization: tenderData.organization,
-        deadline: tenderData.deadline,
+        close_date: tenderData.deadline,
         value: tenderData.value,
+        category: tenderData.category || "Custom",
         description: tenderData.description,
-        category: tenderData.category,
-        location: tenderData.location,
         status: "in-progress",
       })
       .select()
       .single()
 
-    if (tenderError) {
-      console.error("[v0] Error creating custom tender:", tenderError)
-      return { success: false, error: "Failed to create tender" }
+    if (userTenderError) {
+      console.error("[v0] Error creating user tender:", userTenderError)
+      return { success: false, error: "Failed to create tender: " + userTenderError.message }
     }
 
-    // 2. Upload PDF to blob storage if provided
+    console.log("[v0] User tender created successfully:", userTender.id)
+
     if (tenderData.uploadedFile) {
-      const formData = new FormData()
-      formData.append("file", tenderData.uploadedFile)
+      console.log("[v0] Uploading file to blob storage...")
+      try {
+        const blob = await put(tenderData.uploadedFile.name, tenderData.uploadedFile, {
+          access: "public",
+        })
 
-      const uploadResponse = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      })
+        console.log("[v0] File uploaded to blob:", blob.url)
 
-      if (uploadResponse.ok) {
-        const { url } = await uploadResponse.json()
-
-        // Save document reference
-        await supabase.from("user_custom_tender_documents").insert({
-          tender_id: customTender.id,
+        const { error: docError } = await supabase.from("tender_documents").insert({
+          user_tender_id: userTender.id,
+          user_id: user.id,
           file_name: tenderData.uploadedFile.name,
+          storage_path: blob.url,
           file_type: tenderData.uploadedFile.type,
           file_size: tenderData.uploadedFile.size,
-          blob_url: url,
-          storage_path: url,
         })
+
+        if (docError) {
+          console.error("[v0] Error saving document reference:", docError)
+        } else {
+          console.log("[v0] Document reference saved successfully")
+        }
+      } catch (uploadError) {
+        console.error("[v0] Error uploading file:", uploadError)
+        // Don't fail the whole operation
       }
     }
 
-    // 3. Save analysis if provided
     if (tenderData.analysis) {
-      await supabase.from("user_custom_tender_analysis").insert({
-        tender_id: customTender.id,
+      console.log("[v0] Saving analysis data...")
+      const { error: analysisError } = await supabase.from("tender_analysis").insert({
+        tender_id: userTender.id,
         analysis_data: tenderData.analysis,
       })
+
+      if (analysisError) {
+        console.error("[v0] Error saving analysis:", analysisError)
+      } else {
+        console.log("[v0] Analysis saved successfully")
+      }
     }
 
-    // 4. Add to user_tenders with in-progress status
-    const { error: userTenderError } = await supabase.from("user_tenders").insert({
-      user_id: user.id,
-      tender_id: customTender.id,
-      title: tenderData.title,
-      organization: tenderData.organization,
-      close_date: tenderData.deadline,
-      value: tenderData.value,
-      category: tenderData.category,
-      description: tenderData.description,
-      status: "in-progress",
-    })
-
-    if (userTenderError) {
-      console.error("[v0] Error adding to user tenders:", userTenderError)
-      // Don't fail the whole operation, just log it
-    }
-
+    console.log("[v0] Tender creation completed successfully")
     revalidatePath("/dashboard/tenders")
-    revalidatePath("/dashboard/custom-tenders")
-    return { success: true, data: customTender }
+    return { success: true, data: userTender }
   } catch (error) {
     console.error("[v0] Error in createCustomTender:", error)
-    return { success: false, error: "Failed to create tender" }
+    return { success: false, error: "Failed to create tender: " + (error as Error).message }
   }
 }

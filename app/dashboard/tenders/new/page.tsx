@@ -111,9 +111,6 @@ export default function NewTenderPage() {
       const analysisResult = await analyzeResponse.json()
       setAnalysis(analysisResult)
 
-      console.log("[v0] Analysis result:", analysisResult)
-      console.log("[v0] Tender metadata:", analysisResult.tenderMetadata)
-
       if (analysisResult.tenderMetadata) {
         const metadata = analysisResult.tenderMetadata
 
@@ -125,13 +122,6 @@ export default function NewTenderPage() {
           value: metadata.value || prev.value,
           description: analysisResult.summary || prev.description,
         }))
-
-        console.log("[v0] Form auto-filled with metadata:", {
-          title: metadata.title,
-          organization: metadata.organization,
-          deadline: metadata.deadline,
-          value: metadata.value,
-        })
       } else {
         // Fallback to old behavior if no metadata
         if (analysisResult.deadlines.length > 0) {
@@ -142,13 +132,11 @@ export default function NewTenderPage() {
           }
         }
 
-        // Use summary as description
         if (analysisResult.summary) {
           setFormData((prev) => ({ ...prev, description: analysisResult.summary }))
         }
       }
     } catch (error) {
-      console.error("[v0] PDF analysis error:", error)
       setAnalysisError("Failed to analyze the document. Please try again.")
     } finally {
       setAnalyzing(false)
@@ -184,10 +172,9 @@ export default function NewTenderPage() {
         })
       }
     } catch (error) {
-      console.error("[v0] Error creating tender:", error)
       toast({
         title: "Error",
-        description: "Failed to create tender",
+        description: "Failed to create tender: " + (error as Error).message,
         variant: "destructive",
       })
     } finally {

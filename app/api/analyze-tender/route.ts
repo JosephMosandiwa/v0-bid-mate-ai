@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "Document text is required" }, { status: 400 })
     }
 
-    const truncatedText = documentText.substring(0, 12000)
+    const truncatedText = documentText.substring(0, 20000)
     console.log("[v0] Using truncated text length:", truncatedText.length)
 
     console.log("[v0] Calling AI Gateway with generateObject for structured analysis...")
@@ -64,25 +64,52 @@ export async function POST(request: Request) {
     const { object: analysis } = await generateObject({
       model: "openai/gpt-4o",
       schema: tenderAnalysisSchema,
-      prompt: `Analyze this tender document and extract all relevant information.
+      prompt: `You are analyzing a tender document. Your primary task is to accurately extract the tender metadata for auto-filling a form.
 
-Focus on:
-1. Tender Metadata (for auto-filling forms):
-   - Tender title/name
-   - Issuing organization/department
-   - Submission deadline (in YYYY-MM-DD format if possible)
-   - Tender value/budget (extract the amount)
-   - Category (e.g., Construction, IT, Medical Supplies, etc.)
-   - Location/region
+CRITICAL: Extract the following metadata with high accuracy:
 
-2. Executive summary of what the tender is about
-3. Key requirements and qualifications needed
-4. Important deadlines and dates
-5. How bids will be evaluated
-6. Strategic recommendations for bidding
-7. Compliance requirements
-8. Actionable tasks with priorities
-9. ALL form fields that need to be filled (company info, financial details, technical specs, certifications, etc.)
+1. TENDER TITLE:
+   - Look for the main heading, title, or "Tender Name" field
+   - Usually appears at the top of the document or in the first few paragraphs
+   - May be labeled as: "Tender Title", "Project Name", "Bid Title", "RFP Title", etc.
+   - Extract the EXACT title as written, do not summarize
+
+2. ISSUING ORGANIZATION:
+   - Look for the department, ministry, or company issuing the tender
+   - Usually appears near the top or in a "Issued by" section
+   - May be labeled as: "Issuing Authority", "Procuring Entity", "Department", "Ministry", etc.
+   - Extract the FULL official name
+
+3. SUBMISSION DEADLINE:
+   - Look for the final date and time for submission
+   - May be labeled as: "Closing Date", "Submission Deadline", "Due Date", "Closing Time", etc.
+   - Convert to YYYY-MM-DD format (e.g., "2024-03-15")
+   - If only month/year given, use the last day of that month
+
+4. TENDER VALUE/BUDGET:
+   - Look for the estimated value, budget, or contract amount
+   - May be labeled as: "Tender Value", "Estimated Budget", "Contract Value", "Price Range", etc.
+   - Extract the amount with currency (e.g., "R 2,500,000" or "ZAR 2.5M")
+   - If a range is given, use the maximum value
+
+5. CATEGORY:
+   - Determine the type of tender (e.g., Construction, IT Services, Medical Supplies, Consulting, etc.)
+   - Infer from the title and description if not explicitly stated
+
+6. LOCATION:
+   - Look for the project location, delivery location, or service area
+   - May be labeled as: "Location", "Project Site", "Delivery Address", "Service Area", etc.
+   - Extract city, province, or region
+
+After extracting metadata, provide:
+- Executive summary of the tender (2-3 sentences)
+- Key requirements and qualifications needed
+- All important deadlines and dates
+- How bids will be evaluated
+- Strategic recommendations for bidding
+- Compliance requirements
+- Actionable tasks with priorities
+- ALL form fields that need to be filled (company info, financial details, technical specs, certifications, etc.)
 
 For form fields, extract every piece of information requested in the tender:
 - Company details (name, registration, address, contacts)
@@ -99,6 +126,7 @@ ${truncatedText}`,
     })
 
     console.log("[v0] Successfully generated structured analysis")
+    console.log("[v0] Extracted metadata:", analysis.tenderMetadata)
     console.log("[v0] Analysis summary:", analysis.summary?.substring(0, 100))
     console.log("[v0] Form fields count:", analysis.formFields?.length)
 
