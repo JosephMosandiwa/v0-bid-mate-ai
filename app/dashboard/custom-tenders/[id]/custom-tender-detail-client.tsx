@@ -40,9 +40,16 @@ export function CustomTenderDetailClient({
   documents: initialDocuments,
   analysis: initialAnalysis,
 }: CustomTenderDetailClientProps) {
+  console.log("[v0] CustomTenderDetailClient RENDER START")
+  console.log("[v0] Tender prop:", JSON.stringify(tender, null, 2))
+  console.log("[v0] Documents prop:", initialDocuments?.length || 0, initialDocuments)
+  console.log("[v0] Analysis prop:", initialAnalysis ? "EXISTS" : "NULL", initialAnalysis)
+
   const router = useRouter()
   const { toast } = useToast()
   const tenderId = tender.tender_id
+
+  console.log("[v0] Tender ID extracted:", tenderId)
 
   const [documents, setDocuments] = useState(initialDocuments)
   const [analysis, setAnalysis] = useState(initialAnalysis)
@@ -59,11 +66,16 @@ export function CustomTenderDetailClient({
   })
   const [saving, setSaving] = useState(false)
 
+  console.log("[v0] Form data initialized:", formData)
+  console.log("[v0] Has analysis?", !!analysis)
+  console.log("[v0] Has form fields?", analysis?.formFields?.length || 0)
+  console.log("[v0] Documents count:", documents?.length || 0)
+
   useEffect(() => {
-    console.log("[v0] CustomTenderDetailClient mounted")
-    console.log("[v0] Tender:", tender)
-    console.log("[v0] Documents:", documents)
-    console.log("[v0] Analysis:", analysis)
+    console.log("[v0] CustomTenderDetailClient mounted - useEffect")
+    console.log("[v0] Tender in useEffect:", tender)
+    console.log("[v0] Documents in useEffect:", documents)
+    console.log("[v0] Analysis in useEffect:", analysis)
   }, [])
 
   const handleSave = async () => {
