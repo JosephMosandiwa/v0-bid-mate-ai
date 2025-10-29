@@ -15,6 +15,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 type AnalysisResult = {
+  tenderMetadata?: {
+    title?: string
+    organization?: string
+    deadline?: string
+    value?: string
+    category?: string
+    location?: string
+  }
   summary: string
   keyRequirements: string[]
   deadlines: string[]
@@ -100,11 +108,40 @@ export default function NewTenderPage() {
       const analysisResult = await analyzeResponse.json()
       setAnalysis(analysisResult)
 
-      if (analysisResult.deadlines.length > 0) {
-        const deadlineText = analysisResult.deadlines[0]
-        const dateMatch = deadlineText.match(/\d{4}-\d{2}-\d{2}/)
-        if (dateMatch) {
-          setFormData((prev) => ({ ...prev, deadline: dateMatch[0] }))
+      console.log("[v0] Analysis result:", analysisResult)
+      console.log("[v0] Tender metadata:", analysisResult.tenderMetadata)
+
+      if (analysisResult.tenderMetadata) {
+        const metadata = analysisResult.tenderMetadata
+
+        setFormData((prev) => ({
+          ...prev,
+          title: metadata.title || prev.title,
+          organization: metadata.organization || prev.organization,
+          deadline: metadata.deadline || prev.deadline,
+          value: metadata.value || prev.value,
+          description: analysisResult.summary || prev.description,
+        }))
+
+        console.log("[v0] Form auto-filled with metadata:", {
+          title: metadata.title,
+          organization: metadata.organization,
+          deadline: metadata.deadline,
+          value: metadata.value,
+        })
+      } else {
+        // Fallback to old behavior if no metadata
+        if (analysisResult.deadlines.length > 0) {
+          const deadlineText = analysisResult.deadlines[0]
+          const dateMatch = deadlineText.match(/\d{4}-\d{2}-\d{2}/)
+          if (dateMatch) {
+            setFormData((prev) => ({ ...prev, deadline: dateMatch[0] }))
+          }
+        }
+
+        // Use summary as description
+        if (analysisResult.summary) {
+          setFormData((prev) => ({ ...prev, description: analysisResult.summary }))
         }
       }
     } catch (error) {
@@ -255,7 +292,7 @@ export default function NewTenderPage() {
                   <ul className="space-y-1">
                     {analysis.evaluationCriteria.map((criteria, i) => (
                       <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                        <span className="text-primary mt-1">•</span>
+                        <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                         {criteria}
                       </li>
                     ))}
@@ -269,7 +306,7 @@ export default function NewTenderPage() {
                   <ul className="space-y-2">
                     {analysis.keyRequirements.map((req, i) => (
                       <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <CheckCircle2 className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                         {req}
                       </li>
                     ))}
