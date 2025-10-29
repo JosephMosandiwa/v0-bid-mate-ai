@@ -37,11 +37,15 @@ export default async function CustomTenderDetailPage({ params }: { params: Promi
     redirect("/dashboard/tenders")
   }
 
+  console.log("[v0] Tender found:", tender)
+
   const { data: documents } = await supabase
     .from("tender_documents")
     .select("*")
     .eq("tender_id", id)
     .order("created_at", { ascending: false })
+
+  console.log("[v0] Documents found:", documents?.length || 0)
 
   const { data: analysisData } = await supabase
     .from("tender_analysis")
@@ -50,6 +54,8 @@ export default async function CustomTenderDetailPage({ params }: { params: Promi
     .order("created_at", { ascending: false })
     .limit(1)
     .single()
+
+  console.log("[v0] Analysis found:", !!analysisData)
 
   return (
     <CustomTenderDetailClient

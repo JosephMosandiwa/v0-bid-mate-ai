@@ -372,11 +372,11 @@ export async function createCustomTender(tenderData: {
         console.log("[v0] File uploaded to blob:", blob.url)
 
         const { error: docError } = await supabase.from("tender_documents").insert({
-          user_tender_id: userTender.id,
-          user_id: user.id,
-          file_name: tenderData.uploadedFile.name,
-          storage_path: blob.url,
-          file_type: tenderData.uploadedFile.type,
+          tender_id: customTenderId, // Use custom tender ID, not user_tender.id
+          document_name: tenderData.uploadedFile.name,
+          document_type: tenderData.uploadedFile.type,
+          original_url: blob.url,
+          blob_url: blob.url,
           file_size: tenderData.uploadedFile.size,
         })
 
@@ -394,7 +394,7 @@ export async function createCustomTender(tenderData: {
     if (tenderData.analysis) {
       console.log("[v0] Saving analysis data...")
       const { error: analysisError } = await supabase.from("tender_analysis").insert({
-        tender_id: userTender.id,
+        tender_id: customTenderId, // Use custom tender ID
         analysis_data: tenderData.analysis,
       })
 
