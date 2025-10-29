@@ -7,6 +7,11 @@ CREATE TABLE IF NOT EXISTS public.user_custom_tenders (
   title TEXT NOT NULL,
   description TEXT,
   category TEXT,
+  -- Added fields for auto-filled tender metadata from AI analysis
+  organization TEXT,
+  deadline TEXT,
+  value TEXT,
+  location TEXT,
   estimated_value TEXT,
   close_date TIMESTAMP WITH TIME ZONE,
   status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'in-progress', 'submitted')),

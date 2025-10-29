@@ -86,15 +86,25 @@ export async function POST(request: NextRequest) {
     const analysis = await analyzeResponse.json()
     console.log("[v0] Analysis completed")
 
+    const metadata = analysis.tenderMetadata || {}
+    const extractedTitle = metadata.title || title || file.name.replace(".pdf", "")
+    const extractedDescription = metadata.organization
+      ? `${analysis.summary || ""}\n\nIssued by: ${metadata.organization}`
+      : analysis.summary || description || ""
+
     // Create custom tender record
     const { data: tender, error: tenderError } = await supabase
       .from("user_custom_tenders")
       .insert({
         user_id: user.id,
-        title: title || file.name.replace(".pdf", ""),
-        description: description || analysis.summary || "",
-        category: "Custom Upload",
+        title: extractedTitle,
+        description: extractedDescription,
+        category: metadata.category || "Custom Upload",
         status: "draft",
+        organization: metadata.organization || null,
+        deadline: metadata.deadline || null,
+        value: metadata.value || null,
+        location: metadata.location || null,
       })
       .select()
       .single()

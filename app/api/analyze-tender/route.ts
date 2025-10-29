@@ -2,6 +2,16 @@ import { generateObject } from "ai"
 import { z } from "zod"
 
 const tenderAnalysisSchema = z.object({
+  tenderMetadata: z
+    .object({
+      title: z.string().optional(),
+      organization: z.string().optional(),
+      deadline: z.string().optional(),
+      value: z.string().optional(),
+      category: z.string().optional(),
+      location: z.string().optional(),
+    })
+    .optional(),
   summary: z.string().default("No summary available"),
   keyRequirements: z.array(z.string()).default([]),
   deadlines: z.array(z.string()).default([]),
@@ -57,14 +67,22 @@ export async function POST(request: Request) {
       prompt: `Analyze this tender document and extract all relevant information.
 
 Focus on:
-1. Executive summary of what the tender is about
-2. Key requirements and qualifications needed
-3. Important deadlines and dates
-4. How bids will be evaluated
-5. Strategic recommendations for bidding
-6. Compliance requirements
-7. Actionable tasks with priorities
-8. ALL form fields that need to be filled (company info, financial details, technical specs, certifications, etc.)
+1. Tender Metadata (for auto-filling forms):
+   - Tender title/name
+   - Issuing organization/department
+   - Submission deadline (in YYYY-MM-DD format if possible)
+   - Tender value/budget (extract the amount)
+   - Category (e.g., Construction, IT, Medical Supplies, etc.)
+   - Location/region
+
+2. Executive summary of what the tender is about
+3. Key requirements and qualifications needed
+4. Important deadlines and dates
+5. How bids will be evaluated
+6. Strategic recommendations for bidding
+7. Compliance requirements
+8. Actionable tasks with priorities
+9. ALL form fields that need to be filled (company info, financial details, technical specs, certifications, etc.)
 
 For form fields, extract every piece of information requested in the tender:
 - Company details (name, registration, address, contacts)
