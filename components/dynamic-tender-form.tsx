@@ -257,7 +257,7 @@ export function DynamicTenderForm({
     const value = formData[field.id] || ""
     const error = errors[field.id]
 
-    if (isAddressField(field) && googleMapsApiKey && field.type === "text") {
+    if (isAddressField(field) && field.type === "text" && googleMapsApiKey) {
       return (
         <GoogleAddressAutocomplete
           value={value}

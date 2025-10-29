@@ -9,7 +9,7 @@ interface GoogleAddressAutocompleteProps {
   onChange: (value: string, placeDetails?: any) => void
   placeholder?: string
   className?: string
-  apiKey: string
+  apiKey?: string
 }
 
 export function GoogleAddressAutocomplete({

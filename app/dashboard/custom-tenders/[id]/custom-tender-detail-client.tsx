@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -33,14 +33,12 @@ interface CustomTenderDetailClientProps {
   tender: any
   documents: any[]
   analysis: any
-  googleMapsApiKey?: string
 }
 
 export function CustomTenderDetailClient({
   tender,
   documents: initialDocuments,
   analysis: initialAnalysis,
-  googleMapsApiKey,
 }: CustomTenderDetailClientProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -60,6 +58,13 @@ export function CustomTenderDetailClient({
     description: tender.description || "",
   })
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    console.log("[v0] CustomTenderDetailClient mounted")
+    console.log("[v0] Tender:", tender)
+    console.log("[v0] Documents:", documents)
+    console.log("[v0] Analysis:", analysis)
+  }, [])
 
   const handleSave = async () => {
     setSaving(true)
@@ -530,7 +535,6 @@ export function CustomTenderDetailClient({
             <DynamicTenderForm
               tenderId={tenderId}
               formFields={analysis.formFields}
-              googleMapsApiKey={googleMapsApiKey}
               documents={documents}
               tenderData={{
                 id: tenderId,
