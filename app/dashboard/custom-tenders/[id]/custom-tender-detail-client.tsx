@@ -2,43 +2,64 @@
 
 import type React from "react"
 
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Save, FileText, Sparkles, Upload, Loader2, AlertCircle } from "lucide-react"
+import {
+  AlertCircle,
+  ClipboardList,
+  FileText,
+  Sparkles,
+  CheckCircle2,
+  Clock,
+  Download,
+  Upload,
+  Loader2,
+  Save,
+  ArrowLeft,
+} from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
-import { useToast } from "@/hooks/use-toast"
 import { DynamicTenderForm } from "@/components/dynamic-tender-form"
+import { useToast } from "@/hooks/use-toast"
 
 interface CustomTenderDetailClientProps {
   tender: any
   documents: any[]
   analysis: any
+  googleMapsApiKey?: string
 }
 
-export function CustomTenderDetailClient({ tender, documents, analysis }: CustomTenderDetailClientProps) {
+export function CustomTenderDetailClient({
+  tender,
+  documents: initialDocuments,
+  analysis: initialAnalysis,
+  googleMapsApiKey,
+}: CustomTenderDetailClientProps) {
+  const router = useRouter()
   const { toast } = useToast()
   const tenderId = tender.tender_id
+
+  const [documents, setDocuments] = useState(initialDocuments)
+  const [analysis, setAnalysis] = useState(initialAnalysis)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
 
   const [formData, setFormData] = useState({
     title: tender.title || "",
     organization: tender.organization || "",
-    deadline: tender.deadline || "",
+    close_date: tender.close_date || "",
     value: tender.value || "",
     description: tender.description || "",
-    location: tender.location || "",
   })
   const [saving, setSaving] = useState(false)
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [analyzing, setAnalyzing] = useState(false)
-  const [localAnalysis, setLocalAnalysis] = useState(analysis)
-  const [localDocuments, setLocalDocuments] = useState(documents)
-  const [analysisError, setAnalysisError] = useState<string | null>(null)
 
   const handleSave = async () => {
     setSaving(true)
@@ -81,6 +102,7 @@ export function CustomTenderDetailClient({ tender, documents, analysis }: Custom
     setAnalysisError(null)
 
     try {
+      // Extract text from PDF
       const formData = new FormData()
       formData.append("file", file)
 
@@ -95,6 +117,7 @@ export function CustomTenderDetailClient({ tender, documents, analysis }: Custom
 
       const { text } = await extractResponse.json()
 
+      // Analyze the document
       const analyzeResponse = await fetch("/api/analyze-tender", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -107,8 +130,9 @@ export function CustomTenderDetailClient({ tender, documents, analysis }: Custom
       }
 
       const analysisResult = await analyzeResponse.json()
-      setLocalAnalysis(analysisResult)
+      setAnalysis(analysisResult)
 
+      // Upload file to blob storage
       const uploadFormData = new FormData()
       uploadFormData.append("file", file)
 
@@ -123,15 +147,18 @@ export function CustomTenderDetailClient({ tender, documents, analysis }: Custom
 
       const { url: blobUrl } = await uploadResponse.json()
 
-      const docData = {
+      // Add document to list
+      const newDoc = {
+        id: `temp-${Date.now()}`,
         tender_id: tenderId,
-        file_name: file.name,
-        file_type: file.type,
-        file_size: file.size,
+        document_name: file.name,
+        document_type: file.type,
         blob_url: blobUrl,
+        file_size: file.size,
+        created_at: new Date().toISOString(),
       }
 
-      setLocalDocuments([...localDocuments, docData])
+      setDocuments([...documents, newDoc])
 
       toast({
         title: "Success",
@@ -151,198 +178,373 @@ export function CustomTenderDetailClient({ tender, documents, analysis }: Custom
   }
 
   return (
-    <div className="p-6 md:p-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
+      <div>
+        <div className="flex items-center gap-4 mb-4">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/dashboard/tenders">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Custom Tender</h1>
-            <p className="text-muted-foreground">Review details and fill in the tender form</p>
-          </div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">{tender.title || "Custom Tender"}</h1>
         </div>
-        {localAnalysis && (
-          <Badge variant="secondary" className="flex items-center gap-1">
-            <Sparkles className="h-3 w-3" />
-            AI Analyzed
-          </Badge>
-        )}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Badge className="bg-primary/10 text-primary">Custom</Badge>
+          {tender.category && <Badge variant="outline">{tender.category}</Badge>}
+          {analysis && (
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <Sparkles className="h-3 w-3" />
+              AI Analyzed
+            </Badge>
+          )}
+        </div>
+        {tender.description && <p className="text-muted-foreground mb-4">{tender.description}</p>}
+        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+          {tender.organization && (
+            <span className="flex items-center gap-1">
+              <FileText className="h-4 w-4" />
+              {tender.organization}
+            </span>
+          )}
+          {tender.close_date && (
+            <span className="flex items-center gap-1">
+              <Clock className="h-4 w-4" />
+              Closes: {new Date(tender.close_date).toLocaleDateString()}
+            </span>
+          )}
+          {tender.value && (
+            <span className="flex items-center gap-1">
+              <span>Value: {tender.value}</span>
+            </span>
+          )}
+        </div>
       </div>
 
-      <Card className="border-border">
-        <CardHeader>
-          <CardTitle>Tender Details</CardTitle>
-          <CardDescription>
-            {localAnalysis
-              ? "These fields were automatically filled from your uploaded document. Review and edit as needed."
-              : "Basic information about the tender"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="title">Tender Title</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="organization">Organization</Label>
-            <Input
-              id="organization"
-              placeholder="e.g., Department of Health"
-              value={formData.organization}
-              onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-            />
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="deadline">Deadline</Label>
-              <Input
-                id="deadline"
-                type="date"
-                value={formData.deadline}
-                onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="value">Tender Value</Label>
-              <Input
-                id="value"
-                placeholder="e.g., R 2,500,000"
-                value={formData.value}
-                onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              placeholder="e.g., Gauteng, South Africa"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              rows={4}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            />
-          </div>
-
-          <Button onClick={handleSave} disabled={saving}>
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? "Saving..." : "Save Details"}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {localDocuments.length === 0 && (
-        <Card className="border-border">
-          <CardHeader>
-            <CardTitle>Upload Tender Document</CardTitle>
-            <CardDescription>Upload a PDF document to generate the response form automatically</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Label
-                htmlFor="pdf-upload"
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md cursor-pointer hover:bg-primary/90 transition-colors"
-              >
-                <Upload className="h-4 w-4" />
-                {uploadedFile ? "Change Document" : "Upload PDF"}
-              </Label>
-              <Input
-                id="pdf-upload"
-                type="file"
-                accept="application/pdf"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              {uploadedFile && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <FileText className="h-4 w-4" />
-                  {uploadedFile.name}
-                </div>
-              )}
-            </div>
-
-            {analyzing && (
-              <Alert>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <AlertDescription>Analyzing tender document...</AlertDescription>
-              </Alert>
-            )}
-
-            {analysisError && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{analysisError}</AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
+      {analyzing && (
+        <Alert>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <AlertDescription>Analyzing tender documents with AI... This may take a minute.</AlertDescription>
+        </Alert>
       )}
 
-      {localDocuments.length > 0 && (
-        <Card className="border-border">
-          <CardHeader>
-            <CardTitle>Documents</CardTitle>
-            <CardDescription>Uploaded tender documents</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {localDocuments.map((doc, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">{doc.file_name}</p>
-                      <p className="text-sm text-muted-foreground">{(doc.file_size / 1024 / 1024).toFixed(2)} MB</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" asChild className="bg-transparent">
-                    <a href={doc.blob_url} target="_blank" rel="noopener noreferrer">
-                      View
-                    </a>
-                  </Button>
+      {analysisError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{analysisError}</AlertDescription>
+        </Alert>
+      )}
+
+      <Tabs defaultValue="details" className="space-y-4 md:space-y-6">
+        <TabsList>
+          <TabsTrigger value="details">
+            <FileText className="h-4 w-4 mr-2" />
+            Tender Details
+          </TabsTrigger>
+          {analysis && (
+            <TabsTrigger value="analysis">
+              <Sparkles className="h-4 w-4 mr-2" />
+              AI Insights
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="documents">
+            <FileText className="h-4 w-4 mr-2" />
+            Documents ({documents.length})
+          </TabsTrigger>
+          {analysis?.formFields && analysis.formFields.length > 0 && (
+            <TabsTrigger value="form">
+              <ClipboardList className="h-4 w-4 mr-2" />
+              Response Form
+            </TabsTrigger>
+          )}
+        </TabsList>
+
+        <TabsContent value="details" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tender Information</CardTitle>
+              <CardDescription>
+                {analysis
+                  ? "These fields were automatically filled from your uploaded document. Review and edit as needed."
+                  : "Basic information about the tender"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="title">Tender Title</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="organization">Organization</Label>
+                <Input
+                  id="organization"
+                  placeholder="e.g., Department of Health"
+                  value={formData.organization}
+                  onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+                />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="close_date">Deadline</Label>
+                  <Input
+                    id="close_date"
+                    type="date"
+                    value={formData.close_date}
+                    onChange={(e) => setFormData({ ...formData, close_date: e.target.value })}
+                  />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="value">Tender Value</Label>
+                  <Input
+                    id="value"
+                    placeholder="e.g., R 2,500,000"
+                    value={formData.value}
+                    onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  rows={4}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </div>
+
+              <Button onClick={handleSave} disabled={saving}>
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? "Saving..." : "Save Details"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {documents.length === 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Upload Tender Document</CardTitle>
+                <CardDescription>Upload a PDF document to generate the response form automatically</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Label
+                    htmlFor="pdf-upload"
+                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md cursor-pointer hover:bg-primary/90 transition-colors"
+                  >
+                    <Upload className="h-4 w-4" />
+                    {uploadedFile ? "Change Document" : "Upload PDF"}
+                  </Label>
+                  <Input
+                    id="pdf-upload"
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  {uploadedFile && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <FileText className="h-4 w-4" />
+                      {uploadedFile.name}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {analysis && (
+          <TabsContent value="analysis" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground leading-relaxed">{analysis.summary}</p>
+              </CardContent>
+            </Card>
+
+            {analysis.keyRequirements && analysis.keyRequirements.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Key Requirements</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {analysis.keyRequirements.map((req: string, idx: number) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span className="text-muted-foreground">{req}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
+            {analysis.deadlines && analysis.deadlines.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Important Deadlines</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {analysis.deadlines.map((deadline: string, idx: number) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <Clock className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-muted-foreground">{deadline}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
+            {analysis.actionableTasks && analysis.actionableTasks.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Actionable Tasks</CardTitle>
+                  <CardDescription>Prioritized tasks to complete for this tender</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {analysis.actionableTasks.map((task: any, idx: number) => (
+                      <div key={idx} className="flex items-start gap-3 p-3 rounded-lg border border-border">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge
+                              variant={
+                                task.priority === "high"
+                                  ? "destructive"
+                                  : task.priority === "medium"
+                                    ? "default"
+                                    : "secondary"
+                              }
+                              className="text-xs"
+                            >
+                              {task.priority}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {task.category}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-foreground">{task.task}</p>
+                          {task.deadline && (
+                            <p className="text-xs text-muted-foreground mt-1">Deadline: {task.deadline}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {analysis.recommendations && analysis.recommendations.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Strategic Recommendations</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {analysis.recommendations.map((rec: string, idx: number) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <Sparkles className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                        <span className="text-muted-foreground">{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        )}
+
+        <TabsContent value="documents" className="space-y-4">
+          {documents.length > 0 ? (
+            <div className="grid gap-4">
+              {documents.map((doc: any) => (
+                <Card key={doc.id}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg">{doc.document_name || doc.file_name}</CardTitle>
+                        <CardDescription className="mt-1">
+                          {doc.document_type || doc.file_type} • {((doc.file_size || 0) / 1024 / 1024).toFixed(2)} MB
+                        </CardDescription>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" asChild>
+                          <a href={doc.blob_url || doc.storage_path} download>
+                            <Download className="h-4 w-4 mr-2" />
+                            Download
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground mb-4">No documents uploaded yet</p>
+                <Label
+                  htmlFor="pdf-upload-docs"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md cursor-pointer hover:bg-primary/90 transition-colors"
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload PDF
+                </Label>
+                <Input
+                  id="pdf-upload-docs"
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
-      {localAnalysis && localAnalysis.formFields && localAnalysis.formFields.length > 0 && (
-        <DynamicTenderForm
-          tenderId={tenderId}
-          tenderTitle={tender.title}
-          analysis={localAnalysis}
-          documents={localDocuments}
-        />
-      )}
-
-      {!localAnalysis && !analyzing && (
-        <Card className="border-border">
-          <CardContent className="p-12 text-center">
-            <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <p className="text-muted-foreground mb-4">Upload a tender document to generate the response form</p>
-          </CardContent>
-        </Card>
-      )}
+        {analysis?.formFields && analysis.formFields.length > 0 && (
+          <TabsContent value="form" className="space-y-4 md:space-y-6">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                This form was automatically generated from the tender documents. Fill in all required fields and save
+                your progress as you go.
+              </AlertDescription>
+            </Alert>
+            <DynamicTenderForm
+              tenderId={tenderId}
+              formFields={analysis.formFields}
+              googleMapsApiKey={googleMapsApiKey}
+              documents={documents}
+              tenderData={{
+                id: tenderId,
+                title: tender.title,
+                source_name: tender.organization,
+                description: tender.description,
+                close_date: tender.close_date,
+                estimated_value: tender.value,
+                category: tender.category,
+              }}
+            />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   )
 }
