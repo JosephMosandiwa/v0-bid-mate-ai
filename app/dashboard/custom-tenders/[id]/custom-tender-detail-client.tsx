@@ -23,6 +23,8 @@ interface CustomTenderDetailClientProps {
 
 export function CustomTenderDetailClient({ tender, documents, analysis }: CustomTenderDetailClientProps) {
   const { toast } = useToast()
+  const tenderId = tender.tender_id
+
   const [formData, setFormData] = useState({
     title: tender.title || "",
     organization: tender.organization || "",
@@ -41,7 +43,7 @@ export function CustomTenderDetailClient({ tender, documents, analysis }: Custom
   const handleSave = async () => {
     setSaving(true)
     try {
-      const response = await fetch(`/api/custom-tenders/${tender.id}`, {
+      const response = await fetch(`/api/custom-tenders/${tenderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -79,7 +81,6 @@ export function CustomTenderDetailClient({ tender, documents, analysis }: Custom
     setAnalysisError(null)
 
     try {
-      // Extract text from PDF
       const formData = new FormData()
       formData.append("file", file)
 
@@ -94,7 +95,6 @@ export function CustomTenderDetailClient({ tender, documents, analysis }: Custom
 
       const { text } = await extractResponse.json()
 
-      // Analyze the document
       const analyzeResponse = await fetch("/api/analyze-tender", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -109,7 +109,6 @@ export function CustomTenderDetailClient({ tender, documents, analysis }: Custom
       const analysisResult = await analyzeResponse.json()
       setLocalAnalysis(analysisResult)
 
-      // Upload file to blob storage
       const uploadFormData = new FormData()
       uploadFormData.append("file", file)
 
@@ -124,9 +123,8 @@ export function CustomTenderDetailClient({ tender, documents, analysis }: Custom
 
       const { url: blobUrl } = await uploadResponse.json()
 
-      // Save document reference
       const docData = {
-        tender_id: tender.id,
+        tender_id: tenderId,
         file_name: file.name,
         file_type: file.type,
         file_size: file.size,
@@ -174,7 +172,6 @@ export function CustomTenderDetailClient({ tender, documents, analysis }: Custom
         )}
       </div>
 
-      {/* Tender Details Form */}
       <Card className="border-border">
         <CardHeader>
           <CardTitle>Tender Details</CardTitle>
@@ -300,7 +297,6 @@ export function CustomTenderDetailClient({ tender, documents, analysis }: Custom
         </Card>
       )}
 
-      {/* Documents */}
       {localDocuments.length > 0 && (
         <Card className="border-border">
           <CardHeader>
@@ -332,7 +328,7 @@ export function CustomTenderDetailClient({ tender, documents, analysis }: Custom
 
       {localAnalysis && localAnalysis.formFields && localAnalysis.formFields.length > 0 && (
         <DynamicTenderForm
-          tenderId={tender.id}
+          tenderId={tenderId}
           tenderTitle={tender.title}
           analysis={localAnalysis}
           documents={localDocuments}
