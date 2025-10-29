@@ -88,17 +88,16 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 
     const body = await request.json()
-    const { title, organization, deadline, value, description, location } = body
+    const { title, organization, close_date, value, description } = body
 
     const { data: tender, error: updateError } = await supabase
       .from("user_tenders")
       .update({
         title,
         organization,
-        deadline,
+        close_date,
         value,
         description,
-        location,
         updated_at: new Date().toISOString(),
       })
       .eq("tender_id", id)

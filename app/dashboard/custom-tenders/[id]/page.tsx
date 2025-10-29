@@ -25,18 +25,37 @@ export default async function CustomTenderDetailPage({ params }: { params: Promi
     redirect("/login")
   }
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/custom-tenders/${id}`, {
-    headers: {
-      Cookie: cookieStore.toString(),
-    },
-    cache: "no-store",
-  })
+  const { data: tender, error: tenderError } = await supabase
+    .from("user_tenders")
+    .select("*")
+    .eq("tender_id", id)
+    .eq("user_id", user.id)
+    .single()
 
-  if (!response.ok) {
+  if (tenderError || !tender) {
+    console.error("[v0] Tender not found:", tenderError)
     redirect("/dashboard/tenders")
   }
 
-  const data = await response.json()
+  const { data: documents } = await supabase
+    .from("tender_documents")
+    .select("*")
+    .eq("tender_id", id)
+    .order("created_at", { ascending: false })
 
-  return <CustomTenderDetailClient tender={data.tender} documents={data.documents} analysis={data.analysis} />
+  const { data: analysisData } = await supabase
+    .from("tender_analysis")
+    .select("*")
+    .eq("tender_id", id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single()
+
+  return (
+    <CustomTenderDetailClient
+      tender={tender}
+      documents={documents || []}
+      analysis={analysisData?.analysis_data || null}
+    />
+  )
 }
