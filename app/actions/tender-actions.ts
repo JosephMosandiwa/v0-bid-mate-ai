@@ -407,7 +407,7 @@ export async function createCustomTender(tenderData: {
 
     console.log("[v0] Tender creation completed successfully")
     revalidatePath("/dashboard/tenders")
-    return { success: true, data: userTender }
+    return { success: true, data: userTender, tenderId: customTenderId }
   } catch (error) {
     console.error("[v0] Error in createCustomTender:", error)
     return { success: false, error: "Failed to create tender: " + (error as Error).message }

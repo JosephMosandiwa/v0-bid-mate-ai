@@ -163,7 +163,7 @@ export default function NewTenderPage() {
           title: "Tender Created",
           description: "Your custom tender has been added to My Tenders with status 'in-progress'",
         })
-        router.push(`/dashboard/custom-tenders/${result.tenderId}`)
+        router.push("/dashboard/tenders")
       } else {
         toast({
           title: "Error",

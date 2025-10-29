@@ -189,6 +189,15 @@ export default function TendersPage() {
     }
   }
 
+  const getTenderDetailUrl = (tender: UserTender) => {
+    // Custom tenders have IDs starting with "custom-"
+    if (tender.tender_id.startsWith("custom-")) {
+      return `/dashboard/custom-tenders/${tender.tender_id}`
+    }
+    // Scraped tenders have UUID format
+    return `/dashboard/scraped-tenders/${tender.tender_id}`
+  }
+
   if (loading) {
     return (
       <div className="p-6 md:p-8 flex items-center justify-center min-h-[400px]">
@@ -385,7 +394,7 @@ export default function TendersPage() {
                       <Star className="h-4 w-4" />
                     </Button>
                     <Button variant="outline" size="icon" asChild className="bg-transparent">
-                      <Link href={`/dashboard/tenders/${tender.id}`}>
+                      <Link href={getTenderDetailUrl(tender)}>
                         <Eye className="h-4 w-4" />
                       </Link>
                     </Button>
