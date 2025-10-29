@@ -13,6 +13,8 @@ import { ArrowLeft, Upload, FileText, CheckCircle2, AlertCircle, Loader2, Credit
 import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { createCustomTender } from "@/app/actions/tender-actions"
+import { useToast } from "@/hooks/use-toast"
 
 type AnalysisResult = {
   tenderMetadata?: {
@@ -39,6 +41,7 @@ type ErrorResponse = {
 
 export default function NewTenderPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
@@ -156,9 +159,40 @@ export default function NewTenderPage() {
     e.preventDefault()
     setLoading(true)
 
-    setTimeout(() => {
-      router.push("/dashboard/tenders")
-    }, 1000)
+    try {
+      const result = await createCustomTender({
+        title: formData.title,
+        organization: formData.organization,
+        deadline: formData.deadline,
+        value: formData.value,
+        description: formData.description,
+        uploadedFile: uploadedFile || undefined,
+        analysis: analysis || undefined,
+      })
+
+      if (result.success) {
+        toast({
+          title: "Tender Created",
+          description: "Your custom tender has been added to My Tenders with status 'in-progress'",
+        })
+        router.push("/dashboard/tenders")
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to create tender",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("[v0] Error creating tender:", error)
+      toast({
+        title: "Error",
+        description: "Failed to create tender",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
