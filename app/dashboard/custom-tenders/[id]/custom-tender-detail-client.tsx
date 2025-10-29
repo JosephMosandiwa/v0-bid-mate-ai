@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Save, FileText, Sparkles } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { DynamicTenderForm } from "@/components/dynamic-tender-form"
 
@@ -30,9 +30,19 @@ export function CustomTenderDetailClient({ tender, documents, analysis }: Custom
   })
   const [saving, setSaving] = useState(false)
 
+  useEffect(() => {
+    console.log("[v0] Custom tender data received:", {
+      tender,
+      documents,
+      analysis,
+      formData,
+    })
+  }, [tender, documents, analysis, formData])
+
   const handleSave = async () => {
     setSaving(true)
     try {
+      console.log("[v0] Saving tender details:", formData)
       const response = await fetch(`/api/custom-tenders/${tender.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -41,11 +51,13 @@ export function CustomTenderDetailClient({ tender, documents, analysis }: Custom
 
       if (!response.ok) throw new Error("Failed to save")
 
+      console.log("[v0] Tender details saved successfully")
       toast({
         title: "Saved",
         description: "Tender details updated successfully",
       })
     } catch (error) {
+      console.error("[v0] Error saving tender details:", error)
       toast({
         title: "Error",
         description: "Failed to save tender details",
