@@ -26,28 +26,26 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return Response.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Get tender
     const { data: tender, error: tenderError } = await supabase
-      .from("user_custom_tenders")
+      .from("user_tenders")
       .select("*")
-      .eq("id", id)
+      .eq("tender_id", id)
       .eq("user_id", user.id)
       .single()
 
     if (tenderError || !tender) {
+      console.error("[v0] Tender not found:", tenderError)
       return Response.json({ error: "Tender not found" }, { status: 404 })
     }
 
-    // Get documents
     const { data: documents } = await supabase
-      .from("user_custom_tender_documents")
+      .from("tender_documents")
       .select("*")
       .eq("tender_id", id)
       .order("created_at", { ascending: false })
 
-    // Get analysis
     const { data: analysisData } = await supabase
-      .from("user_custom_tender_analysis")
+      .from("tender_analysis")
       .select("*")
       .eq("tender_id", id)
       .order("created_at", { ascending: false })
@@ -93,7 +91,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { title, organization, deadline, value, description, location } = body
 
     const { data: tender, error: updateError } = await supabase
-      .from("user_custom_tenders")
+      .from("user_tenders")
       .update({
         title,
         organization,
@@ -103,7 +101,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         location,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", id)
+      .eq("tender_id", id)
       .eq("user_id", user.id)
       .select()
       .single()
