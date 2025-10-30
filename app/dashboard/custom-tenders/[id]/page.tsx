@@ -26,9 +26,9 @@ export default async function CustomTenderDetailPage({ params }: { params: Promi
   }
 
   const { data: tender, error: tenderError } = await supabase
-    .from("user_tenders")
+    .from("user_custom_tenders")
     .select("*")
-    .eq("tender_id", id)
+    .eq("id", id)
     .eq("user_id", user.id)
     .single()
 
@@ -40,15 +40,16 @@ export default async function CustomTenderDetailPage({ params }: { params: Promi
   console.log("[v0] Tender found:", tender)
 
   const { data: documents } = await supabase
-    .from("tender_documents")
+    .from("user_custom_tender_documents")
     .select("*")
     .eq("tender_id", id)
     .order("created_at", { ascending: false })
 
   console.log("[v0] Documents found:", documents?.length || 0)
+  console.log("[v0] Documents data:", JSON.stringify(documents, null, 2))
 
   const { data: analysisData } = await supabase
-    .from("tender_analysis")
+    .from("user_custom_tender_analysis")
     .select("*")
     .eq("tender_id", id)
     .order("created_at", { ascending: false })

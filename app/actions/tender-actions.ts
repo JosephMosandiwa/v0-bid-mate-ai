@@ -320,7 +320,6 @@ export async function createCustomTender(tenderData: {
 
   const supabase = await createClient()
 
-  // Get current user
   const {
     data: { user },
     error: userError,
@@ -334,34 +333,30 @@ export async function createCustomTender(tenderData: {
   console.log("[v0] User authenticated:", user.id)
 
   try {
-    console.log("[v0] Creating user tender record...")
+    console.log("[v0] Creating custom tender record...")
 
-    // Generate a unique tender ID for custom tenders
-    const customTenderId = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    console.log("[v0] Generated custom tender ID:", customTenderId)
-
-    const { data: userTender, error: userTenderError } = await supabase
-      .from("user_tenders")
+    const { data: customTender, error: customTenderError } = await supabase
+      .from("user_custom_tenders")
       .insert({
         user_id: user.id,
-        tender_id: customTenderId,
         title: tenderData.title,
         organization: tenderData.organization,
-        close_date: tenderData.deadline,
+        deadline: tenderData.deadline,
         value: tenderData.value,
         category: tenderData.category || "Custom",
         description: tenderData.description,
+        location: tenderData.location,
         status: "in-progress",
       })
       .select()
       .single()
 
-    if (userTenderError) {
-      console.error("[v0] Error creating user tender:", userTenderError)
-      return { success: false, error: "Failed to create tender: " + userTenderError.message }
+    if (customTenderError) {
+      console.error("[v0] Error creating custom tender:", customTenderError)
+      return { success: false, error: "Failed to create tender: " + customTenderError.message }
     }
 
-    console.log("[v0] User tender created successfully:", userTender.id)
+    console.log("[v0] Custom tender created successfully:", customTender.id)
 
     let documentSaved = false
     let documentError: string | null = null
@@ -375,26 +370,29 @@ export async function createCustomTender(tenderData: {
       })
 
       try {
-        const blob = await put(tenderData.uploadedFile.name, tenderData.uploadedFile, {
-          access: "public",
-        })
+        const blob = await put(
+          `custom-tenders/${customTender.id}/${tenderData.uploadedFile.name}`,
+          tenderData.uploadedFile,
+          {
+            access: "public",
+          },
+        )
 
         console.log("[v0] File uploaded to blob:", blob.url)
 
-        // Prepare document data
         const documentData = {
-          tender_id: customTenderId,
-          document_name: tenderData.uploadedFile.name,
-          document_type: tenderData.uploadedFile.type,
-          original_url: blob.url,
-          blob_url: blob.url,
+          tender_id: customTender.id,
+          file_name: tenderData.uploadedFile.name,
+          file_type: tenderData.uploadedFile.type,
           file_size: tenderData.uploadedFile.size,
+          blob_url: blob.url,
+          storage_path: blob.url,
         }
 
         console.log("[v0] Inserting document with data:", JSON.stringify(documentData, null, 2))
 
         const { data: insertedDoc, error: docError } = await supabase
-          .from("tender_documents")
+          .from("user_custom_tender_documents")
           .insert(documentData)
           .select()
           .single()
@@ -403,7 +401,6 @@ export async function createCustomTender(tenderData: {
           console.error("[v0] Error saving document reference:", docError)
           console.error("[v0] Error code:", docError.code)
           console.error("[v0] Error message:", docError.message)
-          console.error("[v0] Error details:", JSON.stringify(docError, null, 2))
           documentError = `Failed to save document: ${docError.message} (Code: ${docError.code})`
         } else {
           console.log("[v0] Document reference saved successfully:", insertedDoc.id)
@@ -411,7 +408,6 @@ export async function createCustomTender(tenderData: {
         }
       } catch (uploadError) {
         console.error("[v0] Error uploading file:", uploadError)
-        console.error("[v0] Upload error details:", JSON.stringify(uploadError, null, 2))
         documentError = `Failed to upload file: ${uploadError instanceof Error ? uploadError.message : "Unknown error"}`
       }
     } else {
@@ -423,26 +419,22 @@ export async function createCustomTender(tenderData: {
 
     if (tenderData.analysis) {
       console.log("[v0] Saving analysis data...")
-      console.log("[v0] Analysis data keys:", Object.keys(tenderData.analysis))
 
       const analysisData = {
-        tender_id: customTenderId,
+        tender_id: customTender.id,
         analysis_data: tenderData.analysis,
       }
 
-      console.log("[v0] Inserting analysis with tender_id:", customTenderId)
+      console.log("[v0] Inserting analysis with tender_id:", customTender.id)
 
       const { data: insertedAnalysis, error: analysisErr } = await supabase
-        .from("tender_analysis")
+        .from("user_custom_tender_analysis")
         .insert(analysisData)
         .select()
         .single()
 
       if (analysisErr) {
         console.error("[v0] Error saving analysis:", analysisErr)
-        console.error("[v0] Analysis error code:", analysisErr.code)
-        console.error("[v0] Analysis error message:", analysisErr.message)
-        console.error("[v0] Analysis error details:", JSON.stringify(analysisErr, null, 2))
         analysisError = `Failed to save analysis: ${analysisErr.message} (Code: ${analysisErr.code})`
       } else {
         console.log("[v0] Analysis saved successfully:", insertedAnalysis.id)
@@ -454,11 +446,12 @@ export async function createCustomTender(tenderData: {
 
     console.log("[v0] Tender creation completed")
     revalidatePath("/dashboard/tenders")
+    revalidatePath("/dashboard/custom-tenders")
 
     return {
       success: true,
-      data: userTender,
-      tenderId: customTenderId,
+      data: customTender,
+      tenderId: customTender.id,
       documentSaved,
       documentError,
       analysisSaved,
@@ -466,7 +459,6 @@ export async function createCustomTender(tenderData: {
     }
   } catch (error) {
     console.error("[v0] Error in createCustomTender:", error)
-    console.error("[v0] Error stack:", error instanceof Error ? error.stack : "No stack trace")
     return { success: false, error: "Failed to create tender: " + (error as Error).message }
   }
 }
