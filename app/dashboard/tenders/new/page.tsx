@@ -159,10 +159,29 @@ export default function NewTenderPage() {
       })
 
       if (result.success) {
+        let description = "Your custom tender has been added to My Tenders with status 'in-progress'"
+
+        if (result.documentError) {
+          description += `\n\nDocument Error: ${result.documentError}`
+        } else if (result.documentSaved) {
+          description += "\n\nDocument uploaded successfully"
+        }
+
+        if (result.analysisError) {
+          description += `\n\nAnalysis Error: ${result.analysisError}`
+        } else if (result.analysisSaved) {
+          description += "\n\nAnalysis saved successfully"
+        }
+
         toast({
           title: "Tender Created",
-          description: "Your custom tender has been added to My Tenders with status 'in-progress'",
+          description,
         })
+
+        console.log("[v0] Tender created with ID:", result.tenderId)
+        console.log("[v0] Document saved:", result.documentSaved)
+        console.log("[v0] Analysis saved:", result.analysisSaved)
+
         router.push(`/dashboard/custom-tenders/${result.tenderId}`)
       } else {
         toast({
