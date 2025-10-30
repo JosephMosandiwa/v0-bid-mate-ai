@@ -338,6 +338,7 @@ export async function createCustomTender(tenderData: {
 
     // Generate a unique tender ID for custom tenders
     const customTenderId = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    console.log("[v0] Generated custom tender ID:", customTenderId)
 
     const { data: userTender, error: userTenderError } = await supabase
       .from("user_tenders")
@@ -364,6 +365,12 @@ export async function createCustomTender(tenderData: {
 
     if (tenderData.uploadedFile) {
       console.log("[v0] Uploading file to blob storage...")
+      console.log("[v0] File details:", {
+        name: tenderData.uploadedFile.name,
+        type: tenderData.uploadedFile.type,
+        size: tenderData.uploadedFile.size,
+      })
+
       try {
         const blob = await put(tenderData.uploadedFile.name, tenderData.uploadedFile, {
           access: "public",
@@ -371,38 +378,69 @@ export async function createCustomTender(tenderData: {
 
         console.log("[v0] File uploaded to blob:", blob.url)
 
-        const { error: docError } = await supabase.from("tender_documents").insert({
-          tender_id: customTenderId, // Use custom tender ID, not user_tender.id
+        // Prepare document data
+        const documentData = {
+          tender_id: customTenderId,
           document_name: tenderData.uploadedFile.name,
           document_type: tenderData.uploadedFile.type,
           original_url: blob.url,
           blob_url: blob.url,
           file_size: tenderData.uploadedFile.size,
-        })
+        }
+
+        console.log("[v0] Inserting document with data:", JSON.stringify(documentData, null, 2))
+
+        const { data: insertedDoc, error: docError } = await supabase
+          .from("tender_documents")
+          .insert(documentData)
+          .select()
+          .single()
 
         if (docError) {
           console.error("[v0] Error saving document reference:", docError)
+          console.error("[v0] Error code:", docError.code)
+          console.error("[v0] Error message:", docError.message)
+          console.error("[v0] Error details:", JSON.stringify(docError, null, 2))
+          // Don't fail the whole operation, but log the error
         } else {
-          console.log("[v0] Document reference saved successfully")
+          console.log("[v0] Document reference saved successfully:", insertedDoc.id)
         }
       } catch (uploadError) {
         console.error("[v0] Error uploading file:", uploadError)
+        console.error("[v0] Upload error details:", JSON.stringify(uploadError, null, 2))
         // Don't fail the whole operation
       }
+    } else {
+      console.log("[v0] No file to upload")
     }
 
     if (tenderData.analysis) {
       console.log("[v0] Saving analysis data...")
-      const { error: analysisError } = await supabase.from("tender_analysis").insert({
-        tender_id: customTenderId, // Use custom tender ID
+      console.log("[v0] Analysis data keys:", Object.keys(tenderData.analysis))
+
+      const analysisData = {
+        tender_id: customTenderId,
         analysis_data: tenderData.analysis,
-      })
+      }
+
+      console.log("[v0] Inserting analysis with tender_id:", customTenderId)
+
+      const { data: insertedAnalysis, error: analysisError } = await supabase
+        .from("tender_analysis")
+        .insert(analysisData)
+        .select()
+        .single()
 
       if (analysisError) {
         console.error("[v0] Error saving analysis:", analysisError)
+        console.error("[v0] Analysis error code:", analysisError.code)
+        console.error("[v0] Analysis error message:", analysisError.message)
+        console.error("[v0] Analysis error details:", JSON.stringify(analysisError, null, 2))
       } else {
-        console.log("[v0] Analysis saved successfully")
+        console.log("[v0] Analysis saved successfully:", insertedAnalysis.id)
       }
+    } else {
+      console.log("[v0] No analysis to save")
     }
 
     console.log("[v0] Tender creation completed successfully")
@@ -410,6 +448,7 @@ export async function createCustomTender(tenderData: {
     return { success: true, data: userTender, tenderId: customTenderId }
   } catch (error) {
     console.error("[v0] Error in createCustomTender:", error)
+    console.error("[v0] Error stack:", error instanceof Error ? error.stack : "No stack trace")
     return { success: false, error: "Failed to create tender: " + (error as Error).message }
   }
 }
