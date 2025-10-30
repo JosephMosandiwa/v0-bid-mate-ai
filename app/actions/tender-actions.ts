@@ -363,6 +363,9 @@ export async function createCustomTender(tenderData: {
 
     console.log("[v0] User tender created successfully:", userTender.id)
 
+    let documentSaved = false
+    let documentError: string | null = null
+
     if (tenderData.uploadedFile) {
       console.log("[v0] Uploading file to blob storage...")
       console.log("[v0] File details:", {
@@ -401,18 +404,22 @@ export async function createCustomTender(tenderData: {
           console.error("[v0] Error code:", docError.code)
           console.error("[v0] Error message:", docError.message)
           console.error("[v0] Error details:", JSON.stringify(docError, null, 2))
-          // Don't fail the whole operation, but log the error
+          documentError = `Failed to save document: ${docError.message} (Code: ${docError.code})`
         } else {
           console.log("[v0] Document reference saved successfully:", insertedDoc.id)
+          documentSaved = true
         }
       } catch (uploadError) {
         console.error("[v0] Error uploading file:", uploadError)
         console.error("[v0] Upload error details:", JSON.stringify(uploadError, null, 2))
-        // Don't fail the whole operation
+        documentError = `Failed to upload file: ${uploadError instanceof Error ? uploadError.message : "Unknown error"}`
       }
     } else {
       console.log("[v0] No file to upload")
     }
+
+    let analysisSaved = false
+    let analysisError: string | null = null
 
     if (tenderData.analysis) {
       console.log("[v0] Saving analysis data...")
@@ -425,27 +432,38 @@ export async function createCustomTender(tenderData: {
 
       console.log("[v0] Inserting analysis with tender_id:", customTenderId)
 
-      const { data: insertedAnalysis, error: analysisError } = await supabase
+      const { data: insertedAnalysis, error: analysisErr } = await supabase
         .from("tender_analysis")
         .insert(analysisData)
         .select()
         .single()
 
-      if (analysisError) {
-        console.error("[v0] Error saving analysis:", analysisError)
-        console.error("[v0] Analysis error code:", analysisError.code)
-        console.error("[v0] Analysis error message:", analysisError.message)
-        console.error("[v0] Analysis error details:", JSON.stringify(analysisError, null, 2))
+      if (analysisErr) {
+        console.error("[v0] Error saving analysis:", analysisErr)
+        console.error("[v0] Analysis error code:", analysisErr.code)
+        console.error("[v0] Analysis error message:", analysisErr.message)
+        console.error("[v0] Analysis error details:", JSON.stringify(analysisErr, null, 2))
+        analysisError = `Failed to save analysis: ${analysisErr.message} (Code: ${analysisErr.code})`
       } else {
         console.log("[v0] Analysis saved successfully:", insertedAnalysis.id)
+        analysisSaved = true
       }
     } else {
       console.log("[v0] No analysis to save")
     }
 
-    console.log("[v0] Tender creation completed successfully")
+    console.log("[v0] Tender creation completed")
     revalidatePath("/dashboard/tenders")
-    return { success: true, data: userTender, tenderId: customTenderId }
+
+    return {
+      success: true,
+      data: userTender,
+      tenderId: customTenderId,
+      documentSaved,
+      documentError,
+      analysisSaved,
+      analysisError,
+    }
   } catch (error) {
     console.error("[v0] Error in createCustomTender:", error)
     console.error("[v0] Error stack:", error instanceof Error ? error.stack : "No stack trace")
