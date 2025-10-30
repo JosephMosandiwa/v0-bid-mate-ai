@@ -145,9 +145,16 @@ export default function NewTenderPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log("[v0] Form submitted")
+    console.log("[v0] Form data:", formData)
+    console.log("[v0] Uploaded file:", uploadedFile?.name)
+    console.log("[v0] Analysis:", analysis ? "exists" : "null")
+
     setLoading(true)
 
     try {
+      console.log("[v0] Calling createCustomTender...")
+
       const result = await createCustomTender({
         title: formData.title,
         organization: formData.organization,
@@ -157,6 +164,8 @@ export default function NewTenderPage() {
         uploadedFile: uploadedFile || undefined,
         analysis: analysis || undefined,
       })
+
+      console.log("[v0] createCustomTender result:", result)
 
       if (result.success) {
         let description = "Your custom tender has been added to My Tenders with status 'in-progress'"
@@ -184,6 +193,7 @@ export default function NewTenderPage() {
 
         router.push(`/dashboard/custom-tenders/${result.tenderId}`)
       } else {
+        console.error("[v0] Tender creation failed:", result.error)
         toast({
           title: "Error",
           description: result.error || "Failed to create tender",
@@ -191,6 +201,7 @@ export default function NewTenderPage() {
         })
       }
     } catch (error) {
+      console.error("[v0] Exception in handleSubmit:", error)
       toast({
         title: "Error",
         description: "Failed to create tender: " + (error as Error).message,
@@ -198,6 +209,7 @@ export default function NewTenderPage() {
       })
     } finally {
       setLoading(false)
+      console.log("[v0] Form submission completed")
     }
   }
 
