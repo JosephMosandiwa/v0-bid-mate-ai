@@ -47,7 +47,7 @@ export function CustomTenderDetailClient({
 
   const router = useRouter()
   const { toast } = useToast()
-  const tenderId = tender.tender_id
+  const tenderId = tender.id
 
   console.log("[v0] Tender ID extracted:", tenderId)
 
