@@ -67,6 +67,9 @@ export function DynamicTenderForm({
   const [hasAutoSaved, setHasAutoSaved] = useState(false)
   const { toast } = useToast()
 
+  const isCustomTender = tenderId.length === 36 && tenderId.includes("-")
+  const apiBasePath = isCustomTender ? `/api/custom-tenders/${tenderId}` : `/api/tenders/scraped/${tenderId}`
+
   const availableDocuments = documents.filter(
     (doc: any) => doc.document_type === "application/pdf" || doc.file_type === "application/pdf",
   )
@@ -77,7 +80,7 @@ export function DynamicTenderForm({
 
   const loadSavedResponses = async () => {
     try {
-      const response = await fetch(`/api/tenders/scraped/${tenderId}/responses`)
+      const response = await fetch(`${apiBasePath}/responses`)
       if (response.ok) {
         const { responses } = await response.json()
         if (responses) {
@@ -166,7 +169,7 @@ export function DynamicTenderForm({
 
     setSaving(true)
     try {
-      const response = await fetch(`/api/tenders/scraped/${tenderId}/responses`, {
+      const response = await fetch(`${apiBasePath}/responses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ responses: formData }),
@@ -175,9 +178,18 @@ export function DynamicTenderForm({
       if (response.ok) {
         setSaved(true)
         setTimeout(() => setSaved(false), 3000)
+        toast({
+          title: "Saved",
+          description: "Your responses have been saved successfully",
+        })
       }
     } catch (error) {
       console.error("[v0] Error saving responses:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save responses",
+        variant: "destructive",
+      })
     } finally {
       setSaving(false)
     }
@@ -186,7 +198,7 @@ export function DynamicTenderForm({
   const handlePreviewFilledPdf = async (documentId: string) => {
     setFillingPdf(true)
     try {
-      const response = await fetch(`/api/tenders/scraped/${tenderId}/fill-pdf`, {
+      const response = await fetch(`${apiBasePath}/fill-pdf`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ documentId }),
@@ -204,7 +216,11 @@ export function DynamicTenderForm({
       setTimeout(() => window.URL.revokeObjectURL(url), 1000)
     } catch (error: any) {
       console.error("[v0] Error previewing filled PDF:", error)
-      alert(error.message || "Failed to preview filled PDF")
+      toast({
+        title: "Error",
+        description: error.message || "Failed to preview filled PDF",
+        variant: "destructive",
+      })
     } finally {
       setFillingPdf(false)
     }
@@ -213,7 +229,7 @@ export function DynamicTenderForm({
   const handleDownloadFilledPdf = async (documentId: string) => {
     setFillingPdf(true)
     try {
-      const response = await fetch(`/api/tenders/scraped/${tenderId}/fill-pdf`, {
+      const response = await fetch(`${apiBasePath}/fill-pdf`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ documentId }),
@@ -233,9 +249,18 @@ export function DynamicTenderForm({
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
+
+      toast({
+        title: "Success",
+        description: "Filled PDF downloaded successfully",
+      })
     } catch (error: any) {
       console.error("[v0] Error downloading filled PDF:", error)
-      alert(error.message || "Failed to download filled PDF")
+      toast({
+        title: "Error",
+        description: error.message || "Failed to download filled PDF",
+        variant: "destructive",
+      })
     } finally {
       setFillingPdf(false)
     }
