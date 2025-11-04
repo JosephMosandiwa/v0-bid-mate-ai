@@ -65,9 +65,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     if (documentId) {
       console.log("[v0] Fetching document by ID:", documentId)
       const { data: document, error: docError } = await supabase
-        .from("tender_documents")
-        .select("document_url")
+        .from("user_custom_tender_documents")
+        .select("blob_url")
         .eq("id", documentId)
+        .eq("tender_id", id)
         .single()
 
       if (docError || !document) {
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         return Response.json({ error: "Document not found" }, { status: 404 })
       }
 
-      documentUrl = document.document_url
+      documentUrl = document.blob_url
       console.log("[v0] Found document URL from document ID")
     }
 
