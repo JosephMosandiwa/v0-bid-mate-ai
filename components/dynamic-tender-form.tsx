@@ -488,14 +488,29 @@ export function DynamicTenderForm({
 
     setFillingPdf(true)
     try {
-      console.log("[v0] Making PDF editable...")
-      const response = await fetch(`${apiBasePath}/make-pdf-editable`, {
+      console.log("[v0] ========================================")
+      console.log("[v0] MAKE PDF EDITABLE - URL CONSTRUCTION")
+      console.log("[v0] ========================================")
+      console.log("[v0] tenderId:", tenderId)
+      console.log("[v0] isCustomTender:", isCustomTender)
+      console.log("[v0] apiBasePath:", apiBasePath)
+      const fullUrl = `${apiBasePath}/make-pdf-editable`
+      console.log("[v0] Full URL being fetched:", fullUrl)
+      console.log("[v0] URL length:", fullUrl.length)
+      console.log("[v0] URL contains duplicate?:", fullUrl.includes("/make-pdf-editable/"))
+      console.log("[v0] ========================================")
+
+      const response = await fetch(fullUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       })
 
+      console.log("[v0] Response status:", response.status)
+      console.log("[v0] Response OK:", response.ok)
+
       if (!response.ok) {
         const error = await response.json()
+        console.error("[v0] API error response:", error)
         throw new Error(error.error || "Failed to make PDF editable")
       }
 
@@ -538,7 +553,17 @@ export function DynamicTenderForm({
 
     setFillingPdf(true)
     try {
-      const response = await fetch(`${apiBasePath}/make-pdf-editable`, {
+      console.log("[v0] ========================================")
+      console.log("[v0] DOWNLOAD EDITABLE PDF - URL CONSTRUCTION")
+      console.log("[v0] ========================================")
+      console.log("[v0] tenderId:", tenderId)
+      console.log("[v0] isCustomTender:", isCustomTender)
+      console.log("[v0] apiBasePath:", apiBasePath)
+      const fullUrl = `${apiBasePath}/make-pdf-editable`
+      console.log("[v0] Full URL being fetched:", fullUrl)
+      console.log("[v0] ========================================")
+
+      const response = await fetch(fullUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       })
