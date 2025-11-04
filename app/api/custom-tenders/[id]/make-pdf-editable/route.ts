@@ -63,6 +63,24 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     console.log("[v0] Form responses:", Object.keys(formResponses).length)
     console.log("[v0] Form fields:", formFields.length)
 
+    let fieldsToUse = formFields
+    if (fieldsToUse.length === 0 && Object.keys(formResponses).length > 0) {
+      console.log("[v0] No form fields defined, generating from responses...")
+      fieldsToUse = Object.entries(formResponses).map(([key, value], index) => ({
+        id: key,
+        label: key
+          .replace(/_/g, " ")
+          .replace(/-/g, " ")
+          .replace(/([A-Z])/g, " $1")
+          .trim(),
+        type: "text",
+        section: "Responses",
+        required: false,
+        order: index,
+      }))
+      console.log("[v0] Generated", fieldsToUse.length, "fields from responses")
+    }
+
     let documentUrl = tenderData.document_url
 
     if (documentId) {
@@ -159,10 +177,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     console.log("[v0] PDF has no form fields, adding fields at standard positions...")
 
-    if (formFields.length === 0) {
-      console.log("[v0] No form fields defined for this tender")
+    if (fieldsToUse.length === 0) {
+      console.log("[v0] No form fields or responses available")
       return Response.json(
-        { error: "No form fields defined for this tender. Please analyze the document first." },
+        { error: "No form fields or responses available. Please fill out the tender form first." },
         { status: 400 },
       )
     }
@@ -174,7 +192,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const { height } = firstPage.getSize()
 
     // Group fields by section for better organization
-    const fieldsBySection = formFields.reduce(
+    const fieldsBySection = fieldsToUse.reduce(
       (acc: any, field: any) => {
         const section = field.section || "General"
         if (!acc[section]) acc[section] = []
