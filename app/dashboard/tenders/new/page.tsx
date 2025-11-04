@@ -15,11 +15,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createCustomTender } from "@/app/actions/tender-actions"
 import { useToast } from "@/hooks/use-toast"
-import * as pdfjsLib from "pdfjs-dist"
-
-if (typeof window !== "undefined") {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
-}
 
 type AnalysisResult = {
   tenderMetadata?: {
@@ -97,6 +92,12 @@ export default function NewTenderPage() {
       } else {
         console.warn("[v0] Could not extract PDF fields, continuing without them")
       }
+
+      console.log("[v0] Loading PDF.js library...")
+      const pdfjsLib = await import("pdfjs-dist")
+
+      // Set worker source
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
 
       console.log("[v0] Extracting text from PDF using client-side PDF.js...")
       const arrayBuffer = await file.arrayBuffer()
