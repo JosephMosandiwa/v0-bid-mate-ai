@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("[v0] Extract PDF route called")
+
     const formData = await request.formData()
     const file = formData.get("file") as File
 
@@ -21,8 +23,13 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    const pdfParse = require("pdf-parse")
+    console.log("[v0] Loading pdf-parse module...")
+    const pdfParse = (await import("pdf-parse")).default
+    console.log("[v0] pdf-parse module loaded successfully")
+
+    console.log("[v0] Parsing PDF buffer...")
     const data = await pdfParse(buffer)
+    console.log("[v0] PDF parsed successfully")
 
     const text = data.text.trim()
 
@@ -55,7 +62,8 @@ export async function POST(request: NextRequest) {
     console.error("[v0] PDF extraction error:", error)
     console.error("[v0] Error details:", {
       message: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined,
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
     })
     return Response.json(
       { error: error instanceof Error ? error.message : "Failed to extract text from PDF" },
