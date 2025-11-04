@@ -6,15 +6,32 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const { id } = params
     const supabase = await createClient()
 
-    console.log("[v0] Fetching form responses for custom tender:", id)
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-    const { data, error } = await supabase.from("user_custom_tender_responses").select("*").eq("tender_id", id).single()
+    if (!user) {
+      console.log("[v0] GET responses - No user found")
+      return Response.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    console.log("[v0] Fetching form responses for custom tender:", id, "user:", user.id)
+
+    const { data, error } = await supabase
+      .from("user_custom_tender_responses")
+      .select("*")
+      .eq("tender_id", id)
+      .eq("user_id", user.id)
+      .single()
+
+    console.log("[v0] Query result - data:", data, "error:", error)
 
     if (error && error.code !== "PGRST116") {
       console.error("[v0] Error fetching responses:", error)
       return Response.json({ error: error.message }, { status: 500 })
     }
 
+    console.log("[v0] Returning", Object.keys(data?.response_data || {}).length, "saved responses")
     return Response.json({ responses: data?.response_data || null })
   } catch (error: any) {
     console.error("[v0] Error in GET /api/custom-tenders/[id]/responses:", error)
@@ -29,14 +46,19 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const supabase = await createClient()
 
     console.log("[v0] Saving form responses for custom tender:", id)
+    console.log("[v0] Number of fields to save:", Object.keys(responses).length)
+    console.log("[v0] Response data:", responses)
 
     // Get current user
     const {
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) {
+      console.log("[v0] POST responses - No user found")
       return Response.json({ error: "Unauthorized" }, { status: 401 })
     }
+
+    console.log("[v0] User ID:", user.id)
 
     const { data, error } = await supabase
       .from("user_custom_tender_responses")
@@ -59,7 +81,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return Response.json({ error: error.message }, { status: 500 })
     }
 
-    console.log("[v0] Responses saved successfully")
+    console.log("[v0] Responses saved successfully - record ID:", data?.id)
     return Response.json({ success: true, data })
   } catch (error: any) {
     console.error("[v0] Error in POST /api/custom-tenders/[id]/responses:", error)
