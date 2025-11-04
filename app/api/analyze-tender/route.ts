@@ -50,17 +50,27 @@ export async function POST(request: Request) {
   try {
     const { documentText, pdfFields } = await request.json()
 
-    console.log("[v0] Analyze tender API called, text length:", documentText?.length)
+    console.log("[v0] ========================================")
+    console.log("[v0] TENDER ANALYSIS REQUEST")
+    console.log("[v0] ========================================")
+    console.log("[v0] Document text length:", documentText?.length, "characters")
     console.log("[v0] PDF fields provided:", pdfFields?.length || 0)
+
+    if (documentText) {
+      console.log("[v0] First 1000 characters of document text:")
+      console.log(documentText.substring(0, 1000))
+      console.log("[v0] ...")
+      console.log("[v0] Last 500 characters of document text:")
+      console.log(documentText.substring(Math.max(0, documentText.length - 500)))
+    }
 
     if (!documentText) {
       return Response.json({ error: "Document text is required" }, { status: 400 })
     }
 
     const truncatedText = documentText.substring(0, 50000)
-    console.log("[v0] Using truncated text length:", truncatedText.length)
-
-    console.log("[v0] Calling AI Gateway with generateObject for structured analysis...")
+    console.log("[v0] Using truncated text length:", truncatedText.length, "characters")
+    console.log("[v0] Truncation applied:", documentText.length > 50000 ? "YES" : "NO")
 
     const formFieldsInstruction =
       pdfFields && pdfFields.length > 0
@@ -88,6 +98,9 @@ For form fields, extract every piece of information requested in the tender and 
 - References and past projects
 - Any other information requested
 `
+
+    console.log("[v0] Calling AI Gateway with generateObject for structured analysis...")
+    console.log("[v0] Model: openai/gpt-4o")
 
     const { object: analysis } = await generateObject({
       model: "openai/gpt-4o",
@@ -202,19 +215,32 @@ Tender Document:
 ${truncatedText}`,
     })
 
+    console.log("[v0] ========================================")
+    console.log("[v0] ANALYSIS RESULTS")
+    console.log("[v0] ========================================")
     console.log("[v0] Successfully generated structured analysis")
-    console.log("[v0] Extracted metadata:", analysis.tenderMetadata)
-    console.log("[v0] Analysis summary:", analysis.summary?.substring(0, 100))
+    console.log("[v0] Extracted metadata:", JSON.stringify(analysis.tenderMetadata, null, 2))
+    console.log("[v0] Summary length:", analysis.summary?.length, "characters")
+    console.log("[v0] Summary:", analysis.summary)
+    console.log("[v0] Key requirements count:", analysis.keyRequirements?.length)
+    console.log("[v0] Deadlines count:", analysis.deadlines?.length)
+    console.log("[v0] Evaluation criteria count:", analysis.evaluationCriteria?.length)
+    console.log("[v0] Recommendations count:", analysis.recommendations?.length)
     console.log("[v0] Form fields count:", analysis.formFields?.length)
+    console.log("[v0] ========================================")
 
     return Response.json(analysis)
   } catch (error: any) {
-    console.error("[v0] Tender analysis error:", error)
+    console.error("[v0] ========================================")
+    console.error("[v0] TENDER ANALYSIS ERROR")
+    console.error("[v0] ========================================")
+    console.error("[v0] Error:", error)
     console.error("[v0] Error details:", {
       message: error?.message,
       name: error?.name,
       stack: error?.stack?.substring(0, 500),
     })
+    console.error("[v0] ========================================")
 
     if (error?.message?.includes("credit card") || error?.message?.includes("payment")) {
       return Response.json(
