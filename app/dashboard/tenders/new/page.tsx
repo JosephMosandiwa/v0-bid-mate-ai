@@ -96,8 +96,7 @@ export default function NewTenderPage() {
       console.log("[v0] Loading PDF.js library...")
       const pdfjsLib = await import("pdfjs-dist")
 
-      // Set worker source
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
 
       console.log("[v0] Extracting text from PDF using client-side PDF.js...")
       const arrayBuffer = await file.arrayBuffer()
