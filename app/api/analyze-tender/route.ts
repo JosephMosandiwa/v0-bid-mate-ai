@@ -180,12 +180,14 @@ For each field, provide:
 `
 
     console.log("[v0] Calling AI Gateway with generateObject for structured analysis...")
-    console.log("[v0] Model: openai/gpt-4o-mini")
+    console.log("[v0] Model: gpt-4o-mini")
 
-    const { object: analysis } = await generateObject({
-      model: "openai/gpt-4o-mini",
-      schema: tenderAnalysisSchema,
-      prompt: `You are an elite tender analyst with 20+ years of experience helping companies win government and corporate tenders. Your analysis must be thorough, actionable, and strategically valuable.
+    let analysis
+    try {
+      const result = await generateObject({
+        model: "gpt-4o-mini",
+        schema: tenderAnalysisSchema,
+        prompt: `You are an elite tender analyst with 20+ years of experience helping companies win government and corporate tenders. Your analysis must be thorough, actionable, and strategically valuable.
 
 ===========================================
 CRITICAL METADATA EXTRACTION RULES
@@ -447,7 +449,57 @@ ANALYSIS OUTPUT
 ===========================================
 
 Provide your comprehensive analysis following all the rules above.`,
-    })
+      })
+
+      analysis = result.object
+    } catch (aiError: any) {
+      console.error("[v0] ========================================")
+      console.error("[v0] AI GATEWAY ERROR")
+      console.error("[v0] ========================================")
+      console.error("[v0] AI Error:", aiError)
+      console.error("[v0] AI Error message:", aiError?.message)
+      console.error("[v0] AI Error cause:", aiError?.cause)
+      console.error("[v0] ========================================")
+
+      if (
+        aiError?.message?.includes("credit card") ||
+        aiError?.message?.includes("payment") ||
+        aiError?.message?.includes("billing")
+      ) {
+        return Response.json(
+          {
+            error: "AI Gateway requires a valid payment method. Please add a credit card to your Vercel account.",
+            errorType: "payment_required",
+            details: aiError?.message,
+          },
+          { status: 402 },
+        )
+      }
+
+      if (aiError?.message?.includes("API key") || aiError?.message?.includes("authentication")) {
+        return Response.json(
+          {
+            error: "OpenAI API key is missing or invalid. Please check your environment variables.",
+            errorType: "authentication_error",
+            details: aiError?.message,
+          },
+          { status: 401 },
+        )
+      }
+
+      if (aiError?.message?.includes("timeout") || aiError?.message?.includes("timed out")) {
+        return Response.json(
+          {
+            error: "AI analysis timed out. The document might be too large. Please try with a smaller document.",
+            errorType: "timeout_error",
+            details: aiError?.message,
+          },
+          { status: 504 },
+        )
+      }
+
+      throw aiError
+    }
 
     console.log("[v0] ========================================")
     console.log("[v0] ANALYSIS RESULTS")
@@ -478,21 +530,11 @@ Provide your comprehensive analysis following all the rules above.`,
     })
     console.error("[v0] ========================================")
 
-    if (error?.message?.includes("credit card") || error?.message?.includes("payment")) {
-      return Response.json(
-        {
-          error:
-            "AI Gateway requires a valid credit card. Please add a payment method to your Vercel account at: vercel.com/account/billing",
-          errorType: "payment_required",
-        },
-        { status: 402 },
-      )
-    }
-
     return Response.json(
       {
         error: "Failed to analyze tender document",
         details: error?.message || "Unknown error",
+        errorType: "server_error",
       },
       { status: 500 },
     )
