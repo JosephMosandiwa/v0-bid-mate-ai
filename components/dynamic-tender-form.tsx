@@ -476,6 +476,104 @@ export function DynamicTenderForm({
     }
   }
 
+  const handleMakePdfEditable = async () => {
+    if (Object.keys(formData).length === 0) {
+      toast({
+        title: "No Responses",
+        description: "Please fill in some form fields first.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setFillingPdf(true)
+    try {
+      console.log("[v0] Making PDF editable...")
+      const response = await fetch(`${apiBasePath}/make-pdf-editable`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to make PDF editable")
+      }
+
+      const fieldsAdded = response.headers.get("X-Fields-Added")
+      const fieldsFilled = response.headers.get("X-Fields-Filled")
+
+      console.log("[v0] Fields added:", fieldsAdded)
+      console.log("[v0] Fields filled:", fieldsFilled)
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      window.open(url, "_blank")
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+
+      toast({
+        title: "Success",
+        description: `Created editable PDF with ${fieldsAdded} form fields (${fieldsFilled} filled)`,
+      })
+    } catch (error: any) {
+      console.error("[v0] Error making PDF editable:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to make PDF editable",
+        variant: "destructive",
+      })
+    } finally {
+      setFillingPdf(false)
+    }
+  }
+
+  const handleDownloadEditablePdf = async () => {
+    if (Object.keys(formData).length === 0) {
+      toast({
+        title: "No Responses",
+        description: "Please fill in some form fields first.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setFillingPdf(true)
+    try {
+      const response = await fetch(`${apiBasePath}/make-pdf-editable`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to make PDF editable")
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `editable_tender_${tenderId}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      toast({
+        title: "Success",
+        description: "Editable PDF downloaded successfully",
+      })
+    } catch (error: any) {
+      console.error("[v0] Error downloading editable PDF:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to download editable PDF",
+        variant: "destructive",
+      })
+    } finally {
+      setFillingPdf(false)
+    }
+  }
+
   const isAddressField = (field: FormField): boolean => {
     const addressKeywords = ["address", "street", "location", "physical address", "postal address"]
     const label = field.label.toLowerCase()
@@ -632,26 +730,64 @@ export function DynamicTenderForm({
       {availableDocuments.length > 0 && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
-            <CardTitle className="text-lg">Document Progress</CardTitle>
-            <CardDescription>
-              Preview or download your tender document with the information you've filled in so far
-            </CardDescription>
+            <CardTitle className="text-lg">Document Options</CardTitle>
+            <CardDescription>Choose how you want to work with your tender document</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Alert className="bg-amber-500/10 border-amber-500/20">
+            <Alert className="bg-blue-500/10 border-blue-500/20">
               <AlertDescription className="text-sm">
-                <strong>Note:</strong> If the original PDF cannot be filled automatically (static document), use the
-                "Generate Response PDF" button below to create a new document with all your responses.
+                <strong>Recommended:</strong> Use "Make PDF Editable" to create a version of the original document with
+                fillable form fields at the detected positions.
               </AlertDescription>
             </Alert>
 
             <div className="space-y-3">
               <div className="flex items-center gap-3 flex-wrap">
                 <Button
-                  onClick={() => handlePreviewFilledPdf(availableDocuments[0].id)}
-                  disabled={fillingPdf}
+                  onClick={handleMakePdfEditable}
+                  disabled={fillingPdf || Object.keys(formData).length === 0}
                   size="lg"
                   variant="default"
+                >
+                  {fillingPdf ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Make PDF Editable & Preview
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  onClick={handleDownloadEditablePdf}
+                  disabled={fillingPdf || Object.keys(formData).length === 0}
+                  size="lg"
+                  variant="outline"
+                >
+                  {fillingPdf ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Editable PDF
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-3 flex-wrap pt-2 border-t">
+                <Button
+                  onClick={() => handlePreviewFilledPdf(availableDocuments[0].id)}
+                  disabled={fillingPdf}
+                  size="sm"
+                  variant="secondary"
                 >
                   {fillingPdf ? (
                     <>
@@ -661,36 +797,15 @@ export function DynamicTenderForm({
                   ) : (
                     <>
                       <Eye className="h-4 w-4 mr-2" />
-                      Preview Original PDF
+                      Try Original PDF
                     </>
                   )}
                 </Button>
 
-                <Button
-                  onClick={() => handleDownloadFilledPdf(availableDocuments[0].id)}
-                  disabled={fillingPdf}
-                  size="lg"
-                  variant="outline"
-                >
-                  {fillingPdf ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Loading...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="h-4 w-4 mr-2" />
-                      Download Original PDF
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              <div className="flex items-center gap-3 flex-wrap pt-2 border-t">
                 <Button
                   onClick={handleGenerateResponsePdf}
                   disabled={fillingPdf || Object.keys(formData).length === 0}
-                  size="lg"
+                  size="sm"
                   variant="secondary"
                 >
                   {fillingPdf ? (
@@ -702,25 +817,6 @@ export function DynamicTenderForm({
                     <>
                       <Eye className="h-4 w-4 mr-2" />
                       Generate Response PDF
-                    </>
-                  )}
-                </Button>
-
-                <Button
-                  onClick={handleDownloadResponsePdf}
-                  disabled={fillingPdf || Object.keys(formData).length === 0}
-                  size="lg"
-                  variant="outline"
-                >
-                  {fillingPdf ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="h-4 w-4 mr-2" />
-                      Download Response PDF
                     </>
                   )}
                 </Button>

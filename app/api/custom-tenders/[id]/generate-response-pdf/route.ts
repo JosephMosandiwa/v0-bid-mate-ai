@@ -41,8 +41,30 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const formResponses = responseData?.response_data || {}
     const formFields = tenderData.form_fields || []
 
-    // Create a new PDF document
-    const pdfDoc = await PDFDocument.create()
+    let pdfDoc: PDFDocument
+
+    if (tenderData.document_url) {
+      try {
+        // Fetch the original PDF from blob storage
+        const pdfResponse = await fetch(tenderData.document_url)
+        if (!pdfResponse.ok) {
+          throw new Error("Failed to fetch original PDF")
+        }
+        const originalPdfBytes = await pdfResponse.arrayBuffer()
+
+        // Load the original PDF
+        pdfDoc = await PDFDocument.load(originalPdfBytes)
+        console.log("[v0] Loaded original PDF with", pdfDoc.getPageCount(), "pages")
+      } catch (error) {
+        console.error("[v0] Error loading original PDF, creating new document:", error)
+        // Fallback to creating a new PDF if loading fails
+        pdfDoc = await PDFDocument.create()
+      }
+    } else {
+      // No original PDF, create a new one
+      pdfDoc = await PDFDocument.create()
+    }
+
     const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman)
     const timesRomanBoldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold)
 
