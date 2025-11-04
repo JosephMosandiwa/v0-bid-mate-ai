@@ -180,10 +180,10 @@ For each field, provide:
 `
 
     console.log("[v0] Calling AI Gateway with generateObject for structured analysis...")
-    console.log("[v0] Model: openai/gpt-4o")
+    console.log("[v0] Model: openai/gpt-4o-mini")
 
     const { object: analysis } = await generateObject({
-      model: "openai/gpt-4o",
+      model: "openai/gpt-4o-mini",
       schema: tenderAnalysisSchema,
       prompt: `You are an elite tender analyst with 20+ years of experience helping companies win government and corporate tenders. Your analysis must be thorough, actionable, and strategically valuable.
 
