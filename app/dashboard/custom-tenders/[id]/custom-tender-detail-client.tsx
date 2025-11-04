@@ -119,36 +119,67 @@ export function CustomTenderDetailClient({
     setAnalysisError(null)
 
     try {
+      console.log("[v0] ========================================")
+      console.log("[v0] STARTING PDF UPLOAD AND ANALYSIS")
+      console.log("[v0] ========================================")
+      console.log("[v0] File name:", file.name)
+      console.log("[v0] File size:", (file.size / 1024 / 1024).toFixed(2), "MB")
+      console.log("[v0] File type:", file.type)
+
       // Extract text from PDF
       const formData = new FormData()
       formData.append("file", file)
 
+      console.log("[v0] Step 1: Extracting text from PDF...")
       const extractResponse = await fetch("/api/extract-pdf", {
         method: "POST",
         body: formData,
       })
 
       if (!extractResponse.ok) {
-        throw new Error("Failed to extract text from PDF")
+        const extractError = await extractResponse.json().catch(() => ({}))
+        console.error("[v0] PDF extraction failed:", extractError)
+        throw new Error(extractError.error || "Failed to extract text from PDF")
       }
 
       const { text } = await extractResponse.json()
+      console.log("[v0] ✓ PDF text extracted successfully")
+      console.log("[v0] Extracted text length:", text?.length, "characters")
 
-      // Analyze the document
+      console.log("[v0] Step 2: Analyzing document with AI...")
       const analyzeResponse = await fetch("/api/analyze-tender", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ documentText: text }),
       })
 
+      console.log("[v0] Analyze response status:", analyzeResponse.status, analyzeResponse.statusText)
+
       if (!analyzeResponse.ok) {
-        const errorData = await analyzeResponse.json()
+        let errorData
+        try {
+          errorData = await analyzeResponse.json()
+          console.error("[v0] ========================================")
+          console.error("[v0] ANALYZE-TENDER API ERROR")
+          console.error("[v0] ========================================")
+          console.error("[v0] Status:", analyzeResponse.status)
+          console.error("[v0] Error type:", errorData.errorType)
+          console.error("[v0] Error message:", errorData.error)
+          console.error("[v0] Error details:", errorData.details)
+          console.error("[v0] ========================================")
+        } catch (parseError) {
+          console.error("[v0] Failed to parse error response:", parseError)
+          errorData = { error: "Failed to analyze document" }
+        }
         throw new Error(errorData.error || "Failed to analyze document")
       }
 
       const analysisResult = await analyzeResponse.json()
+      console.log("[v0] ✓ Document analyzed successfully")
+      console.log("[v0] Analysis result keys:", Object.keys(analysisResult))
       setAnalysis(analysisResult)
 
+      console.log("[v0] Step 3: Uploading file to blob storage...")
       // Upload file to blob storage
       const uploadFormData = new FormData()
       uploadFormData.append("file", file)
@@ -159,10 +190,14 @@ export function CustomTenderDetailClient({
       })
 
       if (!uploadResponse.ok) {
-        throw new Error("Failed to upload file")
+        const uploadError = await uploadResponse.json().catch(() => ({}))
+        console.error("[v0] File upload failed:", uploadError)
+        throw new Error(uploadError.error || "Failed to upload file")
       }
 
       const { url: blobUrl } = await uploadResponse.json()
+      console.log("[v0] ✓ File uploaded successfully")
+      console.log("[v0] Blob URL:", blobUrl)
 
       // Add document to list
       const newDoc = {
@@ -177,16 +212,26 @@ export function CustomTenderDetailClient({
 
       setDocuments([...documents, newDoc])
 
+      console.log("[v0] ========================================")
+      console.log("[v0] UPLOAD AND ANALYSIS COMPLETE")
+      console.log("[v0] ========================================")
+
       toast({
         title: "Success",
         description: "Document uploaded and analyzed successfully",
       })
     } catch (error) {
-      console.error("[v0] Error uploading document:", error)
+      console.error("[v0] ========================================")
+      console.error("[v0] UPLOAD AND ANALYSIS ERROR")
+      console.error("[v0] ========================================")
+      console.error("[v0] Error:", error)
+      console.error("[v0] Error message:", error instanceof Error ? error.message : "Unknown error")
+      console.error("[v0] ========================================")
+
       setAnalysisError(error instanceof Error ? error.message : "Failed to process document")
       toast({
         title: "Error",
-        description: "Failed to upload and analyze document",
+        description: error instanceof Error ? error.message : "Failed to upload and analyze document",
         variant: "destructive",
       })
     } finally {
