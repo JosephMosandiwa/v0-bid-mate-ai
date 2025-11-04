@@ -1,4 +1,7 @@
 import type { NextRequest } from "next/server"
+import * as pdfjsLib from "pdfjs-dist"
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,22 +22,28 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] Extracting text from PDF:", file.name, "Size:", file.size, "bytes")
 
-    // Read the PDF file
     const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
+    const uint8Array = new Uint8Array(arrayBuffer)
 
-    console.log("[v0] Loading pdf-parse module...")
-    const pdfParse = (await import("pdf-parse")).default
-    console.log("[v0] pdf-parse module loaded successfully")
+    console.log("[v0] Loading PDF document with pdfjs-dist...")
+    const loadingTask = pdfjsLib.getDocument({ data: uint8Array })
+    const pdfDocument = await loadingTask.promise
+    console.log("[v0] PDF document loaded successfully, pages:", pdfDocument.numPages)
 
-    console.log("[v0] Parsing PDF buffer...")
-    const data = await pdfParse(buffer)
-    console.log("[v0] PDF parsed successfully")
+    // Extract text from all pages
+    const textParts: string[] = []
+    for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
+      console.log(`[v0] Extracting text from page ${pageNum}/${pdfDocument.numPages}`)
+      const page = await pdfDocument.getPage(pageNum)
+      const textContent = await page.getTextContent()
+      const pageText = textContent.items.map((item: any) => item.str).join(" ")
+      textParts.push(pageText)
+    }
 
-    const text = data.text.trim()
+    const text = textParts.join("\n\n").trim()
 
     console.log("[v0] PDF extraction complete:")
-    console.log("[v0] - Total pages:", data.numpages)
+    console.log("[v0] - Total pages:", pdfDocument.numPages)
     console.log("[v0] - Text length:", text.length, "characters")
     console.log("[v0] - First 500 characters:", text.substring(0, 500))
     console.log("[v0] - Last 500 characters:", text.substring(Math.max(0, text.length - 500)))
