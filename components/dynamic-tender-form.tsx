@@ -196,6 +196,9 @@ export function DynamicTenderForm({
   }
 
   const handlePreviewFilledPdf = async (documentId: string) => {
+    console.log("[v0] 🔵 PREVIEW BUTTON CLICKED - Function starting...")
+    console.log("[v0] Current timestamp:", new Date().toISOString())
+
     setFillingPdf(true)
     try {
       console.log("[v0] ========================================")
@@ -206,13 +209,21 @@ export function DynamicTenderForm({
       console.log("[v0] Number of filled fields:", Object.keys(formData).length)
       console.log("[v0] Field IDs:", Object.keys(formData))
 
+      if (Object.keys(formData).length === 0) {
+        console.log("[v0] ⚠⚠⚠ WARNING: No form data to fill! ⚠⚠⚠")
+        console.log("[v0] You haven't filled any fields yet. The PDF will open but will be empty.")
+      }
+
+      console.log("[v0] Making fetch request to:", `${apiBasePath}/fill-pdf`)
       const response = await fetch(`${apiBasePath}/fill-pdf`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ documentId }),
       })
 
+      console.log("[v0] ✓ Fetch completed")
       console.log("[v0] Response status:", response.status)
+      console.log("[v0] Response OK:", response.ok)
       console.log("[v0] Response headers:")
       console.log("[v0]   - PDF Fields Total:", response.headers.get("X-PDF-Fields-Total"))
       console.log("[v0]   - Fields Filled:", response.headers.get("X-Fields-Filled"))
@@ -238,9 +249,9 @@ export function DynamicTenderForm({
         console.log("[v0] This is a static PDF document. The fields cannot be filled automatically.")
         console.log("[v0] You may need to manually fill this PDF or use a different document.")
         toast({
-          title: "PDF Has No Form Fields",
+          title: "Static PDF Detected",
           description:
-            "This PDF doesn't have interactive form fields. The document will open, but your responses cannot be automatically filled in.",
+            "This PDF has no fillable fields. Click 'Generate Response PDF' below to create a new document with your responses.",
           variant: "destructive",
         })
       } else if (fieldsFilled === 0 && responsesTotal > 0) {
@@ -271,19 +282,29 @@ export function DynamicTenderForm({
         throw new Error(error.error || "Failed to fill PDF")
       }
 
+      console.log("[v0] Converting response to blob...")
       const blob = await response.blob()
+      console.log("[v0] Blob size:", blob.size, "bytes")
+      console.log("[v0] Blob type:", blob.type)
+
       const url = window.URL.createObjectURL(blob)
+      console.log("[v0] Opening PDF in new window...")
       window.open(url, "_blank")
 
       setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+      console.log("[v0] ✓ Preview completed successfully")
     } catch (error: any) {
-      console.error("[v0] Error previewing filled PDF:", error)
+      console.error("[v0] ❌ ERROR in handlePreviewFilledPdf:")
+      console.error("[v0] Error type:", error?.constructor?.name)
+      console.error("[v0] Error message:", error?.message)
+      console.error("[v0] Full error:", error)
       toast({
         title: "Error",
         description: error.message || "Failed to preview filled PDF",
         variant: "destructive",
       })
     } finally {
+      console.log("[v0] 🔵 PREVIEW FUNCTION ENDING")
       setFillingPdf(false)
     }
   }
@@ -311,6 +332,7 @@ export function DynamicTenderForm({
 
       console.log("[v0] ========================================")
       console.log("[v0] FILL RESULTS:")
+      console.log("[v0] ========================================")
       console.log("[v0] PDF Fields:", pdfFieldsTotal)
       console.log("[v0] Responses:", responsesTotal)
       console.log("[v0] Filled:", fieldsFilled)
@@ -356,6 +378,97 @@ export function DynamicTenderForm({
       toast({
         title: "Error",
         description: error.message || "Failed to download filled PDF",
+        variant: "destructive",
+      })
+    } finally {
+      setFillingPdf(false)
+    }
+  }
+
+  const handleGenerateResponsePdf = async () => {
+    if (Object.keys(formData).length === 0) {
+      toast({
+        title: "No Responses",
+        description: "Please fill in some form fields before generating a response PDF.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setFillingPdf(true)
+    try {
+      const response = await fetch(`${apiBasePath}/generate-response-pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to generate PDF")
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      window.open(url, "_blank")
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000)
+
+      toast({
+        title: "Success",
+        description: "Response PDF generated successfully",
+      })
+    } catch (error: any) {
+      console.error("[v0] Error generating response PDF:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate response PDF",
+        variant: "destructive",
+      })
+    } finally {
+      setFillingPdf(false)
+    }
+  }
+
+  const handleDownloadResponsePdf = async () => {
+    if (Object.keys(formData).length === 0) {
+      toast({
+        title: "No Responses",
+        description: "Please fill in some form fields before downloading a response PDF.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setFillingPdf(true)
+    try {
+      const response = await fetch(`${apiBasePath}/generate-response-pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to generate PDF")
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `tender_response_${tenderId}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      toast({
+        title: "Success",
+        description: "Response PDF downloaded successfully",
+      })
+    } catch (error: any) {
+      console.error("[v0] Error downloading response PDF:", error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to download response PDF",
         variant: "destructive",
       })
     } finally {
@@ -524,45 +637,94 @@ export function DynamicTenderForm({
               Preview or download your tender document with the information you've filled in so far
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-3 flex-wrap">
-              <Button
-                onClick={() => handlePreviewFilledPdf(availableDocuments[0].id)}
-                disabled={fillingPdf}
-                size="lg"
-                variant="default"
-              >
-                {fillingPdf ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Loading...
-                  </>
-                ) : (
-                  <>
-                    <Eye className="h-4 w-4 mr-2" />
-                    Preview Progress
-                  </>
-                )}
-              </Button>
+          <CardContent className="space-y-4">
+            <Alert className="bg-amber-500/10 border-amber-500/20">
+              <AlertDescription className="text-sm">
+                <strong>Note:</strong> If the original PDF cannot be filled automatically (static document), use the
+                "Generate Response PDF" button below to create a new document with all your responses.
+              </AlertDescription>
+            </Alert>
 
-              <Button
-                onClick={() => handleDownloadFilledPdf(availableDocuments[0].id)}
-                disabled={fillingPdf}
-                size="lg"
-                variant="outline"
-              >
-                {fillingPdf ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Loading...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    Download PDF
-                  </>
-                )}
-              </Button>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 flex-wrap">
+                <Button
+                  onClick={() => handlePreviewFilledPdf(availableDocuments[0].id)}
+                  disabled={fillingPdf}
+                  size="lg"
+                  variant="default"
+                >
+                  {fillingPdf ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Preview Original PDF
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  onClick={() => handleDownloadFilledPdf(availableDocuments[0].id)}
+                  disabled={fillingPdf}
+                  size="lg"
+                  variant="outline"
+                >
+                  {fillingPdf ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Original PDF
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-3 flex-wrap pt-2 border-t">
+                <Button
+                  onClick={handleGenerateResponsePdf}
+                  disabled={fillingPdf || Object.keys(formData).length === 0}
+                  size="lg"
+                  variant="secondary"
+                >
+                  {fillingPdf ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Generate Response PDF
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  onClick={handleDownloadResponsePdf}
+                  disabled={fillingPdf || Object.keys(formData).length === 0}
+                  size="lg"
+                  variant="outline"
+                >
+                  {fillingPdf ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Response PDF
+                    </>
+                  )}
+                </Button>
+              </div>
 
               <p className="text-sm text-muted-foreground">
                 {Object.keys(formData).length > 0
