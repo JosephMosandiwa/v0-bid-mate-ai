@@ -2,10 +2,40 @@ import { createClient } from "@/lib/supabase/server"
 import { PDFDocument, PDFTextField, PDFCheckBox, rgb } from "pdf-lib"
 import type { NextRequest } from "next/server"
 import OpenAI from "openai"
+import pdfjsLib from "pdfjs-dist"
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
+
+async function extractTextFromPDF(pdfBytes: ArrayBuffer): Promise<string> {
+  try {
+    console.log("[v0] Importing pdfjs-dist for text extraction...")
+
+    // Set up worker for server-side usage
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
+
+    console.log("[v0] Loading PDF document...")
+    const loadingTask = pdfjsLib.getDocument({ data: pdfBytes })
+    const pdf = await loadingTask.promise
+
+    console.log("[v0] Extracting text from", pdf.numPages, "pages...")
+    let fullText = ""
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum)
+      const textContent = await page.getTextContent()
+      const pageText = textContent.items.map((item: any) => item.str).join(" ")
+      fullText += pageText + "\n\n"
+    }
+
+    console.log("[v0] Text extraction complete:", fullText.length, "characters")
+    return fullText
+  } catch (error) {
+    console.error("[v0] Error extracting text from PDF:", error)
+    throw new Error("Failed to extract text from PDF")
+  }
+}
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -157,11 +187,26 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     // PDF has no form fields - we need to analyze it and add fields
     console.log("[v0] PDF has no form fields, analyzing document to add fields...")
 
-    // Use AI to analyze the PDF text and suggest where fields should be placed
-    const pdfText = tenderData.extracted_text || ""
+    let pdfText = tenderData.extracted_text || ""
     if (!pdfText) {
-      console.log("[v0] No extracted text available")
-      return Response.json({ error: "No text extracted from PDF. Cannot identify field positions." }, { status: 400 })
+      console.log("[v0] No extracted text in database, extracting from PDF...")
+      try {
+        pdfText = await extractTextFromPDF(originalPdfBytes)
+      } catch (error) {
+        console.error("[v0] Failed to extract text from PDF:", error)
+        return Response.json(
+          { error: "Failed to extract text from PDF. The document might be image-based or corrupted." },
+          { status: 400 },
+        )
+      }
+    }
+
+    if (!pdfText || pdfText.length < 100) {
+      console.log("[v0] Insufficient text extracted:", pdfText.length, "characters")
+      return Response.json(
+        { error: "Insufficient text extracted from PDF. The document might be image-based or contain mostly images." },
+        { status: 400 },
+      )
     }
 
     console.log("[v0] Analyzing PDF text to identify field positions...")
