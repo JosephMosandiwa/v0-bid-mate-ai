@@ -2,40 +2,13 @@ import { createClient } from "@/lib/supabase/server"
 import { PDFDocument, PDFTextField, PDFCheckBox, rgb } from "pdf-lib"
 import type { NextRequest } from "next/server"
 import OpenAI from "openai"
-import pdfjsLib from "pdfjs-dist"
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-async function extractTextFromPDF(pdfBytes: ArrayBuffer): Promise<string> {
-  try {
-    console.log("[v0] Importing pdfjs-dist for text extraction...")
-
-    // Set up worker for server-side usage
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
-
-    console.log("[v0] Loading PDF document...")
-    const loadingTask = pdfjsLib.getDocument({ data: pdfBytes })
-    const pdf = await loadingTask.promise
-
-    console.log("[v0] Extracting text from", pdf.numPages, "pages...")
-    let fullText = ""
-
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum)
-      const textContent = await page.getTextContent()
-      const pageText = textContent.items.map((item: any) => item.str).join(" ")
-      fullText += pageText + "\n\n"
-    }
-
-    console.log("[v0] Text extraction complete:", fullText.length, "characters")
-    return fullText
-  } catch (error) {
-    console.error("[v0] Error extracting text from PDF:", error)
-    throw new Error("Failed to extract text from PDF")
-  }
-}
+// Instead, we'll require that the tender already has extracted_text in the database
+// or we'll skip the AI analysis and just add fields at standard positions
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -184,104 +157,89 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       })
     }
 
-    // PDF has no form fields - we need to analyze it and add fields
-    console.log("[v0] PDF has no form fields, analyzing document to add fields...")
+    console.log("[v0] PDF has no form fields, adding fields at standard positions...")
 
-    let pdfText = tenderData.extracted_text || ""
-    if (!pdfText) {
-      console.log("[v0] No extracted text in database, extracting from PDF...")
-      try {
-        pdfText = await extractTextFromPDF(originalPdfBytes)
-      } catch (error) {
-        console.error("[v0] Failed to extract text from PDF:", error)
-        return Response.json(
-          { error: "Failed to extract text from PDF. The document might be image-based or corrupted." },
-          { status: 400 },
-        )
-      }
-    }
-
-    if (!pdfText || pdfText.length < 100) {
-      console.log("[v0] Insufficient text extracted:", pdfText.length, "characters")
+    if (formFields.length === 0) {
+      console.log("[v0] No form fields defined for this tender")
       return Response.json(
-        { error: "Insufficient text extracted from PDF. The document might be image-based or contain mostly images." },
+        { error: "No form fields defined for this tender. Please analyze the document first." },
         { status: 400 },
       )
     }
 
-    console.log("[v0] Analyzing PDF text to identify field positions...")
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: `You are a PDF form field detector. Analyze the tender document text and identify where form fields should be placed.
-          
-For each field you identify, provide:
-1. The field label/name (what the field is for)
-2. The approximate page number (if you can infer it)
-3. The type of field (text, checkbox, date, etc.)
-4. A brief description
-
-Return a JSON array of field suggestions. Each suggestion should have:
-{
-  "label": "Company Name",
-  "type": "text",
-  "page": 1,
-  "description": "Company or organization name"
-}
-
-Focus on identifying actual form fields that need to be filled, not just any text in the document.`,
-        },
-        {
-          role: "user",
-          content: `Analyze this tender document and identify where form fields should be placed:\n\n${pdfText.slice(0, 50000)}`,
-        },
-      ],
-      response_format: { type: "json_object" },
-    })
-
-    const aiResponse = JSON.parse(completion.choices[0].message.content || "{}")
-    const suggestedFields = aiResponse.fields || []
-    console.log("[v0] AI suggested", suggestedFields.length, "fields")
-
-    // Add form fields to the PDF
-    // Since we don't have exact coordinates, we'll add them at standard positions
+    // Add form fields to the PDF at standard positions
     let fieldsAdded = 0
     const pages = pdfDoc.getPages()
+    const firstPage = pages[0]
+    const { height } = firstPage.getSize()
 
-    for (let i = 0; i < Math.min(suggestedFields.length, formFields.length); i++) {
-      const suggestedField = suggestedFields[i]
-      const formField = formFields[i]
-      const pageIndex = Math.min((suggestedField.page || 1) - 1, pages.length - 1)
-      const page = pages[pageIndex]
-      const { height } = page.getSize()
+    // Group fields by section for better organization
+    const fieldsBySection = formFields.reduce(
+      (acc: any, field: any) => {
+        const section = field.section || "General"
+        if (!acc[section]) acc[section] = []
+        acc[section].push(field)
+        return acc
+      },
+      {} as Record<string, any[]>,
+    )
 
-      // Calculate position (stacking fields vertically)
-      const yPosition = height - 100 - i * 30
+    let currentY = height - 100
+    const lineHeight = 30
+    const fieldHeight = 20
+    const fieldWidth = 300
 
-      try {
-        const textField = form.createTextField(`field_${i}_${formField.id}`)
-        textField.addToPage(page, {
-          x: 50,
-          y: yPosition,
-          width: 200,
-          height: 20,
-          borderColor: rgb(0, 0, 0),
-          backgroundColor: rgb(1, 1, 1),
-        })
+    for (const [section, fields] of Object.entries(fieldsBySection)) {
+      // Add section header
+      if (currentY < 100) {
+        // Need a new page
+        const newPage = pdfDoc.addPage()
+        currentY = newPage.getSize().height - 100
+      }
 
-        // Fill the field if we have a response
-        const value = formResponses[formField.id]
-        if (value) {
-          textField.setText(String(value))
+      console.log("[v0] Adding section:", section, "with", fields.length, "fields")
+
+      for (const formField of fields) {
+        if (currentY < 100) {
+          // Need a new page
+          const newPage = pdfDoc.addPage()
+          currentY = newPage.getSize().height - 100
         }
 
-        fieldsAdded++
-        console.log("[v0] ✓ Added field:", formField.label, "at page", pageIndex + 1)
-      } catch (error) {
-        console.error("[v0] Error adding field:", formField.label, error)
+        const currentPage = pages[pages.length - 1]
+
+        try {
+          const textField = form.createTextField(`field_${formField.id}`)
+          textField.addToPage(currentPage, {
+            x: 50,
+            y: currentY,
+            width: fieldWidth,
+            height: fieldHeight,
+            borderColor: rgb(0, 0, 0),
+            backgroundColor: rgb(1, 1, 1),
+          })
+
+          // Set field properties
+          textField.enableMultiline()
+          textField.setFontSize(10)
+
+          // Fill the field if we have a response
+          const value = formResponses[formField.id]
+          if (value) {
+            textField.setText(String(value))
+          }
+
+          fieldsAdded++
+          console.log("[v0] ✓ Added field:", formField.label)
+
+          currentY -= lineHeight
+        } catch (error) {
+          console.error("[v0] Error adding field:", formField.label, error)
+        }
       }
+
+      // Add spacing between sections
+      currentY -= lineHeight
     }
 
     console.log("[v0] Added", fieldsAdded, "form fields to the PDF")
