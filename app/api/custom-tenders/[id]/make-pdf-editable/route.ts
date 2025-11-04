@@ -187,9 +187,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     // Add form fields to the PDF at standard positions
     let fieldsAdded = 0
-    const pages = pdfDoc.getPages()
-    const firstPage = pages[0]
-    const { height } = firstPage.getSize()
+    let currentPageIndex = 0
+    let currentPage = pdfDoc.getPage(currentPageIndex)
+    const { height } = currentPage.getSize()
 
     // Group fields by section for better organization
     const fieldsBySection = fieldsToUse.reduce(
@@ -206,30 +206,52 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const lineHeight = 30
     const fieldHeight = 20
     const fieldWidth = 300
+    const leftMargin = 50
+    const labelWidth = 200
 
     for (const [section, fields] of Object.entries(fieldsBySection)) {
       // Add section header
       if (currentY < 100) {
         // Need a new page
         const newPage = pdfDoc.addPage()
-        currentY = newPage.getSize().height - 100
+        currentPageIndex = pdfDoc.getPageCount() - 1
+        currentPage = pdfDoc.getPage(currentPageIndex)
+        currentY = currentPage.getSize().height - 100
       }
 
       console.log("[v0] Adding section:", section, "with", fields.length, "fields")
+
+      // Draw section header
+      currentPage.drawText(section, {
+        x: leftMargin,
+        y: currentY + 5,
+        size: 12,
+        color: rgb(0, 0, 0),
+      })
+      currentY -= lineHeight
 
       for (const formField of fields) {
         if (currentY < 100) {
           // Need a new page
           const newPage = pdfDoc.addPage()
-          currentY = newPage.getSize().height - 100
+          currentPageIndex = pdfDoc.getPageCount() - 1
+          currentPage = pdfDoc.getPage(currentPageIndex)
+          currentY = currentPage.getSize().height - 100
         }
 
-        const currentPage = pages[pages.length - 1]
-
         try {
+          // Draw field label
+          currentPage.drawText(formField.label + ":", {
+            x: leftMargin,
+            y: currentY + 5,
+            size: 10,
+            color: rgb(0, 0, 0),
+          })
+
+          // Create text field
           const textField = form.createTextField(`field_${formField.id}`)
           textField.addToPage(currentPage, {
-            x: 50,
+            x: leftMargin + labelWidth,
             y: currentY,
             width: fieldWidth,
             height: fieldHeight,
@@ -245,11 +267,12 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
           const value = formResponses[formField.id]
           if (value) {
             textField.setText(String(value))
+            console.log("[v0] ✓ Added and filled field:", formField.label, "with:", String(value).substring(0, 50))
+          } else {
+            console.log("[v0] ✓ Added empty field:", formField.label)
           }
 
           fieldsAdded++
-          console.log("[v0] ✓ Added field:", formField.label)
-
           currentY -= lineHeight
         } catch (error) {
           console.error("[v0] Error adding field:", formField.label, error)
@@ -261,6 +284,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     console.log("[v0] Added", fieldsAdded, "form fields to the PDF")
+    console.log("[v0] Total pages:", pdfDoc.getPageCount())
 
     const editablePdfBytes = await pdfDoc.save()
 
