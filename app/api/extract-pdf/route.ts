@@ -22,10 +22,19 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const uint8Array = new Uint8Array(arrayBuffer)
 
-    console.log("[v0] Loading PDF document with pdfjs-dist legacy build...")
-    const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs")
+    console.log("[v0] Loading PDF document with pdfjs-dist...")
 
-    const loadingTask = pdfjsLib.getDocument({ data: uint8Array })
+    const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.js")
+
+    // Disable worker for Node.js environment
+    pdfjsLib.GlobalWorkerOptions.workerSrc = ""
+
+    const loadingTask = pdfjsLib.getDocument({
+      data: uint8Array,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true,
+    })
     const pdfDocument = await loadingTask.promise
     console.log("[v0] PDF document loaded successfully, pages:", pdfDocument.numPages)
 
