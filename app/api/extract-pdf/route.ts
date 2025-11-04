@@ -1,7 +1,4 @@
 import type { NextRequest } from "next/server"
-import * as pdfjsLib from "pdfjs-dist"
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,7 +22,9 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const uint8Array = new Uint8Array(arrayBuffer)
 
-    console.log("[v0] Loading PDF document with pdfjs-dist...")
+    console.log("[v0] Loading PDF document with pdfjs-dist legacy build...")
+    const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs")
+
     const loadingTask = pdfjsLib.getDocument({ data: uint8Array })
     const pdfDocument = await loadingTask.promise
     console.log("[v0] PDF document loaded successfully, pages:", pdfDocument.numPages)
