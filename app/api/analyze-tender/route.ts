@@ -211,10 +211,11 @@ Extract the following with ABSOLUTE PRECISION:
    - DO NOT abbreviate official names
 
 3. SUBMISSION DEADLINE:
-   - Extract FINAL submission date and time with timezone if specified
+   - Extract FINAL submission date ONLY (no time component)
    - Look for: "Closing Date", "Submission Deadline", "Due Date", "Closing Time", "Tender Closes"
-   - Format: YYYY-MM-DD HH:MM (e.g., "2024-03-15 11:00")
-   - If only date given, assume end of business day
+   - Format: YYYY-MM-DD ONLY (e.g., "2024-03-15")
+   - CRITICAL: DO NOT include time (HH:MM) in the deadline field
+   - If time is mentioned, include it in the deadlines array instead
    - If unclear, note "See deadlines section for details"
 
 4. TENDER VALUE/BUDGET:
@@ -297,7 +298,7 @@ Staffing & Resources:
 - Subcontracting limitations
 - Local content requirements
 
-DEADLINES (Extract ALL dates with full context):
+DEADLINES (Extract ALL dates with full context, INCLUDING TIME):
 Create a comprehensive timeline with:
 - Briefing session: Date, time, venue, RSVP requirements
 - Site visits: Dates, times, meeting points, mandatory/optional
@@ -310,8 +311,11 @@ Create a comprehensive timeline with:
 - Project milestones and completion dates
 - Payment schedule dates
 
-Format each as: "Action - Date/Time - Details"
+Format each as: "Action - Date Time - Details"
 Example: "Compulsory site visit - 2024-02-15 10:00 - Meet at main gate, RSVP by 2024-02-13"
+Example: "Submission deadline - 2024-03-15 11:00 - Submit to procurement office"
+
+NOTE: Include time information in the deadlines array, but NOT in the metadata deadline field.
 
 EVALUATION CRITERIA (Extract exact scoring methodology):
 Provide the complete evaluation breakdown:
@@ -419,7 +423,7 @@ Example: "Prepare presentation materials for interview - Due: TBD - Category: ot
 
 For each task include:
 - Specific action required
-- Deadline (if mentioned)
+- Deadline (if mentioned) - Format as YYYY-MM-DD ONLY (no time)
 - Category (documentation/technical/financial/compliance/other)
 - Priority level
 
@@ -437,6 +441,7 @@ EXTRACTION PRINCIPLES
 6. CONTEXT: Provide context for requirements
 7. HONESTY: If information is not found, state "Not specified" - never guess
 8. ACTIONABILITY: Make recommendations practical and implementable
+9. DATE FORMAT: Always use YYYY-MM-DD format for dates (no time in metadata deadline field)
 
 ===========================================
 TENDER DOCUMENT TEXT
@@ -499,6 +504,22 @@ Provide your comprehensive analysis following all the rules above.`,
       }
 
       throw aiError
+    }
+
+    if (analysis.tenderMetadata?.deadline) {
+      // Strip time component if present (e.g., "2025-10-13 11:00" -> "2025-10-13")
+      analysis.tenderMetadata.deadline = analysis.tenderMetadata.deadline.split(" ")[0]
+      console.log("[v0] Formatted deadline:", analysis.tenderMetadata.deadline)
+    }
+
+    // Strip time from task deadlines
+    if (analysis.actionableTasks) {
+      analysis.actionableTasks = analysis.actionableTasks.map((task: any) => {
+        if (task.deadline && typeof task.deadline === "string") {
+          task.deadline = task.deadline.split(" ")[0]
+        }
+        return task
+      })
     }
 
     console.log("[v0] ========================================")
