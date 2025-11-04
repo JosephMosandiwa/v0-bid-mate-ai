@@ -235,6 +235,12 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="filled_${docData.file_name}"`,
+        "X-PDF-Fields-Total": String(fields.length),
+        "X-Fields-Filled": String(filledCount),
+        "X-Responses-Total": String(Object.keys(formResponses).length),
+        "X-Fill-Success-Rate": String(
+          ((filledCount / Math.max(Object.keys(formResponses).length, 1)) * 100).toFixed(1),
+        ),
       },
     })
   } catch (error: any) {
