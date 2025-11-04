@@ -198,11 +198,73 @@ export function DynamicTenderForm({
   const handlePreviewFilledPdf = async (documentId: string) => {
     setFillingPdf(true)
     try {
+      console.log("[v0] ========================================")
+      console.log("[v0] PREVIEW FILLED PDF REQUEST")
+      console.log("[v0] ========================================")
+      console.log("[v0] Document ID:", documentId)
+      console.log("[v0] Form data being sent:", formData)
+      console.log("[v0] Number of filled fields:", Object.keys(formData).length)
+      console.log("[v0] Field IDs:", Object.keys(formData))
+
       const response = await fetch(`${apiBasePath}/fill-pdf`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ documentId }),
       })
+
+      console.log("[v0] Response status:", response.status)
+      console.log("[v0] Response headers:")
+      console.log("[v0]   - PDF Fields Total:", response.headers.get("X-PDF-Fields-Total"))
+      console.log("[v0]   - Fields Filled:", response.headers.get("X-Fields-Filled"))
+      console.log("[v0]   - Responses Total:", response.headers.get("X-Responses-Total"))
+      console.log("[v0]   - Fill Success Rate:", response.headers.get("X-Fill-Success-Rate") + "%")
+
+      const pdfFieldsTotal = Number.parseInt(response.headers.get("X-PDF-Fields-Total") || "0")
+      const fieldsFilled = Number.parseInt(response.headers.get("X-Fields-Filled") || "0")
+      const responsesTotal = Number.parseInt(response.headers.get("X-Responses-Total") || "0")
+      const successRate = Number.parseFloat(response.headers.get("X-Fill-Success-Rate") || "0")
+
+      console.log("[v0] ========================================")
+      console.log("[v0] FILL RESULTS:")
+      console.log("[v0] ========================================")
+      console.log("[v0] PDF has", pdfFieldsTotal, "interactive form fields")
+      console.log("[v0] You filled", responsesTotal, "form fields")
+      console.log("[v0] Successfully matched and filled", fieldsFilled, "fields")
+      console.log("[v0] Success rate:", successRate.toFixed(1) + "%")
+      console.log("[v0] ========================================")
+
+      if (pdfFieldsTotal === 0) {
+        console.log("[v0] ⚠⚠⚠ WARNING: This PDF has NO interactive form fields! ⚠⚠⚠")
+        console.log("[v0] This is a static PDF document. The fields cannot be filled automatically.")
+        console.log("[v0] You may need to manually fill this PDF or use a different document.")
+        toast({
+          title: "PDF Has No Form Fields",
+          description:
+            "This PDF doesn't have interactive form fields. The document will open, but your responses cannot be automatically filled in.",
+          variant: "destructive",
+        })
+      } else if (fieldsFilled === 0 && responsesTotal > 0) {
+        console.log("[v0] ⚠⚠⚠ WARNING: No fields were filled! ⚠⚠⚠")
+        console.log("[v0] The form field names don't match the PDF field names.")
+        console.log("[v0] Check the server logs for detailed field matching information.")
+        toast({
+          title: "No Fields Matched",
+          description:
+            "The form field names don't match the PDF field names. The document will open, but your responses couldn't be filled in automatically.",
+          variant: "destructive",
+        })
+      } else if (successRate < 50) {
+        console.log("[v0] ⚠ Low success rate - many fields didn't match")
+        toast({
+          title: "Partial Fill",
+          description: `Only ${fieldsFilled} out of ${responsesTotal} fields were filled (${successRate.toFixed(1)}%). Some field names may not match.`,
+        })
+      } else if (fieldsFilled > 0) {
+        toast({
+          title: "PDF Filled Successfully",
+          description: `${fieldsFilled} field${fieldsFilled === 1 ? "" : "s"} filled in the PDF`,
+        })
+      }
 
       if (!response.ok) {
         const error = await response.json()
@@ -229,11 +291,51 @@ export function DynamicTenderForm({
   const handleDownloadFilledPdf = async (documentId: string) => {
     setFillingPdf(true)
     try {
+      console.log("[v0] ========================================")
+      console.log("[v0] DOWNLOAD FILLED PDF REQUEST")
+      console.log("[v0] ========================================")
+      console.log("[v0] Document ID:", documentId)
+      console.log("[v0] Form data being sent:", formData)
+      console.log("[v0] Number of filled fields:", Object.keys(formData).length)
+
       const response = await fetch(`${apiBasePath}/fill-pdf`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ documentId }),
       })
+
+      const pdfFieldsTotal = Number.parseInt(response.headers.get("X-PDF-Fields-Total") || "0")
+      const fieldsFilled = Number.parseInt(response.headers.get("X-Fields-Filled") || "0")
+      const responsesTotal = Number.parseInt(response.headers.get("X-Responses-Total") || "0")
+      const successRate = Number.parseFloat(response.headers.get("X-Fill-Success-Rate") || "0")
+
+      console.log("[v0] ========================================")
+      console.log("[v0] FILL RESULTS:")
+      console.log("[v0] PDF Fields:", pdfFieldsTotal)
+      console.log("[v0] Responses:", responsesTotal)
+      console.log("[v0] Filled:", fieldsFilled)
+      console.log("[v0] Success Rate:", successRate.toFixed(1) + "%")
+      console.log("[v0] ========================================")
+
+      if (pdfFieldsTotal === 0) {
+        toast({
+          title: "PDF Has No Form Fields",
+          description:
+            "This PDF doesn't have interactive form fields. The document will download, but your responses cannot be automatically filled in.",
+          variant: "destructive",
+        })
+      } else if (fieldsFilled === 0 && responsesTotal > 0) {
+        toast({
+          title: "No Fields Matched",
+          description: "The form field names don't match the PDF field names. Check the console for details.",
+          variant: "destructive",
+        })
+      } else if (fieldsFilled > 0) {
+        toast({
+          title: "Success",
+          description: `Filled PDF downloaded with ${fieldsFilled} field${fieldsFilled === 1 ? "" : "s"} filled`,
+        })
+      }
 
       if (!response.ok) {
         const error = await response.json()
@@ -249,11 +351,6 @@ export function DynamicTenderForm({
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
-
-      toast({
-        title: "Success",
-        description: "Filled PDF downloaded successfully",
-      })
     } catch (error: any) {
       console.error("[v0] Error downloading filled PDF:", error)
       toast({
