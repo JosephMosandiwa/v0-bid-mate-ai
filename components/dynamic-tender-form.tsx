@@ -477,6 +477,15 @@ export function DynamicTenderForm({
   }
 
   const handleMakePdfEditable = async () => {
+    if (availableDocuments.length === 0) {
+      toast({
+        title: "No Document",
+        description: "Please upload a PDF document first.",
+        variant: "destructive",
+      })
+      return
+    }
+
     if (Object.keys(formData).length === 0) {
       toast({
         title: "No Responses",
@@ -498,11 +507,13 @@ export function DynamicTenderForm({
       console.log("[v0] Full URL being fetched:", fullUrl)
       console.log("[v0] URL length:", fullUrl.length)
       console.log("[v0] URL contains duplicate?:", fullUrl.includes("/make-pdf-editable/"))
+      console.log("[v0] Document ID:", availableDocuments[0].id)
       console.log("[v0] ========================================")
 
       const response = await fetch(fullUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId: availableDocuments[0].id }),
       })
 
       console.log("[v0] Response status:", response.status)
@@ -542,6 +553,15 @@ export function DynamicTenderForm({
   }
 
   const handleDownloadEditablePdf = async () => {
+    if (availableDocuments.length === 0) {
+      toast({
+        title: "No Document",
+        description: "Please upload a PDF document first.",
+        variant: "destructive",
+      })
+      return
+    }
+
     if (Object.keys(formData).length === 0) {
       toast({
         title: "No Responses",
@@ -561,11 +581,13 @@ export function DynamicTenderForm({
       console.log("[v0] apiBasePath:", apiBasePath)
       const fullUrl = `${apiBasePath}/make-pdf-editable`
       console.log("[v0] Full URL being fetched:", fullUrl)
+      console.log("[v0] Document ID:", availableDocuments[0].id)
       console.log("[v0] ========================================")
 
       const response = await fetch(fullUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId: availableDocuments[0].id }),
       })
 
       if (!response.ok) {

@@ -10,12 +10,16 @@ const openai = new OpenAI({
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params
+    const body = await request.json()
+    const { documentId } = body
+
     const supabase = await createClient()
 
     console.log("[v0] ========================================")
     console.log("[v0] MAKE PDF EDITABLE REQUEST")
     console.log("[v0] ========================================")
     console.log("[v0] Tender ID:", id)
+    console.log("[v0] Document ID:", documentId)
 
     // Get current user
     const {
@@ -56,13 +60,32 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     console.log("[v0] Form responses:", Object.keys(formResponses).length)
     console.log("[v0] Form fields:", formFields.length)
 
-    if (!tenderData.document_url) {
+    let documentUrl = tenderData.document_url
+
+    if (documentId) {
+      console.log("[v0] Fetching document by ID:", documentId)
+      const { data: document, error: docError } = await supabase
+        .from("tender_documents")
+        .select("document_url")
+        .eq("id", documentId)
+        .single()
+
+      if (docError || !document) {
+        console.log("[v0] Document not found:", docError)
+        return Response.json({ error: "Document not found" }, { status: 404 })
+      }
+
+      documentUrl = document.document_url
+      console.log("[v0] Found document URL from document ID")
+    }
+
+    if (!documentUrl) {
       console.log("[v0] No document URL found")
       return Response.json({ error: "No document URL found" }, { status: 404 })
     }
 
-    console.log("[v0] Fetching original PDF from:", tenderData.document_url)
-    const pdfResponse = await fetch(tenderData.document_url)
+    console.log("[v0] Fetching original PDF from:", documentUrl)
+    const pdfResponse = await fetch(documentUrl)
     if (!pdfResponse.ok) {
       console.log("[v0] Failed to fetch PDF, status:", pdfResponse.status)
       throw new Error("Failed to fetch original PDF")
