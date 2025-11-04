@@ -48,70 +48,37 @@ const tenderAnalysisSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const { documentText } = await request.json()
+    const { documentText, pdfFields } = await request.json()
 
     console.log("[v0] Analyze tender API called, text length:", documentText?.length)
+    console.log("[v0] PDF fields provided:", pdfFields?.length || 0)
 
     if (!documentText) {
       return Response.json({ error: "Document text is required" }, { status: 400 })
     }
 
-    const truncatedText = documentText.substring(0, 20000)
+    const truncatedText = documentText.substring(0, 50000)
     console.log("[v0] Using truncated text length:", truncatedText.length)
 
     console.log("[v0] Calling AI Gateway with generateObject for structured analysis...")
 
-    const { object: analysis } = await generateObject({
-      model: "openai/gpt-4o",
-      schema: tenderAnalysisSchema,
-      prompt: `You are analyzing a tender document. Your primary task is to accurately extract the tender metadata for auto-filling a form.
+    const formFieldsInstruction =
+      pdfFields && pdfFields.length > 0
+        ? `
+IMPORTANT: The PDF has the following form fields that MUST be used exactly as named:
+${pdfFields.map((f: any) => `- ${f.name} (${f.type})`).join("\n")}
 
-CRITICAL: Extract the following metadata with high accuracy:
-
-1. TENDER TITLE:
-   - Look for the main heading, title, or "Tender Name" field
-   - Usually appears at the top of the document or in the first few paragraphs
-   - May be labeled as: "Tender Title", "Project Name", "Bid Title", "RFP Title", etc.
-   - Extract the EXACT title as written, do not summarize
-
-2. ISSUING ORGANIZATION:
-   - Look for the department, ministry, or company issuing the tender
-   - Usually appears near the top or in a "Issued by" section
-   - May be labeled as: "Issuing Authority", "Procuring Entity", "Department", "Ministry", etc.
-   - Extract the FULL official name
-
-3. SUBMISSION DEADLINE:
-   - Look for the final date and time for submission
-   - May be labeled as: "Closing Date", "Submission Deadline", "Due Date", "Closing Time", etc.
-   - Convert to YYYY-MM-DD format (e.g., "2024-03-15")
-   - If only month/year given, use the last day of that month
-
-4. TENDER VALUE/BUDGET:
-   - Look for the estimated value, budget, or contract amount
-   - May be labeled as: "Tender Value", "Estimated Budget", "Contract Value", "Price Range", etc.
-   - Extract the amount with currency (e.g., "R 2,500,000" or "ZAR 2.5M")
-   - If a range is given, use the maximum value
-
-5. CATEGORY:
-   - Determine the type of tender (e.g., Construction, IT Services, Medical Supplies, Consulting, etc.)
-   - Infer from the title and description if not explicitly stated
-
-6. LOCATION:
-   - Look for the project location, delivery location, or service area
-   - May be labeled as: "Location", "Project Site", "Delivery Address", "Service Area", etc.
-   - Extract city, province, or region
-
-After extracting metadata, provide:
-- Executive summary of the tender (2-3 sentences)
-- Key requirements and qualifications needed
-- All important deadlines and dates
-- How bids will be evaluated
-- Strategic recommendations for bidding
-- Compliance requirements
-- Actionable tasks with priorities
-- ALL form fields that need to be filled (company info, financial details, technical specs, certifications, etc.)
-
-For form fields, extract every piece of information requested in the tender:
+For the formFields array, use these EXACT field names as the 'id' property. Create appropriate labels based on the field names.
+For example, if the PDF has a field named "CompanyName", use:
+{
+  "id": "CompanyName",
+  "label": "Company Name",
+  "type": "${pdfFields.find((f: any) => f.name === "CompanyName")?.type || "text"}",
+  ...
+}
+`
+        : `
+For form fields, extract every piece of information requested in the tender and create appropriate field IDs:
 - Company details (name, registration, address, contacts)
 - Financial information (turnover, bank details, tax numbers)
 - Technical specifications and requirements
@@ -120,6 +87,116 @@ For form fields, extract every piece of information requested in the tender:
 - Experience and qualifications
 - References and past projects
 - Any other information requested
+`
+
+    const { object: analysis } = await generateObject({
+      model: "openai/gpt-4o",
+      schema: tenderAnalysisSchema,
+      prompt: `You are an expert tender analyst. Your task is to extract accurate, comprehensive information from this tender document to help bidders understand requirements and prepare winning proposals.
+
+CRITICAL METADATA EXTRACTION RULES:
+
+1. TENDER TITLE:
+   - Extract the EXACT official title as written in the document
+   - Look in: document header, "Tender Name/Title", "Project Name", "RFP/RFQ Title"
+   - DO NOT summarize or paraphrase - use exact wording
+   - If multiple titles exist, use the most prominent one
+
+2. ISSUING ORGANIZATION:
+   - Extract the FULL official name of the issuing entity
+   - Look for: "Issued by", "Procuring Entity", "Department", "Ministry", "Organization"
+   - Include full hierarchy if given (e.g., "Department of Health, Western Cape Provincial Government")
+   - DO NOT abbreviate official names
+
+3. SUBMISSION DEADLINE:
+   - Extract the FINAL submission date and time
+   - Look for: "Closing Date", "Submission Deadline", "Due Date", "Closing Time"
+   - Format as YYYY-MM-DD (e.g., "2024-03-15")
+   - If time is specified, note it in the deadlines array
+   - If only month/year, use last day of month
+
+4. TENDER VALUE/BUDGET:
+   - Extract the estimated contract value or budget
+   - Look for: "Tender Value", "Estimated Budget", "Contract Value", "Price Range"
+   - Include currency symbol and amount (e.g., "R 2,500,000" or "ZAR 2.5M")
+   - If range given, note both min and max
+   - If not explicitly stated, mark as "Not specified"
+
+5. CATEGORY:
+   - Classify the tender type accurately
+   - Common categories: Construction, IT Services, Medical Supplies, Consulting, Professional Services, Goods Supply, Maintenance, Security Services
+   - Base on tender content and requirements
+
+6. LOCATION:
+   - Extract project location, service area, or delivery address
+   - Look for: "Location", "Project Site", "Delivery Address", "Service Area"
+   - Include city, province/state, and country if specified
+
+COMPREHENSIVE ANALYSIS REQUIREMENTS:
+
+SUMMARY (3-5 sentences):
+- What is being procured (goods/services/works)
+- Who is procuring it (organization and context)
+- Key scope and objectives
+- Main deliverables expected
+- Overall contract duration if specified
+
+KEY REQUIREMENTS (extract ALL, be specific):
+- Mandatory qualifications and certifications
+- Technical specifications and standards
+- Experience requirements (years, similar projects)
+- Financial requirements (turnover, bank guarantees)
+- Registration requirements (tax, industry bodies)
+- Insurance and bonding requirements
+- Staffing and resource requirements
+- Quality standards and compliance needs
+- Any pre-qualification criteria
+
+DEADLINES (extract ALL dates with context):
+- Briefing session dates and venues
+- Site visit dates (if applicable)
+- Clarification question deadlines
+- Document submission deadlines
+- Presentation/interview dates
+- Contract start and end dates
+- Milestone dates
+- Payment schedule dates
+
+EVALUATION CRITERIA (extract exact scoring breakdown):
+- Price/cost weighting (e.g., "Price: 80 points")
+- Technical capability scoring
+- Experience and track record points
+- BBBEE or local content requirements
+- Presentation/interview scoring
+- Any other evaluation factors
+- Minimum qualifying scores
+- Evaluation methodology
+
+RECOMMENDATIONS (strategic advice):
+- Critical success factors for this bid
+- Potential challenges and how to address them
+- Key differentiators to emphasize
+- Risk mitigation strategies
+- Partnership or subcontracting suggestions
+- Resource allocation priorities
+
+ACTIONABLE TASKS (prioritized checklist):
+- HIGH priority: Critical path items, mandatory requirements, early deadlines
+- MEDIUM priority: Important but not urgent items
+- LOW priority: Optional or later-stage items
+- Include specific deadlines where mentioned
+- Categorize by: documentation, technical, financial, compliance, other
+
+${formFieldsInstruction}
+
+IMPORTANT EXTRACTION PRINCIPLES:
+- Extract EXACT information, do not paraphrase or summarize
+- If information is not found, explicitly state "Not specified" rather than guessing
+- Include ALL requirements, even if they seem minor
+- Preserve numerical values, dates, and amounts exactly as written
+- Note any ambiguities or unclear requirements
+- Extract contact information for queries
+- Identify mandatory vs optional requirements
 
 Tender Document:
 ${truncatedText}`,

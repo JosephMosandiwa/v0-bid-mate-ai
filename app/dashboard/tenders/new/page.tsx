@@ -75,6 +75,24 @@ export default function NewTenderPage() {
     setDashboardUrl(null)
 
     try {
+      console.log("[v0] Extracting PDF form fields...")
+      const fieldsFormData = new FormData()
+      fieldsFormData.append("file", file)
+
+      const fieldsResponse = await fetch("/api/extract-pdf-fields", {
+        method: "POST",
+        body: fieldsFormData,
+      })
+
+      let pdfFields = null
+      if (fieldsResponse.ok) {
+        const fieldsData = await fieldsResponse.json()
+        pdfFields = fieldsData.fields
+        console.log("[v0] Extracted", pdfFields?.length || 0, "PDF form fields")
+      } else {
+        console.warn("[v0] Could not extract PDF fields, continuing without them")
+      }
+
       const formData = new FormData()
       formData.append("file", file)
 
@@ -92,7 +110,10 @@ export default function NewTenderPage() {
       const analyzeResponse = await fetch("/api/analyze-tender", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentText: text }),
+        body: JSON.stringify({
+          documentText: text,
+          pdfFields: pdfFields,
+        }),
       })
 
       if (!analyzeResponse.ok) {
