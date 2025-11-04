@@ -15,6 +15,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createCustomTender } from "@/app/actions/tender-actions"
 import { useToast } from "@/hooks/use-toast"
+import * as pdfjsLib from "pdfjs-dist"
+
+if (typeof window !== "undefined") {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+}
 
 type AnalysisResult = {
   tenderMetadata?: {
@@ -93,25 +98,37 @@ export default function NewTenderPage() {
         console.warn("[v0] Could not extract PDF fields, continuing without them")
       }
 
-      const formData = new FormData()
-      formData.append("file", file)
+      console.log("[v0] Extracting text from PDF using client-side PDF.js...")
+      const arrayBuffer = await file.arrayBuffer()
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
+      const pdf = await loadingTask.promise
 
-      const extractResponse = await fetch("/api/extract-pdf", {
-        method: "POST",
-        body: formData,
-      })
+      console.log("[v0] PDF loaded, extracting text from", pdf.numPages, "pages...")
 
-      if (!extractResponse.ok) {
-        throw new Error("Failed to extract text from PDF")
+      let fullText = ""
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum)
+        const textContent = await page.getTextContent()
+        const pageText = textContent.items.map((item: any) => item.str).join(" ")
+        fullText += pageText + "\n\n"
       }
 
-      const { text } = await extractResponse.json()
+      console.log("[v0] Text extraction complete:")
+      console.log("[v0] - Total pages:", pdf.numPages)
+      console.log("[v0] - Text length:", fullText.length, "characters")
+      console.log("[v0] - First 500 characters:", fullText.substring(0, 500))
 
+      if (fullText.length < 100) {
+        setAnalysisError("Could not extract sufficient text from PDF. The document might be scanned or image-based.")
+        return
+      }
+
+      console.log("[v0] Sending text to analyze API...")
       const analyzeResponse = await fetch("/api/analyze-tender", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          documentText: text,
+          documentText: fullText,
           pdfFields: pdfFields,
         }),
       })
@@ -158,6 +175,7 @@ export default function NewTenderPage() {
         }
       }
     } catch (error) {
+      console.error("[v0] PDF processing error:", error)
       setAnalysisError("Failed to analyze the document. Please try again.")
     } finally {
       setAnalyzing(false)

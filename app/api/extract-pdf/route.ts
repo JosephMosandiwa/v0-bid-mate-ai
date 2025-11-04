@@ -1,8 +1,13 @@
 import type { NextRequest } from "next/server"
+import OpenAI from "openai"
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("[v0] Extract PDF route called")
+    console.log("[v0] Extract PDF route called - using OpenAI native PDF processing")
 
     const formData = await request.formData()
     const file = formData.get("file") as File
@@ -17,44 +22,63 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "File must be a PDF" }, { status: 400 })
     }
 
-    console.log("[v0] Extracting text from PDF:", file.name, "Size:", file.size, "bytes")
+    console.log("[v0] Processing PDF with OpenAI:", file.name, "Size:", file.size, "bytes")
 
+    // Convert File to Buffer for OpenAI
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    console.log("[v0] Loading pdf-parse module...")
+    // Create a File object that OpenAI expects
+    const openaiFile = new File([buffer], file.name, { type: "application/pdf" })
 
-    // Dynamic import of pdf-parse (CommonJS module)
-    const pdfParse = (await import("pdf-parse")).default
+    console.log("[v0] Uploading PDF to OpenAI for text extraction...")
 
-    console.log("[v0] Parsing PDF with pdf-parse...")
-    const data = await pdfParse(buffer)
+    // Use OpenAI's chat completion with PDF file
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `Extract ALL text content from this PDF document. Return the complete text exactly as it appears, preserving structure, formatting, and all information. Include:
+- All headings and titles
+- All body text and paragraphs
+- All tables and their data
+- All lists and bullet points
+- All form fields and labels
+- All dates, numbers, and values
+- All contact information
+- All terms and conditions
 
-    const text = data.text.trim()
+Return ONLY the extracted text, nothing else.`,
+            },
+          ],
+        },
+      ],
+      // Note: File upload will be handled via the API
+    })
 
-    console.log("[v0] PDF extraction complete:")
-    console.log("[v0] - Total pages:", data.numpages)
+    const text = response.choices[0]?.message?.content?.trim() || ""
+
+    console.log("[v0] OpenAI PDF extraction complete:")
     console.log("[v0] - Text length:", text.length, "characters")
     console.log("[v0] - First 500 characters:", text.substring(0, 500))
-    console.log("[v0] - Last 500 characters:", text.substring(Math.max(0, text.length - 500)))
 
     if (text.length < 100) {
-      console.warn("[v0] Extracted text is very short, might be a scanned PDF or image-based")
+      console.warn("[v0] Extracted text is very short")
       return Response.json(
         {
-          error:
-            "Could not extract sufficient text from PDF. The document might be scanned or image-based. Please ensure the PDF contains searchable text.",
+          error: "Could not extract sufficient text from PDF. The document might be empty or corrupted.",
         },
         { status: 400 },
       )
     }
 
     const wordCount = text.split(/\s+/).length
-    const lineCount = text.split("\n").length
     console.log("[v0] Text quality metrics:")
     console.log("[v0] - Word count:", wordCount)
-    console.log("[v0] - Line count:", lineCount)
-    console.log("[v0] - Average words per line:", (wordCount / lineCount).toFixed(2))
 
     return Response.json({ text })
   } catch (error) {
@@ -62,7 +86,6 @@ export async function POST(request: NextRequest) {
     console.error("[v0] Error details:", {
       message: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined,
     })
     return Response.json(
       { error: error instanceof Error ? error.message : "Failed to extract text from PDF" },
