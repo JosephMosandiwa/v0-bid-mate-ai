@@ -68,35 +68,115 @@ export async function POST(request: Request) {
       return Response.json({ error: "Document text is required" }, { status: 400 })
     }
 
-    const truncatedText = documentText.substring(0, 50000)
+    const truncatedText = documentText.substring(0, 100000)
     console.log("[v0] Using truncated text length:", truncatedText.length, "characters")
-    console.log("[v0] Truncation applied:", documentText.length > 50000 ? "YES" : "NO")
+    console.log("[v0] Truncation applied:", documentText.length > 100000 ? "YES" : "NO")
 
     const formFieldsInstruction =
       pdfFields && pdfFields.length > 0
         ? `
-IMPORTANT: The PDF has the following form fields that MUST be used exactly as named:
-${pdfFields.map((f: any) => `- ${f.name} (${f.type})`).join("\n")}
+CRITICAL: The PDF has ${pdfFields.length} interactive form fields. You MUST use these EXACT field names as the 'id' property.
 
-For the formFields array, use these EXACT field names as the 'id' property. Create appropriate labels based on the field names.
-For example, if the PDF has a field named "CompanyName", use:
+PDF Form Fields:
+${pdfFields.map((f: any, idx: number) => `${idx + 1}. "${f.name}" (${f.type})`).join("\n")}
+
+FORM FIELD GENERATION RULES:
+1. For EACH PDF field above, create a corresponding form field entry
+2. Use the EXACT field name from the PDF as the 'id' (case-sensitive)
+3. Create a human-readable label by:
+   - Converting CamelCase to spaces (e.g., "CompanyName" → "Company Name")
+   - Converting snake_case to spaces (e.g., "company_name" → "Company Name")
+   - Capitalizing appropriately
+4. Map the PDF field type to the appropriate form field type:
+   - PDFTextField → "text" or "textarea" (use textarea for long text fields)
+   - PDFCheckBox → "checkbox"
+   - PDFRadioGroup → "radio"
+   - PDFDropdown → "select"
+5. Mark fields as required if they appear mandatory in the document
+6. Add helpful descriptions based on the document context
+7. Group fields into logical sections (Company Info, Financial, Technical, etc.)
+
+Example:
+PDF Field: "CompanyRegistrationNumber" (PDFTextField)
+Form Field:
 {
-  "id": "CompanyName",
-  "label": "Company Name",
-  "type": "${pdfFields.find((f: any) => f.name === "CompanyName")?.type || "text"}",
-  ...
+  "id": "CompanyRegistrationNumber",
+  "label": "Company Registration Number",
+  "type": "text",
+  "required": true,
+  "placeholder": "e.g., 2021/123456/07",
+  "description": "Your company's official registration number",
+  "section": "Company Information"
 }
 `
         : `
-For form fields, extract every piece of information requested in the tender and create appropriate field IDs:
-- Company details (name, registration, address, contacts)
-- Financial information (turnover, bank details, tax numbers)
-- Technical specifications and requirements
-- Pricing and cost breakdowns
-- Certifications and compliance documents
-- Experience and qualifications
-- References and past projects
-- Any other information requested
+FORM FIELD GENERATION (No PDF fields detected - create comprehensive form):
+
+Extract EVERY piece of information requested in the tender document and create appropriate form fields.
+Be thorough and detailed - include ALL information requirements mentioned.
+
+REQUIRED SECTIONS TO COVER:
+1. Company Information:
+   - Company name, registration number, VAT number
+   - Physical and postal addresses
+   - Contact person details (name, email, phone)
+   - Company type, years in business
+   - Website, social media
+
+2. Financial Information:
+   - Annual turnover (last 3 years)
+   - Bank details (name, branch, account)
+   - Tax clearance certificate
+   - Financial statements
+   - Credit references
+
+3. Technical Capabilities:
+   - Relevant experience (years)
+   - Similar projects completed
+   - Technical staff qualifications
+   - Equipment and resources
+   - Quality certifications (ISO, etc.)
+
+4. Compliance & Legal:
+   - BBBEE certificate and level
+   - Professional indemnity insurance
+   - Public liability insurance
+   - Health and safety compliance
+   - Industry-specific licenses
+
+5. Project-Specific:
+   - Methodology and approach
+   - Project timeline
+   - Resource allocation
+   - Risk management plan
+   - Quality assurance procedures
+
+6. Pricing:
+   - Detailed cost breakdown
+   - Payment terms
+   - Validity period
+   - Assumptions and exclusions
+
+7. References:
+   - Client references (minimum 3)
+   - Contact details for references
+   - Project descriptions
+
+8. Supporting Documents:
+   - Company profile
+   - Certificates and licenses
+   - Previous work samples
+   - CVs of key personnel
+
+For each field, provide:
+- Unique, descriptive ID (use snake_case)
+- Clear, concise label
+- Appropriate type (text, email, tel, number, date, textarea, select, checkbox, file)
+- Whether it's required
+- Helpful placeholder text
+- Detailed description of what's needed
+- Logical section grouping
+- Options array for select/checkbox/radio fields
 `
 
     console.log("[v0] Calling AI Gateway with generateObject for structured analysis...")
@@ -105,114 +185,268 @@ For form fields, extract every piece of information requested in the tender and 
     const { object: analysis } = await generateObject({
       model: "openai/gpt-4o",
       schema: tenderAnalysisSchema,
-      prompt: `You are an expert tender analyst. Your task is to extract accurate, comprehensive information from this tender document to help bidders understand requirements and prepare winning proposals.
+      prompt: `You are an elite tender analyst with 20+ years of experience helping companies win government and corporate tenders. Your analysis must be thorough, actionable, and strategically valuable.
 
-CRITICAL METADATA EXTRACTION RULES:
+===========================================
+CRITICAL METADATA EXTRACTION RULES
+===========================================
+
+Extract the following with ABSOLUTE PRECISION:
 
 1. TENDER TITLE:
-   - Extract the EXACT official title as written in the document
-   - Look in: document header, "Tender Name/Title", "Project Name", "RFP/RFQ Title"
-   - DO NOT summarize or paraphrase - use exact wording
-   - If multiple titles exist, use the most prominent one
+   - Extract the EXACT official title word-for-word
+   - Look in: Document header, "Tender Name/Title", "Project Name", "RFP/RFQ/RFB Title", "Bid Number"
+   - Common locations: First page header, title page, section 1
+   - DO NOT paraphrase, summarize, or interpret
+   - If multiple titles, use the most prominent/official one
+   - Example: "Supply and Delivery of Medical Equipment to Provincial Hospitals"
 
 2. ISSUING ORGANIZATION:
-   - Extract the FULL official name of the issuing entity
-   - Look for: "Issued by", "Procuring Entity", "Department", "Ministry", "Organization"
-   - Include full hierarchy if given (e.g., "Department of Health, Western Cape Provincial Government")
+   - Extract FULL official name including all hierarchy levels
+   - Look for: "Issued by", "Procuring Entity", "Department", "Ministry", "Tender Authority"
+   - Include: Department, Division, Province/Region, Country if specified
+   - Example: "Department of Health, Western Cape Provincial Government, South Africa"
    - DO NOT abbreviate official names
 
 3. SUBMISSION DEADLINE:
-   - Extract the FINAL submission date and time
-   - Look for: "Closing Date", "Submission Deadline", "Due Date", "Closing Time"
-   - Format as YYYY-MM-DD (e.g., "2024-03-15")
-   - If time is specified, note it in the deadlines array
-   - If only month/year, use last day of month
+   - Extract FINAL submission date and time with timezone if specified
+   - Look for: "Closing Date", "Submission Deadline", "Due Date", "Closing Time", "Tender Closes"
+   - Format: YYYY-MM-DD HH:MM (e.g., "2024-03-15 11:00")
+   - If only date given, assume end of business day
+   - If unclear, note "See deadlines section for details"
 
 4. TENDER VALUE/BUDGET:
-   - Extract the estimated contract value or budget
-   - Look for: "Tender Value", "Estimated Budget", "Contract Value", "Price Range"
-   - Include currency symbol and amount (e.g., "R 2,500,000" or "ZAR 2.5M")
-   - If range given, note both min and max
-   - If not explicitly stated, mark as "Not specified"
+   - Extract estimated contract value, budget range, or ceiling price
+   - Look for: "Tender Value", "Estimated Budget", "Contract Value", "Price Range", "Maximum Price"
+   - Include currency and amount: "R 2,500,000" or "ZAR 2.5M" or "R 1M - R 3M"
+   - If range, include both min and max
+   - If not stated: "Not specified" (never guess)
 
 5. CATEGORY:
-   - Classify the tender type accurately
-   - Common categories: Construction, IT Services, Medical Supplies, Consulting, Professional Services, Goods Supply, Maintenance, Security Services
-   - Base on tender content and requirements
+   - Classify accurately based on primary deliverable
+   - Categories: Construction, IT Services, Medical Supplies, Consulting, Professional Services, 
+     Goods Supply, Maintenance, Security Services, Catering, Transport, Training, etc.
+   - Be specific: "Medical Equipment Supply" not just "Supplies"
 
 6. LOCATION:
    - Extract project location, service area, or delivery address
-   - Look for: "Location", "Project Site", "Delivery Address", "Service Area"
-   - Include city, province/state, and country if specified
+   - Look for: "Location", "Project Site", "Delivery Address", "Service Area", "Province"
+   - Include: City, Province/State, Country
+   - Example: "Cape Town, Western Cape, South Africa"
 
-COMPREHENSIVE ANALYSIS REQUIREMENTS:
+===========================================
+COMPREHENSIVE ANALYSIS REQUIREMENTS
+===========================================
 
-SUMMARY (3-5 sentences):
-- What is being procured (goods/services/works)
-- Who is procuring it (organization and context)
-- Key scope and objectives
-- Main deliverables expected
-- Overall contract duration if specified
+SUMMARY (5-7 sentences, highly informative):
+Write a compelling executive summary that covers:
+- What is being procured (specific goods/services/works with quantities if mentioned)
+- Who is procuring it (organization, department, context)
+- Why it's being procured (background, problem being solved, objectives)
+- Key scope elements and main deliverables
+- Contract duration and key dates
+- Estimated value and budget considerations
+- Any unique or notable aspects of this tender
 
-KEY REQUIREMENTS (extract ALL, be specific):
-- Mandatory qualifications and certifications
-- Technical specifications and standards
-- Experience requirements (years, similar projects)
-- Financial requirements (turnover, bank guarantees)
-- Registration requirements (tax, industry bodies)
-- Insurance and bonding requirements
-- Staffing and resource requirements
-- Quality standards and compliance needs
-- Any pre-qualification criteria
+Make it detailed enough that someone can understand the tender without reading the full document.
 
-DEADLINES (extract ALL dates with context):
-- Briefing session dates and venues
-- Site visit dates (if applicable)
-- Clarification question deadlines
-- Document submission deadlines
-- Presentation/interview dates
-- Contract start and end dates
-- Milestone dates
+KEY REQUIREMENTS (Extract ALL, be exhaustively specific):
+List EVERY requirement mentioned in the document, organized by category:
+
+Mandatory Qualifications:
+- Professional registrations (e.g., "Must be registered with Engineering Council of SA")
+- Industry certifications (e.g., "ISO 9001:2015 certification required")
+- Licenses and permits
+- Minimum years in business
+- Minimum staff numbers
+
+Technical Specifications:
+- Exact product specifications, models, standards
+- Technical standards to comply with (e.g., "SANS 10142-1:2012")
+- Performance requirements and KPIs
+- Quality standards
+- Testing and inspection requirements
+
+Experience Requirements:
+- Minimum years of relevant experience
+- Number of similar projects required (e.g., "Minimum 3 similar projects in last 5 years")
+- Specific industry experience
+- Geographic experience requirements
+- Project size/value experience
+
+Financial Requirements:
+- Minimum annual turnover (e.g., "R 5M annual turnover for last 3 years")
+- Bank guarantees or bonds required
+- Insurance requirements (amounts and types)
+- Financial statements required
+- Credit rating requirements
+
+Registration & Compliance:
+- Tax compliance (e.g., "Valid tax clearance certificate")
+- BBBEE requirements (level, points, certificates)
+- Industry body registrations
+- Labor compliance
+- Environmental compliance
+
+Staffing & Resources:
+- Key personnel requirements (qualifications, experience)
+- Minimum team size
+- Equipment and facilities required
+- Subcontracting limitations
+- Local content requirements
+
+DEADLINES (Extract ALL dates with full context):
+Create a comprehensive timeline with:
+- Briefing session: Date, time, venue, RSVP requirements
+- Site visits: Dates, times, meeting points, mandatory/optional
+- Clarification questions deadline: Date, time, submission method
+- Addendum release dates
+- Document submission deadline: Date, time, location/method
+- Presentation/interview dates (if scheduled)
+- Contract award date (estimated)
+- Contract start date
+- Project milestones and completion dates
 - Payment schedule dates
 
-EVALUATION CRITERIA (extract exact scoring breakdown):
-- Price/cost weighting (e.g., "Price: 80 points")
-- Technical capability scoring
-- Experience and track record points
-- BBBEE or local content requirements
-- Presentation/interview scoring
-- Any other evaluation factors
+Format each as: "Action - Date/Time - Details"
+Example: "Compulsory site visit - 2024-02-15 10:00 - Meet at main gate, RSVP by 2024-02-13"
+
+EVALUATION CRITERIA (Extract exact scoring methodology):
+Provide the complete evaluation breakdown:
+
+Price/Cost Component:
+- Points allocated (e.g., "Price: 80 points")
+- Calculation method (e.g., "Lowest price gets 80 points, others pro-rata")
+
+Technical Component:
+- Technical capability points
+- Methodology and approach points
+- Project plan and timeline points
+- Quality assurance points
+
+Experience & Track Record:
+- Relevant experience points
+- Similar projects points
+- References points
+
+BBBEE/Transformation:
+- BBBEE points breakdown by level
+- Local content points
+- Subcontracting to SMMEs points
+
+Other Factors:
+- Presentation/interview points
+- Financial stability points
+- Health & safety record points
+
+Minimum Requirements:
 - Minimum qualifying scores
-- Evaluation methodology
+- Threshold requirements
+- Disqualification criteria
 
-RECOMMENDATIONS (strategic advice):
-- Critical success factors for this bid
+Evaluation Process:
+- Two-stage vs single-stage
+- Evaluation committee composition
+- Evaluation timeline
+
+RECOMMENDATIONS (Strategic, actionable advice):
+Provide expert strategic guidance:
+
+Critical Success Factors:
+- Top 3-5 factors that will determine bid success
+- Must-have vs nice-to-have elements
+- Common pitfalls to avoid
+
+Competitive Positioning:
+- How to differentiate from competitors
+- Key value propositions to emphasize
+- Unique selling points to highlight
+
+Risk Mitigation:
 - Potential challenges and how to address them
-- Key differentiators to emphasize
-- Risk mitigation strategies
-- Partnership or subcontracting suggestions
-- Resource allocation priorities
+- Risk areas requiring special attention
+- Contingency planning needs
 
-ACTIONABLE TASKS (prioritized checklist):
-- HIGH priority: Critical path items, mandatory requirements, early deadlines
-- MEDIUM priority: Important but not urgent items
-- LOW priority: Optional or later-stage items
-- Include specific deadlines where mentioned
-- Categorize by: documentation, technical, financial, compliance, other
+Resource Allocation:
+- Where to focus time and effort
+- Which sections need most attention
+- Team composition recommendations
+
+Partnership Strategy:
+- Whether partnerships/JVs are advisable
+- Types of partners to consider
+- Subcontracting opportunities
+
+Pricing Strategy:
+- Pricing considerations and approach
+- Value engineering opportunities
+- Cost optimization areas
+
+COMPLIANCE CHECKLIST (Comprehensive list):
+Create a detailed checklist of ALL mandatory requirements:
+- Documents to submit (with quantities, e.g., "3 original copies + 1 electronic")
+- Certificates and licenses needed
+- Forms to complete (list each form)
+- Declarations to sign
+- Samples or prototypes required
+- Formatting requirements (page limits, binding, etc.)
+- Submission method and location
+- Packaging and labeling requirements
+
+ACTIONABLE TASKS (Detailed, prioritized, time-bound):
+Create a comprehensive task list with:
+
+HIGH PRIORITY (Critical path, early deadlines):
+- Tasks that must be done first
+- Tasks with imminent deadlines
+- Mandatory requirements
+- Long lead-time items
+Example: "Obtain tax clearance certificate - Due: 2024-02-20 - Category: compliance"
+
+MEDIUM PRIORITY (Important but not urgent):
+- Important preparation tasks
+- Standard requirements
+- Supporting documentation
+Example: "Prepare company profile and credentials - Due: 2024-03-01 - Category: documentation"
+
+LOW PRIORITY (Optional or later-stage):
+- Nice-to-have elements
+- Final touches
+- Post-submission tasks
+Example: "Prepare presentation materials for interview - Due: TBD - Category: other"
+
+For each task include:
+- Specific action required
+- Deadline (if mentioned)
+- Category (documentation/technical/financial/compliance/other)
+- Priority level
 
 ${formFieldsInstruction}
 
-IMPORTANT EXTRACTION PRINCIPLES:
-- Extract EXACT information, do not paraphrase or summarize
-- If information is not found, explicitly state "Not specified" rather than guessing
-- Include ALL requirements, even if they seem minor
-- Preserve numerical values, dates, and amounts exactly as written
-- Note any ambiguities or unclear requirements
-- Extract contact information for queries
-- Identify mandatory vs optional requirements
+===========================================
+EXTRACTION PRINCIPLES
+===========================================
 
-Tender Document:
-${truncatedText}`,
+1. ACCURACY: Extract exact information, never paraphrase official terms
+2. COMPLETENESS: Include ALL requirements, even minor ones
+3. SPECIFICITY: Provide specific details, numbers, dates, amounts
+4. CLARITY: Use clear, unambiguous language
+5. STRUCTURE: Organize information logically
+6. CONTEXT: Provide context for requirements
+7. HONESTY: If information is not found, state "Not specified" - never guess
+8. ACTIONABILITY: Make recommendations practical and implementable
+
+===========================================
+TENDER DOCUMENT TEXT
+===========================================
+
+${truncatedText}
+
+===========================================
+ANALYSIS OUTPUT
+===========================================
+
+Provide your comprehensive analysis following all the rules above.`,
     })
 
     console.log("[v0] ========================================")
@@ -226,6 +460,8 @@ ${truncatedText}`,
     console.log("[v0] Deadlines count:", analysis.deadlines?.length)
     console.log("[v0] Evaluation criteria count:", analysis.evaluationCriteria?.length)
     console.log("[v0] Recommendations count:", analysis.recommendations?.length)
+    console.log("[v0] Compliance checklist count:", analysis.complianceChecklist?.length)
+    console.log("[v0] Actionable tasks count:", analysis.actionableTasks?.length)
     console.log("[v0] Form fields count:", analysis.formFields?.length)
     console.log("[v0] ========================================")
 
