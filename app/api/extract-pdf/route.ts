@@ -20,38 +20,20 @@ export async function POST(request: NextRequest) {
     console.log("[v0] Extracting text from PDF:", file.name, "Size:", file.size, "bytes")
 
     const arrayBuffer = await file.arrayBuffer()
-    const uint8Array = new Uint8Array(arrayBuffer)
+    const buffer = Buffer.from(arrayBuffer)
 
-    console.log("[v0] Loading PDF document with pdfjs-dist...")
+    console.log("[v0] Loading pdf-parse module...")
 
-    const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.js")
+    // Dynamic import of pdf-parse (CommonJS module)
+    const pdfParse = (await import("pdf-parse")).default
 
-    // Disable worker for Node.js environment
-    pdfjsLib.GlobalWorkerOptions.workerSrc = ""
+    console.log("[v0] Parsing PDF with pdf-parse...")
+    const data = await pdfParse(buffer)
 
-    const loadingTask = pdfjsLib.getDocument({
-      data: uint8Array,
-      useWorkerFetch: false,
-      isEvalSupported: false,
-      useSystemFonts: true,
-    })
-    const pdfDocument = await loadingTask.promise
-    console.log("[v0] PDF document loaded successfully, pages:", pdfDocument.numPages)
-
-    // Extract text from all pages
-    const textParts: string[] = []
-    for (let pageNum = 1; pageNum <= pdfDocument.numPages; pageNum++) {
-      console.log(`[v0] Extracting text from page ${pageNum}/${pdfDocument.numPages}`)
-      const page = await pdfDocument.getPage(pageNum)
-      const textContent = await page.getTextContent()
-      const pageText = textContent.items.map((item: any) => item.str).join(" ")
-      textParts.push(pageText)
-    }
-
-    const text = textParts.join("\n\n").trim()
+    const text = data.text.trim()
 
     console.log("[v0] PDF extraction complete:")
-    console.log("[v0] - Total pages:", pdfDocument.numPages)
+    console.log("[v0] - Total pages:", data.numpages)
     console.log("[v0] - Text length:", text.length, "characters")
     console.log("[v0] - First 500 characters:", text.substring(0, 500))
     console.log("[v0] - Last 500 characters:", text.substring(Math.max(0, text.length - 500)))
