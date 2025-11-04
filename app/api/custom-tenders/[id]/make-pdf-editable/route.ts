@@ -7,18 +7,26 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params
+    const { id } = await params
     const supabase = await createClient()
+
+    console.log("[v0] ========================================")
+    console.log("[v0] MAKE PDF EDITABLE REQUEST")
+    console.log("[v0] ========================================")
+    console.log("[v0] Tender ID:", id)
 
     // Get current user
     const {
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) {
+      console.log("[v0] Unauthorized - no user")
       return Response.json({ error: "Unauthorized" }, { status: 401 })
     }
+
+    console.log("[v0] User ID:", user.id)
 
     // Fetch tender data
     const { data: tenderData, error: tenderError } = await supabase
@@ -28,8 +36,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       .single()
 
     if (tenderError || !tenderData) {
+      console.log("[v0] Tender not found:", tenderError)
       return Response.json({ error: "Tender not found" }, { status: 404 })
     }
+
+    console.log("[v0] Tender found:", tenderData.title)
 
     // Fetch form responses
     const { data: responseData } = await supabase
@@ -42,13 +53,18 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const formResponses = responseData?.response_data || {}
     const formFields = tenderData.form_fields || []
 
+    console.log("[v0] Form responses:", Object.keys(formResponses).length)
+    console.log("[v0] Form fields:", formFields.length)
+
     if (!tenderData.document_url) {
+      console.log("[v0] No document URL found")
       return Response.json({ error: "No document URL found" }, { status: 404 })
     }
 
     console.log("[v0] Fetching original PDF from:", tenderData.document_url)
     const pdfResponse = await fetch(tenderData.document_url)
     if (!pdfResponse.ok) {
+      console.log("[v0] Failed to fetch PDF, status:", pdfResponse.status)
       throw new Error("Failed to fetch original PDF")
     }
     const originalPdfBytes = await pdfResponse.arrayBuffer()
@@ -120,6 +136,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     // Use AI to analyze the PDF text and suggest where fields should be placed
     const pdfText = tenderData.extracted_text || ""
     if (!pdfText) {
+      console.log("[v0] No extracted text available")
       return Response.json({ error: "No text extracted from PDF. Cannot identify field positions." }, { status: 400 })
     }
 
