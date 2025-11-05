@@ -303,10 +303,16 @@ export function CustomTenderDetailClient({
             Tender Details
           </TabsTrigger>
           {analysis && (
-            <TabsTrigger value="analysis">
-              <Sparkles className="h-4 w-4 mr-2" />
-              AI Insights
-            </TabsTrigger>
+            <>
+              <TabsTrigger value="action-plan">
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Action Plan
+              </TabsTrigger>
+              <TabsTrigger value="analysis">
+                <Sparkles className="h-4 w-4 mr-2" />
+                AI Insights
+              </TabsTrigger>
+            </>
           )}
           <TabsTrigger value="documents">
             <FileText className="h-4 w-4 mr-2" />
@@ -423,125 +429,56 @@ export function CustomTenderDetailClient({
           )}
         </TabsContent>
 
-        {analysis && (
-          <TabsContent value="analysis" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">{analysis.summary}</p>
-              </CardContent>
-            </Card>
+        {analysis && analysis.action_plan && (
+          <TabsContent value="action-plan" className="space-y-4">
+            <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
+              <AlertCircle className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-900 dark:text-blue-100">
+                Follow this action plan to ensure you meet all requirements and deadlines for this tender.
+              </AlertDescription>
+            </Alert>
 
-            {analysis.keyRequirements && analysis.keyRequirements.length > 0 && (
+            {/* Critical Dates Timeline */}
+            {analysis.action_plan.critical_dates && analysis.action_plan.critical_dates.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Key Requirements</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-orange-600" />
+                    Critical Dates & Events
+                  </CardTitle>
+                  <CardDescription>
+                    Mark these dates in your calendar - missing them may disqualify your bid
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-2">
-                    {analysis.keyRequirements.map((req: string, idx: number) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                        <span className="text-muted-foreground">{req}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-
-            {analysis.deadlines && analysis.deadlines.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Important Deadlines</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {analysis.deadlines.map((deadline: string, idx: number) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <Clock className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-muted-foreground">{deadline}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-
-            {analysis.evaluationCriteria && analysis.evaluationCriteria.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Evaluation Criteria</CardTitle>
-                  <CardDescription>How your tender submission will be scored</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {analysis.evaluationCriteria.map((criteria: string, idx: number) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center mt-0.5 flex-shrink-0">
-                          <span className="text-xs font-semibold text-primary">{idx + 1}</span>
-                        </div>
-                        <span className="text-muted-foreground">{criteria}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-
-            {analysis.complianceChecklist && analysis.complianceChecklist.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Compliance Checklist</CardTitle>
-                  <CardDescription>Mandatory requirements you must fulfill</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {analysis.complianceChecklist.map((item: string, idx: number) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <div className="h-5 w-5 rounded border-2 border-primary mt-0.5 flex-shrink-0" />
-                        <span className="text-muted-foreground">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-
-            {analysis.actionableTasks && analysis.actionableTasks.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Actionable Tasks</CardTitle>
-                  <CardDescription>Prioritized tasks to complete for this tender</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {analysis.actionableTasks.map((task: any, idx: number) => (
-                      <div key={idx} className="flex items-start gap-3 p-3 rounded-lg border border-border">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge
-                              variant={
-                                task.priority === "high"
-                                  ? "destructive"
-                                  : task.priority === "medium"
-                                    ? "default"
-                                    : "secondary"
-                              }
-                              className="text-xs"
-                            >
-                              {task.priority}
-                            </Badge>
-                            <Badge variant="outline" className="text-xs">
-                              {task.category}
-                            </Badge>
+                  <div className="space-y-4">
+                    {analysis.action_plan.critical_dates.map((item: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-4 p-4 rounded-lg border-l-4 border-orange-500 bg-orange-50 dark:bg-orange-950/20"
+                      >
+                        <div className="flex-shrink-0 w-20 text-center">
+                          <div className="text-2xl font-bold text-orange-600">{new Date(item.date).getDate()}</div>
+                          <div className="text-xs text-muted-foreground uppercase">
+                            {new Date(item.date).toLocaleDateString("en-US", { month: "short" })}
                           </div>
-                          <p className="text-sm text-foreground">{task.task}</p>
-                          {task.deadline && (
-                            <p className="text-xs text-muted-foreground mt-1">Deadline: {task.deadline}</p>
-                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-foreground mb-1">{item.event}</h4>
+                          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                            {item.time && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {item.time}
+                              </span>
+                            )}
+                            {item.location && (
+                              <span className="flex items-center gap-1">
+                                <span>📍</span>
+                                {item.location}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -550,20 +487,286 @@ export function CustomTenderDetailClient({
               </Card>
             )}
 
-            {analysis.recommendations && analysis.recommendations.length > 0 && (
+            {/* Preparation Tasks Checklist */}
+            {analysis.action_plan.preparation_tasks && analysis.action_plan.preparation_tasks.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Strategic Recommendations</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardList className="h-5 w-5 text-primary" />
+                    Preparation Checklist
+                  </CardTitle>
+                  <CardDescription>Complete these tasks before the tender closing date</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-2">
-                    {analysis.recommendations.map((rec: string, idx: number) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <Sparkles className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                        <span className="text-muted-foreground">{rec}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="space-y-3">
+                    {analysis.action_plan.preparation_tasks
+                      .sort((a: any, b: any) => {
+                        const priorityOrder = { High: 0, Medium: 1, Low: 2 }
+                        return (
+                          priorityOrder[a.priority as keyof typeof priorityOrder] -
+                          priorityOrder[b.priority as keyof typeof priorityOrder]
+                        )
+                      })
+                      .map((task: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className="flex items-start gap-3 p-4 rounded-lg border border-border hover:border-primary/50 transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            className="mt-1 h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <h4 className="font-medium text-foreground">{task.task}</h4>
+                              <Badge
+                                variant={
+                                  task.priority === "High"
+                                    ? "destructive"
+                                    : task.priority === "Medium"
+                                      ? "default"
+                                      : "secondary"
+                                }
+                                className="flex-shrink-0"
+                              >
+                                {task.priority}
+                              </Badge>
+                            </div>
+                            <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                Due: {new Date(task.deadline).toLocaleDateString()}
+                              </span>
+                              <Badge variant="outline" className="text-xs">
+                                {task.category}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        )}
+
+        {analysis && (
+          <TabsContent value="analysis" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Tender Overview</CardTitle>
+                <CardDescription>Key information about this tender opportunity</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {analysis.tender_summary?.tender_number && (
+                  <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                    <span className="text-sm font-medium text-muted-foreground">Tender Number:</span>
+                    <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                      {analysis.tender_summary.tender_number}
+                    </span>
+                  </div>
+                )}
+
+                {analysis.tender_summary?.title && (
+                  <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                    <span className="text-sm font-medium text-muted-foreground">Title:</span>
+                    <span className="text-sm">{analysis.tender_summary.title}</span>
+                  </div>
+                )}
+
+                {analysis.tender_summary?.entity && (
+                  <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                    <span className="text-sm font-medium text-muted-foreground">Issuing Entity:</span>
+                    <span className="text-sm">{analysis.tender_summary.entity}</span>
+                  </div>
+                )}
+
+                {analysis.tender_summary?.description && (
+                  <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                    <span className="text-sm font-medium text-muted-foreground">Description:</span>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {analysis.tender_summary.description}
+                    </p>
+                  </div>
+                )}
+
+                {analysis.tender_summary?.contract_duration && (
+                  <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                    <span className="text-sm font-medium text-muted-foreground">Contract Duration:</span>
+                    <span className="text-sm">{analysis.tender_summary.contract_duration}</span>
+                  </div>
+                )}
+
+                {analysis.tender_summary?.closing_date && (
+                  <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                    <span className="text-sm font-medium text-muted-foreground">Closing Date:</span>
+                    <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">
+                      {analysis.tender_summary.closing_date}
+                    </span>
+                  </div>
+                )}
+
+                {analysis.tender_summary?.submission_method && (
+                  <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                    <span className="text-sm font-medium text-muted-foreground">Submission Method:</span>
+                    <span className="text-sm">{analysis.tender_summary.submission_method}</span>
+                  </div>
+                )}
+
+                {analysis.tender_summary?.compulsory_briefing && (
+                  <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                    <span className="text-sm font-medium text-muted-foreground">Compulsory Briefing:</span>
+                    <span className="text-sm font-semibold text-red-600 dark:text-red-400">
+                      {analysis.tender_summary.compulsory_briefing}
+                    </span>
+                  </div>
+                )}
+
+                {analysis.tender_summary?.validity_period && (
+                  <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                    <span className="text-sm font-medium text-muted-foreground">Validity Period:</span>
+                    <span className="text-sm">{analysis.tender_summary.validity_period}</span>
+                  </div>
+                )}
+
+                {analysis.tender_summary?.contact_email && (
+                  <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                    <span className="text-sm font-medium text-muted-foreground">Contact Email:</span>
+                    <a
+                      href={`mailto:${analysis.tender_summary.contact_email}`}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {analysis.tender_summary.contact_email}
+                    </a>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {analysis.compliance_summary && (
+              <>
+                {analysis.compliance_summary.requirements && analysis.compliance_summary.requirements.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        Compliance Requirements
+                      </CardTitle>
+                      <CardDescription>Mandatory requirements you must fulfill</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-3">
+                        {analysis.compliance_summary.requirements.map((req: string, idx: number) => (
+                          <li
+                            key={idx}
+                            className="flex items-start gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900"
+                          >
+                            <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm text-foreground">{req}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {analysis.compliance_summary.disqualifiers && analysis.compliance_summary.disqualifiers.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5 text-red-600" />
+                        Disqualifiers
+                      </CardTitle>
+                      <CardDescription>Actions or omissions that will eliminate your bid</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-3">
+                        {analysis.compliance_summary.disqualifiers.map((disq: string, idx: number) => (
+                          <li
+                            key={idx}
+                            className="flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900"
+                          >
+                            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm text-foreground font-medium">{disq}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {analysis.compliance_summary.strengtheners && analysis.compliance_summary.strengtheners.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-blue-600" />
+                        Bid Strengtheners
+                      </CardTitle>
+                      <CardDescription>Factors that will improve your bid quality and competitiveness</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-3">
+                        {analysis.compliance_summary.strengtheners.map((str: string, idx: number) => (
+                          <li
+                            key={idx}
+                            className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900"
+                          >
+                            <Sparkles className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm text-foreground">{str}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+
+            {analysis.evaluation && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Evaluation Criteria</CardTitle>
+                  <CardDescription>
+                    How your tender submission will be scored
+                    {analysis.evaluation.threshold && ` • Minimum threshold: ${analysis.evaluation.threshold}`}
+                    {analysis.evaluation.pricing_system && ` • Pricing system: ${analysis.evaluation.pricing_system}`}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {analysis.evaluation.criteria && analysis.evaluation.criteria.length > 0 && (
+                    <div className="space-y-3">
+                      {analysis.evaluation.criteria.map((item: any, idx: number) => (
+                        <div key={idx} className="flex items-center gap-4 p-3 rounded-lg border border-border">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-foreground">{item.criterion}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-base font-semibold">
+                              {item.weight}%
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="pt-4 border-t border-border space-y-2">
+                    {analysis.evaluation.threshold && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Minimum Qualifying Score:</span>
+                        <span className="font-semibold text-orange-600 dark:text-orange-400">
+                          {analysis.evaluation.threshold}
+                        </span>
+                      </div>
+                    )}
+                    {analysis.evaluation.pricing_system && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Pricing System:</span>
+                        <span className="font-semibold">{analysis.evaluation.pricing_system}</span>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             )}
