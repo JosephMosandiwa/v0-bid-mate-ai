@@ -470,6 +470,46 @@ export function CustomTenderDetailClient({
               </Card>
             )}
 
+            {analysis.evaluationCriteria && analysis.evaluationCriteria.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Evaluation Criteria</CardTitle>
+                  <CardDescription>How your tender submission will be scored</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {analysis.evaluationCriteria.map((criteria: string, idx: number) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center mt-0.5 flex-shrink-0">
+                          <span className="text-xs font-semibold text-primary">{idx + 1}</span>
+                        </div>
+                        <span className="text-muted-foreground">{criteria}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
+            {analysis.complianceChecklist && analysis.complianceChecklist.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Compliance Checklist</CardTitle>
+                  <CardDescription>Mandatory requirements you must fulfill</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {analysis.complianceChecklist.map((item: string, idx: number) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <div className="h-5 w-5 rounded border-2 border-primary mt-0.5 flex-shrink-0" />
+                        <span className="text-muted-foreground">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
             {analysis.actionableTasks && analysis.actionableTasks.length > 0 && (
               <Card>
                 <CardHeader>
