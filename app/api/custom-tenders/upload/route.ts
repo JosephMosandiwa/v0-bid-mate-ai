@@ -86,11 +86,11 @@ export async function POST(request: NextRequest) {
     const analysis = await analyzeResponse.json()
     console.log("[v0] Analysis completed")
 
-    const metadata = analysis.tenderMetadata || {}
-    const extractedTitle = metadata.title || title || file.name.replace(".pdf", "")
-    const extractedDescription = metadata.organization
-      ? `${analysis.summary || ""}\n\nIssued by: ${metadata.organization}`
-      : analysis.summary || description || ""
+    const tenderSummary = analysis.tender_summary || {}
+    const extractedTitle = tenderSummary.title || title || file.name.replace(".pdf", "")
+    const extractedDescription = tenderSummary.entity
+      ? `${tenderSummary.description || ""}\n\nIssued by: ${tenderSummary.entity}`
+      : tenderSummary.description || description || ""
 
     // Create custom tender record
     const { data: tender, error: tenderError } = await supabase
@@ -99,12 +99,12 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         title: extractedTitle,
         description: extractedDescription,
-        category: metadata.category || "Custom Upload",
+        category: "Custom Upload",
         status: "draft",
-        organization: metadata.organization || null,
-        deadline: metadata.deadline || null,
-        value: metadata.value || null,
-        location: metadata.location || null,
+        organization: tenderSummary.entity || null,
+        deadline: tenderSummary.closing_date || null,
+        value: null,
+        location: null,
       })
       .select()
       .single()

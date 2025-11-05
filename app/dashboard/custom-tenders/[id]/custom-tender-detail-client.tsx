@@ -439,115 +439,119 @@ export function CustomTenderDetailClient({
             </Alert>
 
             {/* Critical Dates Timeline */}
-            {analysis.action_plan?.critical_dates && analysis.action_plan.critical_dates.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-orange-600" />
-                    Critical Dates & Events
-                  </CardTitle>
-                  <CardDescription>
-                    Mark these dates in your calendar - missing them may disqualify your bid
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {analysis.action_plan.critical_dates.map((item: any, idx: number) => (
-                      <div
-                        key={idx}
-                        className="flex items-start gap-4 p-4 rounded-lg border-l-4 border-orange-500 bg-orange-50 dark:bg-orange-950/20"
-                      >
-                        <div className="flex-shrink-0 w-20 text-center">
-                          <div className="text-2xl font-bold text-orange-600">{new Date(item.date).getDate()}</div>
-                          <div className="text-xs text-muted-foreground uppercase">
-                            {new Date(item.date).toLocaleDateString("en-US", { month: "short" })}
-                          </div>
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-foreground mb-1">{item.event}</h4>
-                          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                            {item.time && (
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {item.time}
-                              </span>
-                            )}
-                            {item.location && (
-                              <span className="flex items-center gap-1">
-                                <span>📍</span>
-                                {item.location}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Preparation Tasks Checklist */}
-            {analysis.action_plan?.preparation_tasks && analysis.action_plan.preparation_tasks.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ClipboardList className="h-5 w-5 text-primary" />
-                    Preparation Checklist
-                  </CardTitle>
-                  <CardDescription>Complete these tasks before the tender closing date</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {analysis.action_plan.preparation_tasks
-                      .sort((a: any, b: any) => {
-                        const priorityOrder = { High: 0, Medium: 1, Low: 2 }
-                        return (
-                          priorityOrder[a.priority as keyof typeof priorityOrder] -
-                          priorityOrder[b.priority as keyof typeof priorityOrder]
-                        )
-                      })
-                      .map((task: any, idx: number) => (
+            {analysis.action_plan?.critical_dates &&
+              Array.isArray(analysis.action_plan.critical_dates) &&
+              analysis.action_plan.critical_dates.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-orange-600" />
+                      Critical Dates & Events
+                    </CardTitle>
+                    <CardDescription>
+                      Mark these dates in your calendar - missing them may disqualify your bid
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {analysis.action_plan.critical_dates.map((item: any, idx: number) => (
                         <div
                           key={idx}
-                          className="flex items-start gap-3 p-4 rounded-lg border border-border hover:border-primary/50 transition-colors"
+                          className="flex items-start gap-4 p-4 rounded-lg border-l-4 border-orange-500 bg-orange-50 dark:bg-orange-950/20"
                         >
-                          <input
-                            type="checkbox"
-                            className="mt-1 h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <h4 className="font-medium text-foreground">{task.task}</h4>
-                              <Badge
-                                variant={
-                                  task.priority === "High"
-                                    ? "destructive"
-                                    : task.priority === "Medium"
-                                      ? "default"
-                                      : "secondary"
-                                }
-                                className="flex-shrink-0"
-                              >
-                                {task.priority}
-                              </Badge>
+                          <div className="flex-shrink-0 w-20 text-center">
+                            <div className="text-2xl font-bold text-orange-600">{new Date(item.date).getDate()}</div>
+                            <div className="text-xs text-muted-foreground uppercase">
+                              {new Date(item.date).toLocaleDateString("en-US", { month: "short" })}
                             </div>
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-foreground mb-1">{item.event}</h4>
                             <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                Due: {new Date(task.deadline).toLocaleDateString()}
-                              </span>
-                              <Badge variant="outline" className="text-xs">
-                                {task.category}
-                              </Badge>
+                              {item.time && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {item.time}
+                                </span>
+                              )}
+                              {item.location && (
+                                <span className="flex items-center gap-1">
+                                  <span>📍</span>
+                                  {item.location}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
                       ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+            {/* Preparation Tasks Checklist */}
+            {analysis.action_plan?.preparation_tasks &&
+              Array.isArray(analysis.action_plan.preparation_tasks) &&
+              analysis.action_plan.preparation_tasks.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ClipboardList className="h-5 w-5 text-primary" />
+                      Preparation Checklist
+                    </CardTitle>
+                    <CardDescription>Complete these tasks before the tender closing date</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {analysis.action_plan.preparation_tasks
+                        .sort((a: any, b: any) => {
+                          const priorityOrder = { High: 0, Medium: 1, Low: 2 }
+                          return (
+                            priorityOrder[a.priority as keyof typeof priorityOrder] -
+                            priorityOrder[b.priority as keyof typeof priorityOrder]
+                          )
+                        })
+                        .map((task: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="flex items-start gap-3 p-4 rounded-lg border border-border hover:border-primary/50 transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              className="mt-1 h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <h4 className="font-medium text-foreground">{task.task}</h4>
+                                <Badge
+                                  variant={
+                                    task.priority === "High"
+                                      ? "destructive"
+                                      : task.priority === "Medium"
+                                        ? "default"
+                                        : "secondary"
+                                  }
+                                  className="flex-shrink-0"
+                                >
+                                  {task.priority}
+                                </Badge>
+                              </div>
+                              <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  Due: {new Date(task.deadline).toLocaleDateString()}
+                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {task.category}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
           </TabsContent>
         )}
 
@@ -646,80 +650,88 @@ export function CustomTenderDetailClient({
 
             {analysis.compliance_summary && (
               <>
-                {analysis.compliance_summary?.requirements && analysis.compliance_summary.requirements.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-green-600" />
-                        Compliance Requirements
-                      </CardTitle>
-                      <CardDescription>Mandatory requirements you must fulfill</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-3">
-                        {analysis.compliance_summary.requirements.map((req: string, idx: number) => (
-                          <li
-                            key={idx}
-                            className="flex items-start gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900"
-                          >
-                            <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm text-foreground">{req}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
+                {analysis.compliance_summary?.requirements &&
+                  Array.isArray(analysis.compliance_summary.requirements) &&
+                  analysis.compliance_summary.requirements.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                          Compliance Requirements
+                        </CardTitle>
+                        <CardDescription>Mandatory requirements you must fulfill</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-3">
+                          {analysis.compliance_summary.requirements.map((req: string, idx: number) => (
+                            <li
+                              key={idx}
+                              className="flex items-start gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900"
+                            >
+                              <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm text-foreground">{req}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
 
-                {analysis.compliance_summary?.disqualifiers && analysis.compliance_summary.disqualifiers.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <AlertCircle className="h-5 w-5 text-red-600" />
-                        Disqualifiers
-                      </CardTitle>
-                      <CardDescription>Actions or omissions that will eliminate your bid</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-3">
-                        {analysis.compliance_summary.disqualifiers.map((disq: string, idx: number) => (
-                          <li
-                            key={idx}
-                            className="flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900"
-                          >
-                            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm text-foreground font-medium">{disq}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
+                {analysis.compliance_summary?.disqualifiers &&
+                  Array.isArray(analysis.compliance_summary.disqualifiers) &&
+                  analysis.compliance_summary.disqualifiers.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <AlertCircle className="h-5 w-5 text-red-600" />
+                          Disqualifiers
+                        </CardTitle>
+                        <CardDescription>Actions or omissions that will eliminate your bid</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-3">
+                          {analysis.compliance_summary.disqualifiers.map((disq: string, idx: number) => (
+                            <li
+                              key={idx}
+                              className="flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900"
+                            >
+                              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm text-foreground font-medium">{disq}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
 
-                {analysis.compliance_summary?.strengtheners && analysis.compliance_summary.strengtheners.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-blue-600" />
-                        Bid Strengtheners
-                      </CardTitle>
-                      <CardDescription>Factors that will improve your bid quality and competitiveness</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-3">
-                        {analysis.compliance_summary.strengtheners.map((str: string, idx: number) => (
-                          <li
-                            key={idx}
-                            className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900"
-                          >
-                            <Sparkles className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm text-foreground">{str}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
+                {analysis.compliance_summary?.strengtheners &&
+                  Array.isArray(analysis.compliance_summary.strengtheners) &&
+                  analysis.compliance_summary.strengtheners.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Sparkles className="h-5 w-5 text-blue-600" />
+                          Bid Strengtheners
+                        </CardTitle>
+                        <CardDescription>
+                          Factors that will improve your bid quality and competitiveness
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-3">
+                          {analysis.compliance_summary.strengtheners.map((str: string, idx: number) => (
+                            <li
+                              key={idx}
+                              className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900"
+                            >
+                              <Sparkles className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm text-foreground">{str}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
               </>
             )}
 
@@ -734,22 +746,24 @@ export function CustomTenderDetailClient({
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {analysis.evaluation?.criteria && analysis.evaluation.criteria.length > 0 && (
-                    <div className="space-y-3">
-                      {analysis.evaluation.criteria.map((item: any, idx: number) => (
-                        <div key={idx} className="flex items-center gap-4 p-3 rounded-lg border border-border">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-foreground">{item.criterion}</p>
+                  {analysis.evaluation?.criteria &&
+                    Array.isArray(analysis.evaluation.criteria) &&
+                    analysis.evaluation.criteria.length > 0 && (
+                      <div className="space-y-3">
+                        {analysis.evaluation.criteria.map((item: any, idx: number) => (
+                          <div key={idx} className="flex items-center gap-4 p-3 rounded-lg border border-border">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-foreground">{item.criterion}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="text-base font-semibold">
+                                {item.weight}%
+                              </Badge>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-base font-semibold">
-                              {item.weight}%
-                            </Badge>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    )}
 
                   <div className="pt-4 border-t border-border space-y-2">
                     {analysis.evaluation.threshold && (
