@@ -439,7 +439,7 @@ export function CustomTenderDetailClient({
             </Alert>
 
             {/* Critical Dates Timeline */}
-            {analysis.action_plan.critical_dates && analysis.action_plan.critical_dates.length > 0 && (
+            {analysis.action_plan?.critical_dates && analysis.action_plan.critical_dates.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -488,7 +488,7 @@ export function CustomTenderDetailClient({
             )}
 
             {/* Preparation Tasks Checklist */}
-            {analysis.action_plan.preparation_tasks && analysis.action_plan.preparation_tasks.length > 0 && (
+            {analysis.action_plan?.preparation_tasks && analysis.action_plan.preparation_tasks.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -646,7 +646,7 @@ export function CustomTenderDetailClient({
 
             {analysis.compliance_summary && (
               <>
-                {analysis.compliance_summary.requirements && analysis.compliance_summary.requirements.length > 0 && (
+                {analysis.compliance_summary?.requirements && analysis.compliance_summary.requirements.length > 0 && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -671,7 +671,7 @@ export function CustomTenderDetailClient({
                   </Card>
                 )}
 
-                {analysis.compliance_summary.disqualifiers && analysis.compliance_summary.disqualifiers.length > 0 && (
+                {analysis.compliance_summary?.disqualifiers && analysis.compliance_summary.disqualifiers.length > 0 && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -696,7 +696,7 @@ export function CustomTenderDetailClient({
                   </Card>
                 )}
 
-                {analysis.compliance_summary.strengtheners && analysis.compliance_summary.strengtheners.length > 0 && (
+                {analysis.compliance_summary?.strengtheners && analysis.compliance_summary.strengtheners.length > 0 && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -734,7 +734,7 @@ export function CustomTenderDetailClient({
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {analysis.evaluation.criteria && analysis.evaluation.criteria.length > 0 && (
+                  {analysis.evaluation?.criteria && analysis.evaluation.criteria.length > 0 && (
                     <div className="space-y-3">
                       {analysis.evaluation.criteria.map((item: any, idx: number) => (
                         <div key={idx} className="flex items-center gap-4 p-3 rounded-lg border border-border">
