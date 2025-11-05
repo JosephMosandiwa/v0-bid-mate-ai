@@ -107,6 +107,9 @@ export async function POST(request: Request) {
 
     let analysis
     try {
+      console.log("[v0] Starting AI generation...")
+      const startTime = Date.now()
+
       const result = await generateObject({
         model: "gpt-4o-mini",
         schema: tenderAnalysisSchema,
@@ -119,16 +122,31 @@ TENDER DOCUMENT TEXT
 ${truncatedText}
 
 ===========================================
-ANALYSIS OUTPUT
+END OF DOCUMENT
 ===========================================
 
-Provide your comprehensive analysis following all the rules above.`,
+Now analyze the above tender document and provide your comprehensive analysis in the exact JSON format specified.`,
       })
+
+      const endTime = Date.now()
+      console.log("[v0] AI generation completed in", (endTime - startTime) / 1000, "seconds")
 
       analysis = result.object
 
       console.log("[v0] Raw AI response received successfully")
       console.log("[v0] Response structure:", Object.keys(analysis))
+
+      console.log(
+        "[v0] tender_summary keys:",
+        analysis.tender_summary ? Object.keys(analysis.tender_summary) : "MISSING",
+      )
+      console.log(
+        "[v0] compliance_summary keys:",
+        analysis.compliance_summary ? Object.keys(analysis.compliance_summary) : "MISSING",
+      )
+      console.log("[v0] evaluation keys:", analysis.evaluation ? Object.keys(analysis.evaluation) : "MISSING")
+      console.log("[v0] action_plan keys:", analysis.action_plan ? Object.keys(analysis.action_plan) : "MISSING")
+      console.log("[v0] formFields present:", Array.isArray(analysis.formFields) ? "YES" : "NO")
     } catch (aiError: any) {
       console.error("[v0] ========================================")
       console.error("[v0] AI GENERATION ERROR")
@@ -137,8 +155,16 @@ Provide your comprehensive analysis following all the rules above.`,
       console.error("[v0] Error message:", aiError?.message)
       console.error("[v0] Error stack:", aiError?.stack?.substring(0, 1000))
 
+      if (aiError?.cause) {
+        console.error("[v0] Error cause:", aiError.cause)
+      }
+      if (aiError?.response) {
+        console.error("[v0] Error response:", aiError.response)
+      }
+
       if (aiError?.message?.includes("schema")) {
         console.error("[v0] Schema validation failed - AI response doesn't match expected structure")
+        console.error("[v0] This usually means the AI returned data in a different format than expected")
       }
 
       console.error("[v0] ========================================")
@@ -180,14 +206,55 @@ Provide your comprehensive analysis following all the rules above.`,
         )
       }
 
-      throw aiError
+      return Response.json(
+        {
+          error: "AI generation failed",
+          errorType: "ai_generation_error",
+          details: aiError?.message || "Unknown AI error",
+          hint: "Check the server logs for more details",
+        },
+        { status: 500 },
+      )
     }
 
     if (!analysis.action_plan) {
+      console.log("[v0] action_plan missing, adding defaults")
       analysis.action_plan = { critical_dates: [], preparation_tasks: [] }
     }
     if (!analysis.formFields) {
+      console.log("[v0] formFields missing, adding empty array")
       analysis.formFields = []
+    }
+    if (!analysis.tender_summary) {
+      console.log("[v0] WARNING: tender_summary is missing!")
+      analysis.tender_summary = {
+        tender_number: "Not specified",
+        title: "Not specified",
+        entity: "Not specified",
+        description: "Not specified",
+        contract_duration: "Not specified",
+        closing_date: "Not specified",
+        submission_method: "Not specified",
+        compulsory_briefing: "Not specified",
+        validity_period: "Not specified",
+        contact_email: "Not specified",
+      }
+    }
+    if (!analysis.compliance_summary) {
+      console.log("[v0] WARNING: compliance_summary is missing!")
+      analysis.compliance_summary = {
+        requirements: [],
+        disqualifiers: [],
+        strengtheners: [],
+      }
+    }
+    if (!analysis.evaluation) {
+      console.log("[v0] WARNING: evaluation is missing!")
+      analysis.evaluation = {
+        criteria: [],
+        threshold: "Not specified",
+        pricing_system: "Not specified",
+      }
     }
 
     if (analysis.tender_summary?.closing_date) {
