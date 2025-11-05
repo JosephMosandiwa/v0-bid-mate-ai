@@ -17,26 +17,49 @@ import { createCustomTender } from "@/app/actions/tender-actions"
 import { useToast } from "@/hooks/use-toast"
 
 type AnalysisResult = {
-  tenderMetadata?: {
+  tender_summary?: {
+    tender_number?: string
     title?: string
-    organization?: string
-    deadline?: string
-    value?: string
-    category?: string
-    location?: string
+    entity?: string
+    description?: string
+    contract_duration?: string
+    closing_date?: string
+    submission_method?: string
+    compulsory_briefing?: string
+    validity_period?: string
+    contact_email?: string
   }
-  summary: string
-  keyRequirements: string[]
-  deadlines: string[]
-  evaluationCriteria: string[]
-  recommendations: string[]
-  complianceChecklist: string[]
-}
-
-type ErrorResponse = {
-  error: string
-  errorType?: string
-  dashboardUrl?: string
+  compliance_summary?: {
+    requirements?: string[]
+    disqualifiers?: string[]
+    strengtheners?: string[]
+  }
+  evaluation?: {
+    criteria?: Array<{ criterion: string; weight: string }>
+    threshold?: string
+    pricing_system?: string
+  }
+  action_plan?: {
+    critical_dates?: Array<{
+      date: string
+      event: string
+      time?: string
+      location?: string
+    }>
+    preparation_tasks?: Array<{
+      task: string
+      priority: string
+      category: string
+      deadline?: string
+    }>
+  }
+  formFields?: Array<{
+    id: string
+    label: string
+    type: string
+    required: boolean
+    section: string
+  }>
 }
 
 export default function NewTenderPage() {
@@ -134,7 +157,7 @@ export default function NewTenderPage() {
       })
 
       if (!analyzeResponse.ok) {
-        const errorData: ErrorResponse = await analyzeResponse.json()
+        const errorData: any = await analyzeResponse.json()
 
         if (errorData.errorType === "payment_required") {
           setPaymentRequired(true)
@@ -149,29 +172,27 @@ export default function NewTenderPage() {
       const analysisResult = await analyzeResponse.json()
       setAnalysis(analysisResult)
 
-      if (analysisResult.tenderMetadata) {
-        const metadata = analysisResult.tenderMetadata
+      if (analysisResult.tender_summary) {
+        const summary = analysisResult.tender_summary
 
         setFormData((prev) => ({
           ...prev,
-          title: metadata.title || prev.title,
-          organization: metadata.organization || prev.organization,
-          deadline: metadata.deadline || prev.deadline,
-          value: metadata.value || prev.value,
-          description: analysisResult.summary || prev.description,
+          title: summary.title || prev.title,
+          organization: summary.entity || prev.organization,
+          deadline: summary.closing_date || prev.deadline,
+          value: prev.value, // Value not in new schema
+          description: summary.description || prev.description,
         }))
-      } else {
-        // Fallback to old behavior if no metadata
-        if (analysisResult.deadlines.length > 0) {
-          const deadlineText = analysisResult.deadlines[0]
-          const dateMatch = deadlineText.match(/\d{4}-\d{2}-\d{2}/)
-          if (dateMatch) {
-            setFormData((prev) => ({ ...prev, deadline: dateMatch[0] }))
-          }
+      } else if (analysisResult.action_plan?.critical_dates && analysisResult.action_plan.critical_dates.length > 0) {
+        const closingDate = analysisResult.action_plan.critical_dates.find(
+          (d) => d.event.toLowerCase().includes("closing") || d.event.toLowerCase().includes("submission"),
+        )
+        if (closingDate) {
+          setFormData((prev) => ({ ...prev, deadline: closingDate.date }))
         }
 
-        if (analysisResult.summary) {
-          setFormData((prev) => ({ ...prev, description: analysisResult.summary }))
+        if (analysisResult.tender_summary?.description) {
+          setFormData((prev) => ({ ...prev, description: analysisResult.tender_summary.description }))
         }
       }
     } catch (error) {
@@ -363,72 +384,121 @@ export default function NewTenderPage() {
               <TabsContent value="summary" className="space-y-4 mt-4">
                 <div>
                   <h3 className="font-semibold mb-2">Executive Summary</h3>
-                  <p className="text-sm text-muted-foreground">{analysis.summary}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {analysis.tender_summary?.description || "No summary available"}
+                  </p>
                 </div>
 
-                <div>
-                  <h3 className="font-semibold mb-2">Important Deadlines</h3>
-                  <ul className="space-y-1">
-                    {analysis.deadlines.map((deadline, i) => (
-                      <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                        <span className="text-primary mt-1">•</span>
-                        {deadline}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {analysis.action_plan?.critical_dates && analysis.action_plan.critical_dates.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Important Deadlines</h3>
+                    <ul className="space-y-1">
+                      {analysis.action_plan.critical_dates.map((deadline, i) => (
+                        <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                          <span className="text-primary mt-1">•</span>
+                          {deadline.date} - {deadline.event}
+                          {deadline.time && ` at ${deadline.time}`}
+                          {deadline.location && ` (${deadline.location})`}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-                <div>
-                  <h3 className="font-semibold mb-2">Evaluation Criteria</h3>
-                  <ul className="space-y-1">
-                    {analysis.evaluationCriteria.map((criteria, i) => (
-                      <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        {criteria}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {analysis.evaluation?.criteria && analysis.evaluation.criteria.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Evaluation Criteria</h3>
+                    <ul className="space-y-1">
+                      {analysis.evaluation.criteria.map((criteria, i) => (
+                        <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          {criteria.criterion} ({criteria.weight})
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="requirements" className="space-y-4 mt-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Key Requirements</h3>
-                  <ul className="space-y-2">
-                    {analysis.keyRequirements.map((req, i) => (
-                      <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                        {req}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {analysis.compliance_summary?.requirements && analysis.compliance_summary.requirements.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Key Requirements</h3>
+                    <ul className="space-y-2">
+                      {analysis.compliance_summary.requirements.map((req, i) => (
+                        <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                          {req}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-                <div>
-                  <h3 className="font-semibold mb-2">Compliance Checklist</h3>
-                  <ul className="space-y-2">
-                    {analysis.complianceChecklist.map((item, i) => (
-                      <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {analysis.compliance_summary?.disqualifiers && analysis.compliance_summary.disqualifiers.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2 text-red-500">Disqualifiers (Must Avoid)</h3>
+                    <ul className="space-y-2">
+                      {analysis.compliance_summary.disqualifiers.map((item, i) => (
+                        <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="tips" className="space-y-4 mt-4">
-                <div>
-                  <h3 className="font-semibold mb-2">Strategic Recommendations</h3>
-                  <ul className="space-y-3">
-                    {analysis.recommendations.map((rec, i) => (
-                      <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                        <span className="text-primary font-bold mt-0.5 flex-shrink-0">{i + 1}.</span>
-                        {rec}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {analysis.compliance_summary?.strengtheners && analysis.compliance_summary.strengtheners.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">Strategic Recommendations</h3>
+                    <ul className="space-y-3">
+                      {analysis.compliance_summary.strengtheners.map((rec, i) => (
+                        <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                          <span className="text-primary font-bold mt-0.5 flex-shrink-0">{i + 1}.</span>
+                          {rec}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {analysis.action_plan?.preparation_tasks && analysis.action_plan.preparation_tasks.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2 mt-4">Preparation Tasks</h3>
+                    <ul className="space-y-3">
+                      {analysis.action_plan.preparation_tasks
+                        .sort((a, b) => {
+                          const priorityOrder = { high: 0, medium: 1, low: 2 }
+                          return (
+                            priorityOrder[a.priority.toLowerCase() as keyof typeof priorityOrder] -
+                            priorityOrder[b.priority.toLowerCase() as keyof typeof priorityOrder]
+                          )
+                        })
+                        .map((task, i) => (
+                          <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                            <span
+                              className={`text-xs font-bold mt-0.5 flex-shrink-0 px-2 py-0.5 rounded ${
+                                task.priority.toLowerCase() === "high"
+                                  ? "bg-red-500/20 text-red-500"
+                                  : task.priority.toLowerCase() === "medium"
+                                    ? "bg-yellow-500/20 text-yellow-500"
+                                    : "bg-blue-500/20 text-blue-500"
+                              }`}
+                            >
+                              {task.priority}
+                            </span>
+                            <span>
+                              {task.task}
+                              {task.deadline && ` (Due: ${task.deadline})`}
+                            </span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>
