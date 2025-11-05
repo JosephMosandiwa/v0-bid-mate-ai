@@ -4,16 +4,16 @@ import { getAnalysisPrompt } from "@/lib/prompts"
 
 const tenderAnalysisSchema = z.object({
   tender_summary: z.object({
-    tender_number: z.string().optional(),
-    title: z.string().optional(),
-    entity: z.string().optional(),
-    description: z.string().optional(),
-    contract_duration: z.string().optional(),
-    closing_date: z.string().optional(),
-    submission_method: z.string().optional(),
-    compulsory_briefing: z.string().optional(),
-    validity_period: z.string().optional(),
-    contact_email: z.string().optional(),
+    tender_number: z.string().optional().default("Not specified"),
+    title: z.string().optional().default("Not specified"),
+    entity: z.string().optional().default("Not specified"),
+    description: z.string().optional().default("Not specified"),
+    contract_duration: z.string().optional().default("Not specified"),
+    closing_date: z.string().optional().default("Not specified"),
+    submission_method: z.string().optional().default("Not specified"),
+    compulsory_briefing: z.string().optional().default("Not specified"),
+    validity_period: z.string().optional().default("Not specified"),
+    contact_email: z.string().optional().default("Not specified"),
   }),
   compliance_summary: z.object({
     requirements: z.array(z.string()).default([]),
@@ -29,29 +29,34 @@ const tenderAnalysisSchema = z.object({
         }),
       )
       .default([]),
-    threshold: z.string().optional(),
-    pricing_system: z.string().optional(),
+    threshold: z.string().optional().default("Not specified"),
+    pricing_system: z.string().optional().default("Not specified"),
   }),
   action_plan: z
     .object({
-      critical_dates: z.array(
-        z.object({
-          date: z.string(),
-          event: z.string(),
-          time: z.string().optional(),
-          location: z.string().optional(),
-        }),
-      ),
-      preparation_tasks: z.array(
-        z.object({
-          task: z.string(),
-          priority: z.enum(["High", "Medium", "Low"]),
-          deadline: z.string(),
-          category: z.string(),
-        }),
-      ),
+      critical_dates: z
+        .array(
+          z.object({
+            date: z.string(),
+            event: z.string(),
+            time: z.string().optional(),
+            location: z.string().optional(),
+          }),
+        )
+        .default([]),
+      preparation_tasks: z
+        .array(
+          z.object({
+            task: z.string(),
+            priority: z.enum(["High", "Medium", "Low"]),
+            deadline: z.string(),
+            category: z.string(),
+          }),
+        )
+        .default([]),
     })
-    .optional(),
+    .optional()
+    .default({ critical_dates: [], preparation_tasks: [] }),
   formFields: z
     .array(
       z.object({
@@ -65,7 +70,8 @@ const tenderAnalysisSchema = z.object({
         options: z.array(z.string()).optional(),
       }),
     )
-    .optional(),
+    .optional()
+    .default([]),
 })
 
 export async function POST(request: Request) {
@@ -96,8 +102,8 @@ export async function POST(request: Request) {
 
     const basePrompt = getAnalysisPrompt()
 
-    console.log("[v0] Calling AI Gateway with generateObject for structured analysis...")
-    console.log("[v0] Model: gpt-4o-mini")
+    console.log("[v0] Calling AI with model: gpt-4o-mini")
+    console.log("[v0] Using custom prompt:", process.env.USE_CUSTOM_PROMPT === "true" ? "YES" : "NO")
 
     let analysis
     try {
@@ -120,13 +126,21 @@ Provide your comprehensive analysis following all the rules above.`,
       })
 
       analysis = result.object
+
+      console.log("[v0] Raw AI response received successfully")
+      console.log("[v0] Response structure:", Object.keys(analysis))
     } catch (aiError: any) {
       console.error("[v0] ========================================")
-      console.error("[v0] AI GATEWAY ERROR")
+      console.error("[v0] AI GENERATION ERROR")
       console.error("[v0] ========================================")
-      console.error("[v0] AI Error:", aiError)
-      console.error("[v0] AI Error message:", aiError?.message)
-      console.error("[v0] AI Error cause:", aiError?.cause)
+      console.error("[v0] Error type:", aiError?.constructor?.name)
+      console.error("[v0] Error message:", aiError?.message)
+      console.error("[v0] Error stack:", aiError?.stack?.substring(0, 1000))
+
+      if (aiError?.message?.includes("schema")) {
+        console.error("[v0] Schema validation failed - AI response doesn't match expected structure")
+      }
+
       console.error("[v0] ========================================")
 
       if (
@@ -169,6 +183,13 @@ Provide your comprehensive analysis following all the rules above.`,
       throw aiError
     }
 
+    if (!analysis.action_plan) {
+      analysis.action_plan = { critical_dates: [], preparation_tasks: [] }
+    }
+    if (!analysis.formFields) {
+      analysis.formFields = []
+    }
+
     if (analysis.tender_summary?.closing_date) {
       analysis.tender_summary.closing_date = analysis.tender_summary.closing_date.split(" ")[0]
       console.log("[v0] Formatted closing_date:", analysis.tender_summary.closing_date)
@@ -178,15 +199,12 @@ Provide your comprehensive analysis following all the rules above.`,
     console.log("[v0] ANALYSIS RESULTS")
     console.log("[v0] ========================================")
     console.log("[v0] Successfully generated structured analysis")
-    console.log("[v0] Tender summary:", JSON.stringify(analysis.tender_summary, null, 2))
-    console.log("[v0] Compliance requirements count:", analysis.compliance_summary?.requirements?.length)
-    console.log("[v0] Compliance disqualifiers count:", analysis.compliance_summary?.disqualifiers?.length)
-    console.log("[v0] Compliance strengtheners count:", analysis.compliance_summary?.strengtheners?.length)
-    console.log("[v0] Evaluation criteria count:", analysis.evaluation?.criteria?.length)
-    console.log("[v0] Evaluation threshold:", analysis.evaluation?.threshold)
-    console.log("[v0] Evaluation pricing system:", analysis.evaluation?.pricing_system)
-    console.log("[v0] Action plan critical dates count:", analysis.action_plan?.critical_dates?.length || 0)
-    console.log("[v0] Action plan preparation tasks count:", analysis.action_plan?.preparation_tasks?.length || 0)
+    console.log("[v0] Tender title:", analysis.tender_summary?.title)
+    console.log("[v0] Requirements count:", analysis.compliance_summary?.requirements?.length || 0)
+    console.log("[v0] Disqualifiers count:", analysis.compliance_summary?.disqualifiers?.length || 0)
+    console.log("[v0] Criteria count:", analysis.evaluation?.criteria?.length || 0)
+    console.log("[v0] Critical dates count:", analysis.action_plan?.critical_dates?.length || 0)
+    console.log("[v0] Tasks count:", analysis.action_plan?.preparation_tasks?.length || 0)
     console.log("[v0] Form fields count:", analysis.formFields?.length || 0)
     console.log("[v0] ========================================")
 
@@ -195,12 +213,9 @@ Provide your comprehensive analysis following all the rules above.`,
     console.error("[v0] ========================================")
     console.error("[v0] TENDER ANALYSIS ERROR")
     console.error("[v0] ========================================")
-    console.error("[v0] Error:", error)
-    console.error("[v0] Error details:", {
-      message: error?.message,
-      name: error?.name,
-      stack: error?.stack?.substring(0, 500),
-    })
+    console.error("[v0] Error type:", error?.constructor?.name)
+    console.error("[v0] Error message:", error?.message)
+    console.error("[v0] Error stack:", error?.stack)
     console.error("[v0] ========================================")
 
     return Response.json(
