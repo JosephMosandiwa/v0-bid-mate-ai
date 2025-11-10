@@ -62,6 +62,7 @@
     "next-themes": "latest",
     "openai": "latest",
     "pdf-lib": "latest",
+    "pdf-parse": "latest",
     "pdfjs-dist": "4.9.155",
     "react": "19.1.0",
     "react-day-picker": "latest",
