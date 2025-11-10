@@ -98,13 +98,14 @@ export default function NewTenderPage() {
     setDashboardUrl(null)
 
     try {
-      console.log("[v0] Extracting PDF form fields...")
-      const fieldsFormData = new FormData()
-      fieldsFormData.append("file", file)
+      console.log("[v0] Sending PDF to server for processing...")
+      const formData = new FormData()
+      formData.append("file", file)
 
+      // Extract PDF fields (existing functionality)
       const fieldsResponse = await fetch("/api/extract-pdf-fields", {
         method: "POST",
-        body: fieldsFormData,
+        body: formData,
       })
 
       let pdfFields = null
@@ -112,32 +113,25 @@ export default function NewTenderPage() {
         const fieldsData = await fieldsResponse.json()
         pdfFields = fieldsData.fields
         console.log("[v0] Extracted", pdfFields?.length || 0, "PDF form fields")
-      } else {
-        console.warn("[v0] Could not extract PDF fields, continuing without them")
       }
 
-      console.log("[v0] Loading PDF.js library...")
-      const pdfjsLib = await import("pdfjs-dist")
+      // Extract text on server (more reliable for mobile)
+      const textFormData = new FormData()
+      textFormData.append("file", file)
 
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
+      const textResponse = await fetch("/api/extract-pdf", {
+        method: "POST",
+        body: textFormData,
+      })
 
-      console.log("[v0] Extracting text from PDF using client-side PDF.js...")
-      const arrayBuffer = await file.arrayBuffer()
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
-      const pdf = await loadingTask.promise
-
-      console.log("[v0] PDF loaded, extracting text from", pdf.numPages, "pages...")
-
-      let fullText = ""
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum)
-        const textContent = await page.getTextContent()
-        const pageText = textContent.items.map((item: any) => item.str).join(" ")
-        fullText += pageText + "\n\n"
+      if (!textResponse.ok) {
+        setAnalysisError("Could not extract text from PDF. The document might be scanned or image-based.")
+        return
       }
+
+      const { text: fullText } = await textResponse.json()
 
       console.log("[v0] Text extraction complete:")
-      console.log("[v0] - Total pages:", pdf.numPages)
       console.log("[v0] - Text length:", fullText.length, "characters")
       console.log("[v0] - First 500 characters:", fullText.substring(0, 500))
 
