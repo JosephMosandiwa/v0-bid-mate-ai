@@ -1,17 +1,21 @@
+import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import pdf from "pdf-parse"
+
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 
 export async function POST(request: NextRequest) {
   try {
     console.log("[v0] Extract PDF route called")
-    console.log("[v0] Request headers:", Object.fromEntries(request.headers))
+    console.log("[v0] Request method:", request.method)
+    console.log("[v0] Request URL:", request.url)
 
     const formData = await request.formData()
     const file = formData.get("file") as File
 
     if (!file) {
       console.error("[v0] No file provided in request")
-      return Response.json({ error: "No file provided" }, { status: 400 })
+      return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
 
     console.log("[v0] File details:", {
@@ -22,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     if (file.type !== "application/pdf") {
       console.error("[v0] Invalid file type:", file.type)
-      return Response.json({ error: "File must be a PDF" }, { status: 400 })
+      return NextResponse.json({ error: "File must be a PDF" }, { status: 400 })
     }
 
     // Convert File to Buffer
@@ -30,14 +34,28 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer)
 
     console.log("[v0] Buffer created, size:", buffer.length, "bytes")
-    console.log("[v0] Attempting pdf-parse extraction...")
+    console.log("[v0] Attempting dynamic pdf-parse import...")
 
-    // Extract text using pdf-parse with detailed error catching
+    let pdf
+    try {
+      pdf = (await import("pdf-parse")).default
+      console.log("[v0] pdf-parse imported successfully")
+    } catch (importError) {
+      console.error("[v0] Failed to import pdf-parse:", importError)
+      return NextResponse.json(
+        {
+          error: "PDF parsing library not available",
+          details: importError instanceof Error ? importError.message : "Unknown error",
+        },
+        { status: 500 },
+      )
+    }
+
+    // Extract text using pdf-parse
     let data
     try {
       data = await pdf(buffer, {
         max: 0, // Parse all pages
-        version: "v2.0.550", // Use stable version
       })
       console.log("[v0] pdf-parse completed successfully")
     } catch (parseError) {
@@ -45,10 +63,9 @@ export async function POST(request: NextRequest) {
       console.error("[v0] Parse error details:", {
         message: parseError instanceof Error ? parseError.message : "Unknown",
         name: parseError instanceof Error ? parseError.name : "Unknown",
-        stack: parseError instanceof Error ? parseError.stack : undefined,
       })
 
-      return Response.json(
+      return NextResponse.json(
         {
           error: "Failed to parse PDF. The document might be corrupted, password-protected, or scanned.",
           details: parseError instanceof Error ? parseError.message : "Unknown error",
@@ -60,7 +77,6 @@ export async function POST(request: NextRequest) {
     console.log("[v0] PDF extraction results:")
     console.log("[v0] - Total pages:", data.numpages)
     console.log("[v0] - Text length:", data.text?.length || 0, "characters")
-    console.log("[v0] - Info:", JSON.stringify(data.info || {}))
 
     if (data.text && data.text.length > 0) {
       console.log("[v0] - First 200 chars:", data.text.substring(0, 200))
@@ -69,7 +85,7 @@ export async function POST(request: NextRequest) {
     // Check if we got meaningful text
     if (!data.text || data.text.trim().length < 50) {
       console.error("[v0] Insufficient text extracted")
-      return Response.json(
+      return NextResponse.json(
         {
           error:
             "Could not extract sufficient text from PDF. The document might be scanned, image-based, or contain only graphics. Please try OCR or manual entry.",
@@ -89,7 +105,7 @@ export async function POST(request: NextRequest) {
     console.log("[v0] - Average words per page:", avgWordsPerPage)
     console.log("[v0] - Quality: " + (avgWordsPerPage > 50 ? "Good" : "Poor (possibly scanned)"))
 
-    return Response.json({
+    return NextResponse.json({
       text: data.text,
       pages: data.numpages,
       info: data.info,
@@ -102,7 +118,7 @@ export async function POST(request: NextRequest) {
     console.error("[v0] Error message:", error instanceof Error ? error.message : String(error))
     console.error("[v0] Error stack:", error instanceof Error ? error.stack : "No stack trace")
 
-    return Response.json(
+    return NextResponse.json(
       {
         error: "An unexpected error occurred while processing the PDF",
         details: error instanceof Error ? error.message : "Unknown error",
