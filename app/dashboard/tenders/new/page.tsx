@@ -97,8 +97,20 @@ export default function NewTenderPage() {
     setPaymentRequired(false)
     setDashboardUrl(null)
 
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+
+    if (isMobile) {
+      console.log("[v0] Mobile device detected - skipping automatic text extraction")
+      setAnalyzing(false)
+      toast({
+        title: "PDF Uploaded",
+        description: "Please fill in the tender details below. We'll analyze the document when you submit.",
+      })
+      return
+    }
+
     try {
-      console.log("[v0] Starting PDF processing on mobile/desktop...")
+      console.log("[v0] Starting PDF processing on desktop...")
       console.log("[v0] File:", file.name, "Size:", file.size, "bytes")
 
       const formData = new FormData()
@@ -134,15 +146,10 @@ export default function NewTenderPage() {
         const errorData = await textResponse.json()
         console.error("[v0] Text extraction failed:", errorData)
 
-        if (errorData.isScanned) {
-          setAnalysisError(
-            "This appears to be a scanned document. Please use a text-based PDF or manually enter the tender details below.",
-          )
-        } else {
-          setAnalysisError(
-            errorData.error || "Could not extract text from PDF. Please manually enter the details below.",
-          )
-        }
+        setAnalysisError(
+          "Could not automatically extract text. Please fill in the details below and we'll analyze the document when you submit.",
+        )
+        setAnalyzing(false)
         return
       }
 
@@ -156,8 +163,9 @@ export default function NewTenderPage() {
       if (fullText.length < 100) {
         console.error("[v0] Insufficient text extracted")
         setAnalysisError(
-          "Could not extract enough text from the PDF. Please check if it's a scanned document and manually enter details below.",
+          "Could not extract enough text. Please fill in the details below and we'll analyze the document when you submit.",
         )
+        setAnalyzing(false)
         return
       }
 
@@ -210,7 +218,7 @@ export default function NewTenderPage() {
         message: error instanceof Error ? error.message : "Unknown",
         stack: error instanceof Error ? error.stack : undefined,
       })
-      setAnalysisError("An unexpected error occurred. Please try again or manually enter the tender details below.")
+      setAnalysisError("An error occurred during processing. Please fill in the details below.")
     } finally {
       setAnalyzing(false)
       console.log("[v0] PDF processing completed")
