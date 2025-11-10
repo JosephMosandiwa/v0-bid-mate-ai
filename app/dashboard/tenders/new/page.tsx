@@ -98,11 +98,13 @@ export default function NewTenderPage() {
     setDashboardUrl(null)
 
     try {
-      console.log("[v0] Sending PDF to server for processing...")
+      console.log("[v0] Starting PDF processing on mobile/desktop...")
+      console.log("[v0] File:", file.name, "Size:", file.size, "bytes")
+
       const formData = new FormData()
       formData.append("file", file)
 
-      // Extract PDF fields (existing functionality)
+      console.log("[v0] Step 1: Extracting PDF form fields...")
       const fieldsResponse = await fetch("/api/extract-pdf-fields", {
         method: "POST",
         body: formData,
@@ -113,9 +115,11 @@ export default function NewTenderPage() {
         const fieldsData = await fieldsResponse.json()
         pdfFields = fieldsData.fields
         console.log("[v0] Extracted", pdfFields?.length || 0, "PDF form fields")
+      } else {
+        console.log("[v0] No form fields found or extraction failed")
       }
 
-      // Extract text on server (more reliable for mobile)
+      console.log("[v0] Step 2: Extracting text from PDF on server...")
       const textFormData = new FormData()
       textFormData.append("file", file)
 
@@ -124,23 +128,40 @@ export default function NewTenderPage() {
         body: textFormData,
       })
 
+      console.log("[v0] Text extraction response status:", textResponse.status)
+
       if (!textResponse.ok) {
-        setAnalysisError("Could not extract text from PDF. The document might be scanned or image-based.")
+        const errorData = await textResponse.json()
+        console.error("[v0] Text extraction failed:", errorData)
+
+        if (errorData.isScanned) {
+          setAnalysisError(
+            "This appears to be a scanned document. Please use a text-based PDF or manually enter the tender details below.",
+          )
+        } else {
+          setAnalysisError(
+            errorData.error || "Could not extract text from PDF. Please manually enter the details below.",
+          )
+        }
         return
       }
 
-      const { text: fullText } = await textResponse.json()
+      const { text: fullText, wordCount, avgWordsPerPage } = await textResponse.json()
 
-      console.log("[v0] Text extraction complete:")
+      console.log("[v0] Text extraction successful:")
       console.log("[v0] - Text length:", fullText.length, "characters")
-      console.log("[v0] - First 500 characters:", fullText.substring(0, 500))
+      console.log("[v0] - Word count:", wordCount)
+      console.log("[v0] - Avg words/page:", avgWordsPerPage)
 
       if (fullText.length < 100) {
-        setAnalysisError("Could not extract sufficient text from PDF. The document might be scanned or image-based.")
+        console.error("[v0] Insufficient text extracted")
+        setAnalysisError(
+          "Could not extract enough text from the PDF. Please check if it's a scanned document and manually enter details below.",
+        )
         return
       }
 
-      console.log("[v0] Sending text to analyze API...")
+      console.log("[v0] Step 3: Analyzing with AI...")
       const analyzeResponse = await fetch("/api/analyze-tender", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -150,8 +171,11 @@ export default function NewTenderPage() {
         }),
       })
 
+      console.log("[v0] AI analysis response status:", analyzeResponse.status)
+
       if (!analyzeResponse.ok) {
         const errorData: any = await analyzeResponse.json()
+        console.error("[v0] AI analysis failed:", errorData)
 
         if (errorData.errorType === "payment_required") {
           setPaymentRequired(true)
@@ -164,6 +188,7 @@ export default function NewTenderPage() {
       }
 
       const analysisResult = await analyzeResponse.json()
+      console.log("[v0] Analysis complete. Result keys:", Object.keys(analysisResult))
       setAnalysis(analysisResult)
 
       if (analysisResult.tender_summary) {
@@ -174,26 +199,21 @@ export default function NewTenderPage() {
           title: summary.title || prev.title,
           organization: summary.entity || prev.organization,
           deadline: summary.closing_date || prev.deadline,
-          value: prev.value, // Value not in new schema
+          value: prev.value,
           description: summary.description || prev.description,
         }))
-      } else if (analysisResult.action_plan?.critical_dates && analysisResult.action_plan.critical_dates.length > 0) {
-        const closingDate = analysisResult.action_plan.critical_dates.find(
-          (d) => d.event.toLowerCase().includes("closing") || d.event.toLowerCase().includes("submission"),
-        )
-        if (closingDate) {
-          setFormData((prev) => ({ ...prev, deadline: closingDate.date }))
-        }
-
-        if (analysisResult.tender_summary?.description) {
-          setFormData((prev) => ({ ...prev, description: analysisResult.tender_summary.description }))
-        }
+        console.log("[v0] Form auto-filled from analysis")
       }
     } catch (error) {
-      console.error("[v0] PDF processing error:", error)
-      setAnalysisError("Failed to analyze the document. Please try again.")
+      console.error("[v0] Unexpected error during PDF processing:", error)
+      console.error("[v0] Error details:", {
+        message: error instanceof Error ? error.message : "Unknown",
+        stack: error instanceof Error ? error.stack : undefined,
+      })
+      setAnalysisError("An unexpected error occurred. Please try again or manually enter the tender details below.")
     } finally {
       setAnalyzing(false)
+      console.log("[v0] PDF processing completed")
     }
   }
 
