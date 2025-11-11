@@ -47,17 +47,17 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] PDF uploaded to blob:", blob.url)
 
-    const analyzeResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL || "https://bidmateai.vercel.app"}/api/analyze-tender`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          documentUrl: blob.url,
-          documentText: "", // AI will fetch and read the PDF from the URL
-        }),
-      },
-    )
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://bidmateai.vercel.app"
+    const baseUrl = siteUrl.startsWith("http") ? siteUrl : `https://${siteUrl}`
+
+    const analyzeResponse = await fetch(`${baseUrl}/api/analyze-tender`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        documentUrl: blob.url,
+        documentText: "", // AI will fetch and read the PDF from the URL
+      }),
+    })
 
     if (!analyzeResponse.ok) {
       const errorText = await analyzeResponse.text()
