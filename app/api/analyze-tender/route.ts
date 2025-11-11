@@ -196,20 +196,43 @@ export async function POST(request: Request) {
       console.log("[v0] PDF URL:", documentUrl)
 
       try {
-        console.log("[v0] Step 1: Using OpenAI GPT-4o to extract text from PDF...")
+        console.log("[v0] Step 1: Fetching PDF from blob storage...")
+
+        const pdfResponse = await fetch(documentUrl)
+        if (!pdfResponse.ok) {
+          throw new Error(`Failed to fetch PDF: ${pdfResponse.status} ${pdfResponse.statusText}`)
+        }
+
+        const pdfBuffer = await pdfResponse.arrayBuffer()
+        const base64Pdf = Buffer.from(pdfBuffer).toString("base64")
+        console.log("[v0] PDF fetched and encoded to base64, size:", (base64Pdf.length / 1024).toFixed(2), "KB")
+
+        console.log("[v0] Step 2: Using OpenAI GPT-4o vision API to extract text from PDF...")
 
         const extractionResult = await generateText({
           model: "openai/gpt-4o",
-          prompt: `Extract ALL text content from this tender document PDF. Include:
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: `Extract ALL text content from this tender document PDF. Include:
 - All headings, sections, and paragraphs
-- Requirements and specifications
+- Requirements and specifications  
 - Dates, values, and contact information
 - Terms and conditions
 - Any forms or tables
 
-Return ONLY the extracted text content, nothing else.
-
-PDF URL: ${documentUrl}`,
+Return ONLY the extracted text content, nothing else. Be thorough and capture every piece of text you can see.`,
+                },
+                {
+                  type: "image",
+                  image: `data:application/pdf;base64,${base64Pdf}`,
+                },
+              ],
+            },
+          ],
         })
 
         textToAnalyze = extractionResult.text
