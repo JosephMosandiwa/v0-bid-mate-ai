@@ -110,7 +110,7 @@ export default function NewTenderPage() {
       setAnalyzing(false)
       toast({
         title: "✅ PDF Uploaded Successfully",
-        description: "Fill in the details below and submit. We'll analyze the document and create your tender.",
+        description: "Fill in the details below and submit. We'll analyze the document when you create the tender.",
       })
       return
     }
@@ -119,13 +119,14 @@ export default function NewTenderPage() {
       console.log("[v0] Starting PDF processing on desktop...")
       console.log("[v0] File:", file.name, "Size:", file.size, "bytes")
 
-      const formData = new FormData()
-      formData.append("file", file)
-
+      // Step 1: Extract PDF form fields
       console.log("[v0] Step 1: Extracting PDF form fields...")
+      const formDataFields = new FormData()
+      formDataFields.append("file", file)
+
       const fieldsResponse = await fetch("/api/extract-pdf-fields", {
         method: "POST",
-        body: formData,
+        body: formDataFields,
       })
 
       let pdfFields = null
@@ -137,46 +138,27 @@ export default function NewTenderPage() {
         console.log("[v0] No form fields found or extraction failed")
       }
 
-      console.log("[v0] Step 2: Extracting text from PDF on server...")
-      const textFormData = new FormData()
-      textFormData.append("file", file)
+      // Step 2: Extract text using PDF.js on client
+      console.log("[v0] Step 2: Extracting text from PDF using PDF.js...")
 
-      const textResponse = await fetch("/api/extract-pdf", {
-        method: "POST",
-        body: textFormData,
-      })
+      const arrayBuffer = await file.arrayBuffer()
+      const pdfjsLib = await import("pdfjs-dist")
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
 
-      console.log("[v0] Text extraction response status:", textResponse.status)
-      console.log("[v0] Text extraction response OK:", textResponse.ok)
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+      console.log("[v0] PDF loaded. Pages:", pdf.numPages)
 
-      if (!textResponse.ok) {
-        let errorData
-        try {
-          errorData = await textResponse.json()
-          console.error("[v0] Text extraction failed with error:", errorData)
-        } catch (e) {
-          console.error("[v0] Could not parse error response:", e)
-          errorData = { error: "Unknown error occurred" }
-        }
-
-        setAnalysisError(
-          "Automatic text extraction is not available. Please fill in the form manually and we'll analyze the document when you submit.",
-        )
-        setAnalyzing(false)
-        toast({
-          title: "Manual Entry Required",
-          description:
-            "Fill in the tender details below. Your PDF is uploaded and will be processed with your submission.",
-        })
-        return
+      let fullText = ""
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i)
+        const textContent = await page.getTextContent()
+        const pageText = textContent.items.map((item: any) => item.str).join(" ")
+        fullText += pageText + "\n\n"
       }
-
-      const { text: fullText, wordCount, avgWordsPerPage } = await textResponse.json()
 
       console.log("[v0] Text extraction successful:")
       console.log("[v0] - Text length:", fullText.length, "characters")
-      console.log("[v0] - Word count:", wordCount)
-      console.log("[v0] - Avg words/page:", avgWordsPerPage)
+      console.log("[v0] - Pages:", pdf.numPages)
 
       if (fullText.length < 100) {
         console.error("[v0] Insufficient text extracted")
@@ -189,6 +171,7 @@ export default function NewTenderPage() {
         return
       }
 
+      // Step 3: Analyze with AI
       console.log("[v0] Step 3: Analyzing with AI...")
       const analyzeResponse = await fetch("/api/analyze-tender", {
         method: "POST",
@@ -242,14 +225,10 @@ export default function NewTenderPage() {
         })
       }
     } catch (error) {
-      console.error("[v0] Unexpected error during PDF processing:", error)
-      console.error("[v0] Error details:", {
-        message: error instanceof Error ? error.message : "Unknown",
-        stack: error instanceof Error ? error.stack : undefined,
-      })
-      setAnalysisError("An error occurred during processing. Please fill in the details below.")
+      console.error("[v0] PDF processing error:", error)
+      setAnalysisError("Could not extract text from PDF. The document might be scanned or image-based.")
       toast({
-        title: "Processing Error",
+        title: "Extraction Failed",
         description: "Fill in the tender details manually. Your PDF is uploaded and will be saved.",
         variant: "destructive",
       })
