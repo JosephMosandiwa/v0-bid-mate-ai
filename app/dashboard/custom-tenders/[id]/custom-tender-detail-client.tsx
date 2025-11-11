@@ -311,17 +311,35 @@ export function CustomTenderDetailClient({
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
-      {process.env.NODE_ENV === "development" && (
-        <div className="bg-purple-100 dark:bg-purple-900/20 border border-purple-300 dark:border-purple-800 rounded-lg p-4 text-sm font-mono">
+      <div className="bg-purple-100 dark:bg-purple-900/20 border-2 border-purple-500 rounded-lg p-4 text-sm font-mono">
+        <div className="font-bold text-lg mb-2">🔍 Debug Info</div>
+        <div className="grid grid-cols-2 gap-2">
           <div>
-            <strong>Debug Info:</strong>
+            Documents: <strong>{documents.length}</strong>
           </div>
-          <div>Documents: {documents.length}</div>
-          <div>Analysis: {analysis ? "EXISTS" : "NULL"}</div>
-          <div>Analyzing: {analyzing ? "YES" : "NO"}</div>
-          <div>Show Analyze Button: {documents.length > 0 && !analysis && !analyzing ? "YES" : "NO"}</div>
+          <div>
+            Analysis: <strong>{analysis ? "✅ EXISTS" : "❌ NULL"}</strong>
+          </div>
+          <div>
+            Analyzing: <strong>{analyzing ? "YES" : "NO"}</strong>
+          </div>
+          <div>
+            Show Button:{" "}
+            <strong className="text-lg">{documents.length > 0 && !analysis && !analyzing ? "✅ YES" : "❌ NO"}</strong>
+          </div>
         </div>
-      )}
+        {analysis && (
+          <div className="mt-2 p-2 bg-green-100 dark:bg-green-900/20 rounded">✅ Analysis exists - button hidden</div>
+        )}
+        {!analysis && documents.length === 0 && (
+          <div className="mt-2 p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded">
+            ⚠️ No documents - upload a document first
+          </div>
+        )}
+        {!analysis && documents.length > 0 && (
+          <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/20 rounded">🚨 Button SHOULD be visible below!</div>
+        )}
+      </div>
 
       <div>
         <div className="flex items-center gap-4 mb-4">
@@ -378,38 +396,37 @@ export function CustomTenderDetailClient({
         </Alert>
       )}
 
-      {documents.length > 0 && !analysis && !analyzing && (
-        <Alert className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900 border-2">
-          <AlertCircle className="h-5 w-5 text-yellow-600" />
-          <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="border-4 border-yellow-500 rounded-xl p-1">
+        <Alert className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 border-yellow-300 dark:border-yellow-800 border-2">
+          <AlertCircle className="h-6 w-6 text-yellow-600 animate-pulse" />
+          <AlertDescription className="flex flex-col gap-4">
             <div className="flex-1">
-              <div className="font-semibold text-yellow-900 dark:text-yellow-100 mb-1">Analysis Required</div>
-              <span className="text-yellow-900 dark:text-yellow-100">
-                This tender has documents but hasn't been analyzed yet. Click the button to generate AI insights and
-                form fields.
+              <div className="font-bold text-lg text-yellow-900 dark:text-yellow-100 mb-2">🎯 Analysis Required</div>
+              <span className="text-yellow-900 dark:text-yellow-100 text-base">
+                This tender has {documents.length} document(s) but hasn't been analyzed yet. Click below to generate AI
+                insights, compliance checks, and the response form.
               </span>
             </div>
             <Button
               size="lg"
               onClick={() => handleManualAnalysis(documents[0].blob_url || documents[0].storage_path)}
               disabled={analyzing}
-              className="flex-shrink-0 bg-yellow-600 hover:bg-yellow-700 text-white"
+              className="w-full bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white text-lg py-6 font-bold shadow-lg"
             >
               {analyzing ? (
                 <>
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  Analyzing...
+                  <Loader2 className="h-6 w-6 mr-3 animate-spin" />
+                  Analyzing Document...
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-5 w-5 mr-2" />
-                  Analyze Now
+                  <Sparkles className="h-6 w-6 mr-3" />🚀 Analyze Document Now
                 </>
               )}
             </Button>
           </AlertDescription>
         </Alert>
-      )}
+      </div>
 
       <Tabs defaultValue="details" className="space-y-4 md:space-y-6">
         <TabsList>
