@@ -189,49 +189,24 @@ export async function POST(request: Request) {
       return Response.json({ error: "Either document text or document URL is required" }, { status: 400 })
     }
 
-    const textToAnalyze = documentText
-
     if (documentUrl && (!documentText || documentText === "")) {
       console.log("[v0] Using PDF URL for direct analysis with gpt-4o")
       console.log("[v0] PDF URL:", documentUrl)
 
       try {
-        console.log("[v0] Fetching PDF from blob storage...")
-        const pdfResponse = await fetch(documentUrl)
-        if (!pdfResponse.ok) {
-          throw new Error(`Failed to fetch PDF: ${pdfResponse.status}`)
-        }
-
-        const arrayBuffer = await pdfResponse.arrayBuffer()
-        const base64Pdf = Buffer.from(arrayBuffer).toString("base64")
-        console.log("[v0] PDF converted to base64, size:", base64Pdf.length, "characters")
-
         const basePrompt = getAnalysisPrompt()
 
-        console.log("[v0] Analyzing PDF with gpt-4o multimodal capabilities...")
+        console.log("[v0] Analyzing PDF with gpt-4o using URL...")
         const startTime = Date.now()
 
         const result = await generateObject({
           model: "gpt-4o",
           schema: tenderAnalysisSchema,
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: `${basePrompt}
+          prompt: `${basePrompt}
 
-Analyze the tender PDF document attached and provide your comprehensive analysis in the exact JSON format specified.`,
-                },
-                {
-                  type: "file",
-                  data: `data:application/pdf;base64,${base64Pdf}`,
-                  mimeType: "application/pdf",
-                },
-              ],
-            },
-          ],
+Here is the tender PDF document to analyze: ${documentUrl}
+
+Please analyze the PDF document and provide your comprehensive analysis in the exact JSON format specified.`,
         })
 
         const endTime = Date.now()
@@ -310,6 +285,8 @@ Analyze the tender PDF document attached and provide your comprehensive analysis
         return Response.json(analysis)
       } catch (pdfError: any) {
         console.error("[v0] PDF analysis error:", pdfError)
+        console.error("[v0] Error message:", pdfError?.message)
+        console.error("[v0] Error stack:", pdfError?.stack?.substring(0, 500))
         return Response.json(
           {
             error: "Failed to analyze PDF from URL",
@@ -321,7 +298,7 @@ Analyze the tender PDF document attached and provide your comprehensive analysis
       }
     }
 
-    const truncatedText = textToAnalyze!.substring(0, 100000)
+    const truncatedText = documentText!.substring(0, 100000)
     console.log("[v0] Using text-based analysis, length:", truncatedText.length, "characters")
 
     const basePrompt = getAnalysisPrompt()
