@@ -42,6 +42,7 @@ interface UserTender {
   is_favourited: boolean
   is_wishlisted: boolean
   created_at: string
+  tender_type?: "scraped" | "custom" // Added tender_type to interface
 }
 
 export default function TendersPage() {
@@ -190,12 +191,11 @@ export default function TendersPage() {
   }
 
   const getTenderDetailUrl = (tender: UserTender) => {
-    // Custom tenders have IDs starting with "custom-"
-    if (tender.tender_id.startsWith("custom-")) {
-      return `/dashboard/custom-tenders/${tender.tender_id}`
+    if (tender.tender_type === "custom") {
+      return `/dashboard/custom-tenders/${tender.id}`
     }
-    // Scraped tenders have UUID format
-    return `/dashboard/scraped-tenders/${tender.tender_id}`
+    // Scraped tenders
+    return `/dashboard/tenders/${tender.tender_id}`
   }
 
   if (loading) {

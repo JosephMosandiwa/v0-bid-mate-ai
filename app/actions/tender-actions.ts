@@ -186,18 +186,63 @@ export async function getUserTenders() {
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: "Not authenticated", tenders: [] }
 
-  const { data, error } = await supabase
+  // Fetch scraped tenders from user_tenders
+  const { data: scrapedTenders, error: scrapedError } = await supabase
     .from("user_tenders")
     .select("*")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
 
-  if (error) {
-    console.error("[v0] Error fetching tenders:", error)
-    return { success: false, error: "Failed to fetch tenders", tenders: [] }
+  if (scrapedError) {
+    console.error("[v0] Error fetching scraped tenders:", scrapedError)
   }
 
-  return { success: true, tenders: data || [] }
+  // Fetch custom tenders from user_custom_tenders
+  const { data: customTenders, error: customError } = await supabase
+    .from("user_custom_tenders")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+
+  if (customError) {
+    console.error("[v0] Error fetching custom tenders:", customError)
+  }
+
+  // Combine and normalize both types of tenders
+  const allTenders = [
+    ...(scrapedTenders || []).map((tender) => ({
+      id: tender.id,
+      tender_id: tender.tender_id,
+      title: tender.title,
+      organization: tender.organization,
+      status: tender.status,
+      close_date: tender.close_date,
+      value: tender.value,
+      category: tender.category,
+      is_pinned: tender.is_pinned || false,
+      is_favourited: tender.is_favourited || false,
+      is_wishlisted: tender.is_wishlisted || false,
+      created_at: tender.created_at,
+      tender_type: "scraped" as const,
+    })),
+    ...(customTenders || []).map((tender) => ({
+      id: tender.id,
+      tender_id: `custom-${tender.id}`,
+      title: tender.title,
+      organization: tender.organization,
+      status: tender.status,
+      close_date: tender.deadline,
+      value: tender.value,
+      category: tender.category,
+      is_pinned: tender.is_pinned || false,
+      is_favourited: tender.is_favourited || false,
+      is_wishlisted: tender.is_wishlisted || false,
+      created_at: tender.created_at,
+      tender_type: "custom" as const,
+    })),
+  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+  return { success: true, tenders: allTenders }
 }
 
 export async function deleteTender(tenderId: string) {
