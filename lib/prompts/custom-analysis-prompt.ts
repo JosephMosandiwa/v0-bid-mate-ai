@@ -77,7 +77,75 @@ Include 5-10 tasks covering all major requirements.
 
 ---
 
-### STEP 5 — GENERATE FORM FIELDS
+### STEP 5 — EXTRACT FINANCIAL REQUIREMENTS
+Identify all financial obligations and requirements:
+
+- bank_guarantee: Amount and duration (e.g., "10% of contract value for 12 months")
+- performance_bond: Amount and conditions
+- insurance_requirements: List of required insurance types with coverage amounts
+- financial_turnover: Minimum annual turnover requirement
+- audited_financials: Period required (e.g., "Last 3 years")
+- payment_terms: Payment schedule, retention amounts, payment timeframes
+
+---
+
+### STEP 6 — EXTRACT LEGAL & REGISTRATION REQUIREMENTS
+Identify all registration and legal requirements:
+
+- cidb_grading: Specific CIDB grade required (e.g., "CE6", "GB4")
+- cipc_registration: Company registration requirements
+- professional_registration: Required professional bodies (SACPCMP, ECSA, SACAP, etc.)
+- joint_venture_requirements: JV limitations or requirements
+- subcontracting_limitations: Maximum percentage allowed
+
+---
+
+### STEP 7 — EXTRACT LABOUR & EMPLOYMENT REQUIREMENTS
+Identify workforce and local content requirements:
+
+- local_content: Required percentage (e.g., "100%", "60%")
+- subcontracting_limit: Maximum subcontracting percentage
+- labour_composition: Required workforce demographics
+- skills_development: Training or skills levy requirements
+- employment_equity: EE plan requirements
+
+---
+
+### STEP 8 — EXTRACT TECHNICAL SPECIFICATIONS
+Identify experience and capability requirements:
+
+- minimum_experience: Years of experience required (e.g., "5 years in similar projects")
+- project_references: Number and value of similar projects required
+- key_personnel: Qualifications and experience for key staff
+- equipment_resources: Required machinery, vehicles, or equipment
+- methodology_requirements: Expected approach or methodology
+
+---
+
+### STEP 9 — EXTRACT SUBMISSION REQUIREMENTS
+Identify how to submit the tender:
+
+- number_of_copies: Hard and soft copies required
+- formatting_requirements: Page limits, font sizes, binding
+- submission_address: Physical address or portal URL
+- query_deadline: Last date for questions
+- late_submission_policy: Whether late submissions are accepted
+
+---
+
+### STEP 10 — EXTRACT PENALTIES & PAYMENT TERMS
+Identify financial penalties and payment structure:
+
+- late_completion_penalty: Daily or percentage penalty
+- non_performance_penalty: Penalties for not meeting KPIs
+- warranty_period: Defects liability period
+- payment_schedule: Monthly, milestone-based, etc.
+- retention_amount: Percentage held back
+- payment_timeframe: Days from invoice (e.g., "30 days")
+
+---
+
+### STEP 11 — GENERATE FORM FIELDS
 Create 15-20 form fields covering:
 1. Company Information (name, registration, contact details)
 2. Compliance Documents (CSD, tax clearance, BBBEE, CIDB)
@@ -103,31 +171,53 @@ Each field must have:
 Return ONE valid JSON object with this exact structure:
 
 {
-  "tender_summary": {
-    "tender_number": "",
-    "title": "",
-    "entity": "",
-    "description": "",
-    "contract_duration": "",
-    "closing_date": "",
-    "submission_method": "",
-    "compulsory_briefing": "",
-    "validity_period": "",
-    "contact_email": ""
+  "tender_summary": { ... },
+  "compliance_summary": { ... },
+  "evaluation": { ... },
+  "action_plan": { ... },
+  "financial_requirements": {
+    "bank_guarantee": "",
+    "performance_bond": "",
+    "insurance_requirements": [],
+    "financial_turnover": "",
+    "audited_financials": "",
+    "payment_terms": ""
   },
-  "compliance_summary": {
-    "requirements": [],
-    "disqualifiers": [],
-    "strengtheners": []
+  "legal_registration": {
+    "cidb_grading": "",
+    "cipc_registration": "",
+    "professional_registration": [],
+    "joint_venture_requirements": "",
+    "subcontracting_limitations": ""
   },
-  "evaluation": {
-    "criteria": [],
-    "threshold": "",
-    "pricing_system": ""
+  "labour_employment": {
+    "local_content": "",
+    "subcontracting_limit": "",
+    "labour_composition": "",
+    "skills_development": "",
+    "employment_equity": ""
   },
-  "action_plan": {
-    "critical_dates": [],
-    "preparation_tasks": []
+  "technical_specs": {
+    "minimum_experience": "",
+    "project_references": "",
+    "key_personnel": [],
+    "equipment_resources": [],
+    "methodology_requirements": ""
+  },
+  "submission_requirements": {
+    "number_of_copies": "",
+    "formatting_requirements": "",
+    "submission_address": "",
+    "query_deadline": "",
+    "late_submission_policy": ""
+  },
+  "penalties_payment": {
+    "late_completion_penalty": "",
+    "non_performance_penalty": "",
+    "warranty_period": "",
+    "payment_schedule": "",
+    "retention_amount": "",
+    "payment_timeframe": ""
   },
   "formFields": []
 }
@@ -138,4 +228,5 @@ CRITICAL RULES:
 - All dates must be YYYY-MM-DD format
 - Weights must be numbers, not strings
 - If information is unclear, provide sensible defaults
-- Include at least one item in each array`
+- Include at least one item in each array
+- Use "Not specified" for missing fields`

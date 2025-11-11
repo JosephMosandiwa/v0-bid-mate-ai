@@ -57,6 +57,106 @@ const tenderAnalysisSchema = z.object({
     })
     .optional()
     .default({ critical_dates: [], preparation_tasks: [] }),
+  financial_requirements: z
+    .object({
+      bank_guarantee: z.string().optional().default("Not specified"),
+      performance_bond: z.string().optional().default("Not specified"),
+      insurance_requirements: z.array(z.string()).default([]),
+      financial_turnover: z.string().optional().default("Not specified"),
+      audited_financials: z.string().optional().default("Not specified"),
+      payment_terms: z.string().optional().default("Not specified"),
+    })
+    .optional()
+    .default({
+      bank_guarantee: "Not specified",
+      performance_bond: "Not specified",
+      insurance_requirements: [],
+      financial_turnover: "Not specified",
+      audited_financials: "Not specified",
+      payment_terms: "Not specified",
+    }),
+  legal_registration: z
+    .object({
+      cidb_grading: z.string().optional().default("Not specified"),
+      cipc_registration: z.string().optional().default("Not specified"),
+      professional_registration: z.array(z.string()).default([]),
+      joint_venture_requirements: z.string().optional().default("Not specified"),
+      subcontracting_limitations: z.string().optional().default("Not specified"),
+    })
+    .optional()
+    .default({
+      cidb_grading: "Not specified",
+      cipc_registration: "Not specified",
+      professional_registration: [],
+      joint_venture_requirements: "Not specified",
+      subcontracting_limitations: "Not specified",
+    }),
+  labour_employment: z
+    .object({
+      local_content: z.string().optional().default("Not specified"),
+      subcontracting_limit: z.string().optional().default("Not specified"),
+      labour_composition: z.string().optional().default("Not specified"),
+      skills_development: z.string().optional().default("Not specified"),
+      employment_equity: z.string().optional().default("Not specified"),
+    })
+    .optional()
+    .default({
+      local_content: "Not specified",
+      subcontracting_limit: "Not specified",
+      labour_composition: "Not specified",
+      skills_development: "Not specified",
+      employment_equity: "Not specified",
+    }),
+  technical_specs: z
+    .object({
+      minimum_experience: z.string().optional().default("Not specified"),
+      project_references: z.string().optional().default("Not specified"),
+      key_personnel: z.array(z.string()).default([]),
+      equipment_resources: z.array(z.string()).default([]),
+      methodology_requirements: z.string().optional().default("Not specified"),
+    })
+    .optional()
+    .default({
+      minimum_experience: "Not specified",
+      project_references: "Not specified",
+      key_personnel: [],
+      equipment_resources: [],
+      methodology_requirements: "Not specified",
+    }),
+  submission_requirements: z
+    .object({
+      number_of_copies: z.string().optional().default("Not specified"),
+      formatting_requirements: z.string().optional().default("Not specified"),
+      submission_address: z.string().optional().default("Not specified"),
+      query_deadline: z.string().optional().default("Not specified"),
+      late_submission_policy: z.string().optional().default("Not specified"),
+    })
+    .optional()
+    .default({
+      number_of_copies: "Not specified",
+      formatting_requirements: "Not specified",
+      submission_address: "Not specified",
+      query_deadline: "Not specified",
+      late_submission_policy: "Not specified",
+    }),
+  penalties_payment: z
+    .object({
+      late_completion_penalty: z.string().optional().default("Not specified"),
+      non_performance_penalty: z.string().optional().default("Not specified"),
+      warranty_period: z.string().optional().default("Not specified"),
+      payment_schedule: z.string().optional().default("Not specified"),
+      retention_amount: z.string().optional().default("Not specified"),
+      payment_timeframe: z.string().optional().default("Not specified"),
+    })
+    .optional()
+    .default({
+      late_completion_penalty: "Not specified",
+      non_performance_penalty: "Not specified",
+      warranty_period: "Not specified",
+      payment_schedule: "Not specified",
+      retention_amount: "Not specified",
+      payment_timeframe: "Not specified",
+    }),
   formFields: z
     .array(
       z.object({
@@ -146,6 +246,30 @@ Now analyze the above tender document and provide your comprehensive analysis in
       )
       console.log("[v0] evaluation keys:", analysis.evaluation ? Object.keys(analysis.evaluation) : "MISSING")
       console.log("[v0] action_plan keys:", analysis.action_plan ? Object.keys(analysis.action_plan) : "MISSING")
+      console.log(
+        "[v0] financial_requirements keys:",
+        analysis.financial_requirements ? Object.keys(analysis.financial_requirements) : "MISSING",
+      )
+      console.log(
+        "[v0] legal_registration keys:",
+        analysis.legal_registration ? Object.keys(analysis.legal_registration) : "MISSING",
+      )
+      console.log(
+        "[v0] labour_employment keys:",
+        analysis.labour_employment ? Object.keys(analysis.labour_employment) : "MISSING",
+      )
+      console.log(
+        "[v0] technical_specs keys:",
+        analysis.technical_specs ? Object.keys(analysis.technical_specs) : "MISSING",
+      )
+      console.log(
+        "[v0] submission_requirements keys:",
+        analysis.submission_requirements ? Object.keys(analysis.submission_requirements) : "MISSING",
+      )
+      console.log(
+        "[v0] penalties_payment keys:",
+        analysis.penalties_payment ? Object.keys(analysis.penalties_payment) : "MISSING",
+      )
       console.log("[v0] formFields present:", Array.isArray(analysis.formFields) ? "YES" : "NO")
     } catch (aiError: any) {
       console.error("[v0] ========================================")
@@ -256,6 +380,68 @@ Now analyze the above tender document and provide your comprehensive analysis in
         pricing_system: "Not specified",
       }
     }
+    if (!analysis.financial_requirements) {
+      console.log("[v0] WARNING: financial_requirements is missing!")
+      analysis.financial_requirements = {
+        bank_guarantee: "Not specified",
+        performance_bond: "Not specified",
+        insurance_requirements: [],
+        financial_turnover: "Not specified",
+        audited_financials: "Not specified",
+        payment_terms: "Not specified",
+      }
+    }
+    if (!analysis.legal_registration) {
+      console.log("[v0] WARNING: legal_registration is missing!")
+      analysis.legal_registration = {
+        cidb_grading: "Not specified",
+        cipc_registration: "Not specified",
+        professional_registration: [],
+        joint_venture_requirements: "Not specified",
+        subcontracting_limitations: "Not specified",
+      }
+    }
+    if (!analysis.labour_employment) {
+      console.log("[v0] WARNING: labour_employment is missing!")
+      analysis.labour_employment = {
+        local_content: "Not specified",
+        subcontracting_limit: "Not specified",
+        labour_composition: "Not specified",
+        skills_development: "Not specified",
+        employment_equity: "Not specified",
+      }
+    }
+    if (!analysis.technical_specs) {
+      console.log("[v0] WARNING: technical_specs is missing!")
+      analysis.technical_specs = {
+        minimum_experience: "Not specified",
+        project_references: "Not specified",
+        key_personnel: [],
+        equipment_resources: [],
+        methodology_requirements: "Not specified",
+      }
+    }
+    if (!analysis.submission_requirements) {
+      console.log("[v0] WARNING: submission_requirements is missing!")
+      analysis.submission_requirements = {
+        number_of_copies: "Not specified",
+        formatting_requirements: "Not specified",
+        submission_address: "Not specified",
+        query_deadline: "Not specified",
+        late_submission_policy: "Not specified",
+      }
+    }
+    if (!analysis.penalties_payment) {
+      console.log("[v0] WARNING: penalties_payment is missing!")
+      analysis.penalties_payment = {
+        late_completion_penalty: "Not specified",
+        non_performance_penalty: "Not specified",
+        warranty_period: "Not specified",
+        payment_schedule: "Not specified",
+        retention_amount: "Not specified",
+        payment_timeframe: "Not specified",
+      }
+    }
 
     if (analysis.tender_summary?.closing_date) {
       analysis.tender_summary.closing_date = analysis.tender_summary.closing_date.split(" ")[0]
@@ -272,6 +458,12 @@ Now analyze the above tender document and provide your comprehensive analysis in
     console.log("[v0] Criteria count:", analysis.evaluation?.criteria?.length || 0)
     console.log("[v0] Critical dates count:", analysis.action_plan?.critical_dates?.length || 0)
     console.log("[v0] Tasks count:", analysis.action_plan?.preparation_tasks?.length || 0)
+    console.log("[v0] Financial requirements:", analysis.financial_requirements ? "YES" : "NO")
+    console.log("[v0] Legal registration:", analysis.legal_registration ? "YES" : "NO")
+    console.log("[v0] Labour employment:", analysis.labour_employment ? "YES" : "NO")
+    console.log("[v0] Technical specs:", analysis.technical_specs ? "YES" : "NO")
+    console.log("[v0] Submission requirements:", analysis.submission_requirements ? "YES" : "NO")
+    console.log("[v0] Penalties payment:", analysis.penalties_payment ? "YES" : "NO")
     console.log("[v0] Form fields count:", analysis.formFields?.length || 0)
     console.log("[v0] ========================================")
 

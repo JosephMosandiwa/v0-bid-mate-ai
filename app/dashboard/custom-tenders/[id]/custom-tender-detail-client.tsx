@@ -784,6 +784,316 @@ export function CustomTenderDetailClient({
                 </CardContent>
               </Card>
             )}
+
+            {analysis.financial_requirements && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Financial Requirements</CardTitle>
+                  <CardDescription>Financial obligations and proof required for this tender</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {analysis.financial_requirements.bank_guarantee &&
+                    analysis.financial_requirements.bank_guarantee !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Bank Guarantee:</div>
+                        <div className="text-sm flex-1">{analysis.financial_requirements.bank_guarantee}</div>
+                      </div>
+                    )}
+                  {analysis.financial_requirements.performance_bond &&
+                    analysis.financial_requirements.performance_bond !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Performance Bond:</div>
+                        <div className="text-sm flex-1">{analysis.financial_requirements.performance_bond}</div>
+                      </div>
+                    )}
+                  {analysis.financial_requirements.insurance_requirements?.length > 0 && (
+                    <div className="flex items-start gap-3 p-3 rounded-lg border">
+                      <div className="font-medium text-sm w-40 text-muted-foreground">Insurance:</div>
+                      <ul className="text-sm flex-1 space-y-1">
+                        {analysis.financial_requirements.insurance_requirements.map((ins: string, idx: number) => (
+                          <li key={idx}>• {ins}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {analysis.financial_requirements.financial_turnover &&
+                    analysis.financial_requirements.financial_turnover !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Min. Turnover:</div>
+                        <div className="text-sm flex-1">{analysis.financial_requirements.financial_turnover}</div>
+                      </div>
+                    )}
+                  {analysis.financial_requirements.audited_financials &&
+                    analysis.financial_requirements.audited_financials !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Financial Statements:</div>
+                        <div className="text-sm flex-1">{analysis.financial_requirements.audited_financials}</div>
+                      </div>
+                    )}
+                  {analysis.financial_requirements.payment_terms &&
+                    analysis.financial_requirements.payment_terms !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Payment Terms:</div>
+                        <div className="text-sm flex-1">{analysis.financial_requirements.payment_terms}</div>
+                      </div>
+                    )}
+                </CardContent>
+              </Card>
+            )}
+
+            {analysis.legal_registration && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Legal & Registration Requirements</CardTitle>
+                  <CardDescription>Mandatory registrations and legal compliance</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {analysis.legal_registration.cidb_grading &&
+                    analysis.legal_registration.cidb_grading !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border bg-orange-50 dark:bg-orange-950/20">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">CIDB Grading:</div>
+                        <div className="text-sm flex-1 font-semibold text-orange-600">
+                          {analysis.legal_registration.cidb_grading}
+                        </div>
+                      </div>
+                    )}
+                  {analysis.legal_registration.cipc_registration &&
+                    analysis.legal_registration.cipc_registration !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">CIPC Registration:</div>
+                        <div className="text-sm flex-1">{analysis.legal_registration.cipc_registration}</div>
+                      </div>
+                    )}
+                  {analysis.legal_registration.professional_registration?.length > 0 && (
+                    <div className="flex items-start gap-3 p-3 rounded-lg border">
+                      <div className="font-medium text-sm w-40 text-muted-foreground">Professional Bodies:</div>
+                      <ul className="text-sm flex-1 space-y-1">
+                        {analysis.legal_registration.professional_registration.map((reg: string, idx: number) => (
+                          <li key={idx}>• {reg}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {analysis.legal_registration.joint_venture_requirements &&
+                    analysis.legal_registration.joint_venture_requirements !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">JV Requirements:</div>
+                        <div className="text-sm flex-1">{analysis.legal_registration.joint_venture_requirements}</div>
+                      </div>
+                    )}
+                  {analysis.legal_registration.subcontracting_limitations &&
+                    analysis.legal_registration.subcontracting_limitations !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Subcontracting Limit:</div>
+                        <div className="text-sm flex-1">{analysis.legal_registration.subcontracting_limitations}</div>
+                      </div>
+                    )}
+                </CardContent>
+              </Card>
+            )}
+
+            {analysis.labour_employment && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Labour & Local Content</CardTitle>
+                  <CardDescription>Workforce and transformation requirements</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {analysis.labour_employment.local_content &&
+                    analysis.labour_employment.local_content !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border bg-green-50 dark:bg-green-950/20">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Local Content:</div>
+                        <div className="text-sm flex-1 font-semibold text-green-600">
+                          {analysis.labour_employment.local_content}
+                        </div>
+                      </div>
+                    )}
+                  {analysis.labour_employment.subcontracting_limit &&
+                    analysis.labour_employment.subcontracting_limit !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Subcontracting Limit:</div>
+                        <div className="text-sm flex-1">{analysis.labour_employment.subcontracting_limit}</div>
+                      </div>
+                    )}
+                  {analysis.labour_employment.labour_composition &&
+                    analysis.labour_employment.labour_composition !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Labour Composition:</div>
+                        <div className="text-sm flex-1">{analysis.labour_employment.labour_composition}</div>
+                      </div>
+                    )}
+                  {analysis.labour_employment.skills_development &&
+                    analysis.labour_employment.skills_development !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Skills Development:</div>
+                        <div className="text-sm flex-1">{analysis.labour_employment.skills_development}</div>
+                      </div>
+                    )}
+                  {analysis.labour_employment.employment_equity &&
+                    analysis.labour_employment.employment_equity !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Employment Equity:</div>
+                        <div className="text-sm flex-1">{analysis.labour_employment.employment_equity}</div>
+                      </div>
+                    )}
+                </CardContent>
+              </Card>
+            )}
+
+            {analysis.technical_specs && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Technical Requirements</CardTitle>
+                  <CardDescription>Experience, resources, and capabilities required</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {analysis.technical_specs.minimum_experience &&
+                    analysis.technical_specs.minimum_experience !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Min. Experience:</div>
+                        <div className="text-sm flex-1">{analysis.technical_specs.minimum_experience}</div>
+                      </div>
+                    )}
+                  {analysis.technical_specs.project_references &&
+                    analysis.technical_specs.project_references !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Project References:</div>
+                        <div className="text-sm flex-1">{analysis.technical_specs.project_references}</div>
+                      </div>
+                    )}
+                  {analysis.technical_specs.key_personnel?.length > 0 && (
+                    <div className="flex items-start gap-3 p-3 rounded-lg border">
+                      <div className="font-medium text-sm w-40 text-muted-foreground">Key Personnel:</div>
+                      <ul className="text-sm flex-1 space-y-1">
+                        {analysis.technical_specs.key_personnel.map((person: string, idx: number) => (
+                          <li key={idx}>• {person}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {analysis.technical_specs.equipment_resources?.length > 0 && (
+                    <div className="flex items-start gap-3 p-3 rounded-lg border">
+                      <div className="font-medium text-sm w-40 text-muted-foreground">Equipment/Resources:</div>
+                      <ul className="text-sm flex-1 space-y-1">
+                        {analysis.technical_specs.equipment_resources.map((equip: string, idx: number) => (
+                          <li key={idx}>• {equip}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {analysis.technical_specs.methodology_requirements &&
+                    analysis.technical_specs.methodology_requirements !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Methodology:</div>
+                        <div className="text-sm flex-1">{analysis.technical_specs.methodology_requirements}</div>
+                      </div>
+                    )}
+                </CardContent>
+              </Card>
+            )}
+
+            {analysis.submission_requirements && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Submission Requirements</CardTitle>
+                  <CardDescription>How to submit your tender proposal</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {analysis.submission_requirements.number_of_copies &&
+                    analysis.submission_requirements.number_of_copies !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Copies Required:</div>
+                        <div className="text-sm flex-1">{analysis.submission_requirements.number_of_copies}</div>
+                      </div>
+                    )}
+                  {analysis.submission_requirements.formatting_requirements &&
+                    analysis.submission_requirements.formatting_requirements !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Formatting:</div>
+                        <div className="text-sm flex-1">{analysis.submission_requirements.formatting_requirements}</div>
+                      </div>
+                    )}
+                  {analysis.submission_requirements.submission_address &&
+                    analysis.submission_requirements.submission_address !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Submit To:</div>
+                        <div className="text-sm flex-1">{analysis.submission_requirements.submission_address}</div>
+                      </div>
+                    )}
+                  {analysis.submission_requirements.query_deadline &&
+                    analysis.submission_requirements.query_deadline !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Query Deadline:</div>
+                        <div className="text-sm flex-1">{analysis.submission_requirements.query_deadline}</div>
+                      </div>
+                    )}
+                  {analysis.submission_requirements.late_submission_policy &&
+                    analysis.submission_requirements.late_submission_policy !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Late Submissions:</div>
+                        <div className="text-sm flex-1">{analysis.submission_requirements.late_submission_policy}</div>
+                      </div>
+                    )}
+                </CardContent>
+              </Card>
+            )}
+
+            {analysis.penalties_payment && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Penalties & Payment Terms</CardTitle>
+                  <CardDescription>Contract penalties and payment structure</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {analysis.penalties_payment.late_completion_penalty &&
+                    analysis.penalties_payment.late_completion_penalty !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border bg-red-50 dark:bg-red-950/20">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Late Completion:</div>
+                        <div className="text-sm flex-1 font-semibold text-red-600">
+                          {analysis.penalties_payment.late_completion_penalty}
+                        </div>
+                      </div>
+                    )}
+                  {analysis.penalties_payment.non_performance_penalty &&
+                    analysis.penalties_payment.non_performance_penalty !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border bg-red-50 dark:bg-red-950/20">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Non-Performance:</div>
+                        <div className="text-sm flex-1 font-semibold text-red-600">
+                          {analysis.penalties_payment.non_performance_penalty}
+                        </div>
+                      </div>
+                    )}
+                  {analysis.penalties_payment.warranty_period &&
+                    analysis.penalties_payment.warranty_period !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Warranty Period:</div>
+                        <div className="text-sm flex-1">{analysis.penalties_payment.warranty_period}</div>
+                      </div>
+                    )}
+                  {analysis.penalties_payment.payment_schedule &&
+                    analysis.penalties_payment.payment_schedule !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border bg-green-50 dark:bg-green-950/20">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Payment Schedule:</div>
+                        <div className="text-sm flex-1">{analysis.penalties_payment.payment_schedule}</div>
+                      </div>
+                    )}
+                  {analysis.penalties_payment.retention_amount &&
+                    analysis.penalties_payment.retention_amount !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Retention:</div>
+                        <div className="text-sm flex-1">{analysis.penalties_payment.retention_amount}</div>
+                      </div>
+                    )}
+                  {analysis.penalties_payment.payment_timeframe &&
+                    analysis.penalties_payment.payment_timeframe !== "Not specified" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg border">
+                        <div className="font-medium text-sm w-40 text-muted-foreground">Payment Timeframe:</div>
+                        <div className="text-sm flex-1">{analysis.penalties_payment.payment_timeframe}</div>
+                      </div>
+                    )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         )}
 
