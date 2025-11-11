@@ -241,6 +241,67 @@ export function CustomTenderDetailClient({
     }
   }
 
+  const handleManualAnalysis = async (documentUrl: string) => {
+    setAnalyzing(true)
+    setAnalysisError(null)
+
+    try {
+      console.log("[v0] ========================================")
+      console.log("[v0] MANUAL ANALYSIS TRIGGERED")
+      console.log("[v0] Document URL:", documentUrl)
+      console.log("[v0] ========================================")
+
+      const response = await fetch("/api/analyze-tender", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          documentUrl,
+          documentText: "", // Let the API extract text from URL
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Failed to analyze" }))
+        console.error("[v0] Analysis failed:", errorData)
+        throw new Error(errorData.error || "Failed to analyze document")
+      }
+
+      const analysisResult = await response.json()
+      console.log("[v0] ✓ Analysis complete!")
+
+      // Save analysis to database
+      const saveResponse = await fetch(`/api/custom-tenders/${tenderId}/analysis`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ analysis: analysisResult }),
+      })
+
+      if (!saveResponse.ok) {
+        throw new Error("Failed to save analysis")
+      }
+
+      setAnalysis(analysisResult)
+
+      toast({
+        title: "Success",
+        description: "Document analyzed successfully",
+      })
+
+      // Refresh the page to show new analysis
+      router.refresh()
+    } catch (error) {
+      console.error("[v0] Manual analysis error:", error)
+      setAnalysisError(error instanceof Error ? error.message : "Failed to analyze document")
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to analyze document",
+        variant: "destructive",
+      })
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
       <div>
@@ -295,6 +356,34 @@ export function CustomTenderDetailClient({
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{analysisError}</AlertDescription>
+        </Alert>
+      )}
+
+      {documents.length > 0 && !analysis && !analyzing && (
+        <Alert className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900">
+          <AlertCircle className="h-4 w-4 text-yellow-600" />
+          <AlertDescription className="flex items-center justify-between gap-4">
+            <span className="text-yellow-900 dark:text-yellow-100">
+              This tender hasn't been analyzed yet. Click the button to generate AI insights and form fields.
+            </span>
+            <Button
+              size="sm"
+              onClick={() => handleManualAnalysis(documents[0].blob_url || documents[0].storage_path)}
+              disabled={analyzing}
+            >
+              {analyzing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Analyze Now
+                </>
+              )}
+            </Button>
+          </AlertDescription>
         </Alert>
       )}
 
