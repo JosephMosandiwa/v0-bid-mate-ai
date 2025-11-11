@@ -245,7 +245,7 @@ export async function getUserTenders() {
   return { success: true, tenders: allTenders }
 }
 
-export async function deleteTender(tenderId: string) {
+export async function deleteTender(tenderId: string, tenderType?: "scraped" | "custom") {
   const supabase = await createClient()
 
   const {
@@ -253,7 +253,27 @@ export async function deleteTender(tenderId: string) {
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: "Not authenticated" }
 
-  const { error } = await supabase.from("user_tenders").delete().eq("id", tenderId).eq("user_id", user.id)
+  // Try to determine tender type if not provided
+  if (!tenderType) {
+    // Check if it exists in custom tenders first
+    const { data: customTender } = await supabase
+      .from("user_custom_tenders")
+      .select("id")
+      .eq("id", tenderId)
+      .eq("user_id", user.id)
+      .single()
+
+    if (customTender) {
+      tenderType = "custom"
+    } else {
+      tenderType = "scraped"
+    }
+  }
+
+  // Delete from the appropriate table
+  const tableName = tenderType === "custom" ? "user_custom_tenders" : "user_tenders"
+
+  const { error } = await supabase.from(tableName).delete().eq("id", tenderId).eq("user_id", user.id)
 
   if (error) {
     console.error("[v0] Error deleting tender:", error)

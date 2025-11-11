@@ -143,11 +143,11 @@ export default function TendersPage() {
     setUpdatingTender(null)
   }
 
-  const handleDelete = async (tenderId: string) => {
+  const handleDelete = async (tenderId: string, tenderType?: "scraped" | "custom") => {
     if (!confirm("Are you sure you want to delete this tender?")) return
 
     setUpdatingTender(tenderId)
-    const result = await deleteTender(tenderId)
+    const result = await deleteTender(tenderId, tenderType)
     if (result.success) {
       await loadTenders()
       toast({
@@ -401,7 +401,7 @@ export default function TendersPage() {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => handleDelete(tender.id)}
+                      onClick={() => handleDelete(tender.id, tender.tender_type)}
                       disabled={updatingTender === tender.id}
                       className="bg-transparent text-destructive hover:text-destructive"
                     >
