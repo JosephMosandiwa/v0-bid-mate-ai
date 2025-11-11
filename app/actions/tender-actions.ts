@@ -527,3 +527,104 @@ export async function createCustomTender(tenderData: {
     return { success: false, error: "Failed to create tender: " + (error as Error).message }
   }
 }
+
+export async function getDashboardStats() {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: "Not authenticated" }
+
+  try {
+    // Get scraped tenders count
+    const { count: scrapedCount } = await supabase
+      .from("user_tenders")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+
+    // Get custom tenders count
+    const { count: customCount } = await supabase
+      .from("user_custom_tenders")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+
+    const totalTenders = (scrapedCount || 0) + (customCount || 0)
+
+    // Get analyzed tenders (custom tenders with analysis)
+    const { count: analyzedCount } = await supabase
+      .from("user_custom_tender_analysis")
+      .select("tender_id", { count: "exact", head: true })
+      .in(
+        "tender_id",
+        await supabase
+          .from("user_custom_tenders")
+          .select("id")
+          .eq("user_id", user.id)
+          .then((res) => res.data?.map((t) => t.id) || []),
+      )
+
+    // Get recent activity (last 5 custom tenders)
+    const { data: recentCustom } = await supabase
+      .from("user_custom_tenders")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(3)
+
+    // Get recent scraped tenders
+    const { data: recentScraped } = await supabase
+      .from("user_tenders")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(2)
+
+    const recentActivity = [
+      ...(recentCustom || []).map((tender) => ({
+        id: tender.id,
+        title: tender.title,
+        organization: tender.organization,
+        type: "analyzed" as const,
+        created_at: tender.created_at,
+      })),
+      ...(recentScraped || []).map((tender) => ({
+        id: tender.id,
+        title: tender.title,
+        organization: tender.organization,
+        type: "saved" as const,
+        created_at: tender.created_at,
+      })),
+    ]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 5)
+
+    // Get tenders closing soon (next 7 days)
+    const sevenDaysFromNow = new Date()
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7)
+
+    const { data: closingSoon } = await supabase
+      .from("user_tenders")
+      .select("*")
+      .eq("user_id", user.id)
+      .not("close_date", "is", null)
+      .gte("close_date", new Date().toISOString())
+      .lte("close_date", sevenDaysFromNow.toISOString())
+      .order("close_date", { ascending: true })
+      .limit(5)
+
+    return {
+      success: true,
+      stats: {
+        totalTenders,
+        analyzedTenders: analyzedCount || 0,
+        closingSoon: closingSoon?.length || 0,
+        recentActivity,
+        upcomingDeadlines: closingSoon || [],
+      },
+    }
+  } catch (error) {
+    console.error("[v0] Error fetching dashboard stats:", error)
+    return { success: false, error: "Failed to fetch dashboard statistics" }
+  }
+}
