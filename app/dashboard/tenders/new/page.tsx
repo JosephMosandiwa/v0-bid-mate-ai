@@ -141,27 +141,46 @@ export default function NewTenderPage() {
       // Step 2: Extract text using PDF.js on client
       console.log("[v0] Step 2: Extracting text from PDF using PDF.js...")
 
-      const arrayBuffer = await file.arrayBuffer()
-      const pdfjsLib = await import("pdfjs-dist")
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
-
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
-      console.log("[v0] PDF loaded. Pages:", pdf.numPages)
-
       let fullText = ""
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i)
-        const textContent = await page.getTextContent()
-        const pageText = textContent.items.map((item: any) => item.str).join(" ")
-        fullText += pageText + "\n\n"
+      let pdf = null
+
+      try {
+        const arrayBuffer = await file.arrayBuffer()
+        console.log("[v0] ArrayBuffer created, size:", arrayBuffer.byteLength)
+
+        const pdfjsLib = await import("pdfjs-dist")
+        console.log("[v0] PDF.js library loaded, version:", pdfjsLib.version)
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+        console.log("[v0] Worker source set:", pdfjsLib.GlobalWorkerOptions.workerSrc)
+
+        pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+        console.log("[v0] PDF loaded successfully. Pages:", pdf.numPages)
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+          console.log("[v0] Processing page", i, "of", pdf.numPages)
+          const page = await pdf.getPage(i)
+          const textContent = await page.getTextContent()
+          const pageText = textContent.items.map((item: any) => item.str).join(" ")
+          fullText += pageText + "\n\n"
+          console.log("[v0] Page", i, "text length:", pageText.length, "characters")
+        }
+
+        console.log("[v0] Text extraction successful:")
+        console.log("[v0] - Total text length:", fullText.length, "characters")
+        console.log("[v0] - Total pages:", pdf.numPages)
+        console.log("[v0] - First 200 chars:", fullText.substring(0, 200))
+      } catch (pdfError) {
+        console.error("[v0] PDF.js error:", pdfError)
+        console.error("[v0] Error type:", pdfError instanceof Error ? pdfError.name : typeof pdfError)
+        console.error("[v0] Error message:", pdfError instanceof Error ? pdfError.message : String(pdfError))
+        console.error("[v0] Error stack:", pdfError instanceof Error ? pdfError.stack : "No stack trace")
+
+        throw new Error(`PDF processing failed: ${pdfError instanceof Error ? pdfError.message : String(pdfError)}`)
       }
 
-      console.log("[v0] Text extraction successful:")
-      console.log("[v0] - Text length:", fullText.length, "characters")
-      console.log("[v0] - Pages:", pdf.numPages)
-
       if (fullText.length < 100) {
-        console.error("[v0] Insufficient text extracted")
+        console.error("[v0] Insufficient text extracted. Length:", fullText.length)
         setAnalysisError("The PDF appears to be scanned or image-based. Please fill in the details manually.")
         setAnalyzing(false)
         toast({
@@ -226,7 +245,23 @@ export default function NewTenderPage() {
       }
     } catch (error) {
       console.error("[v0] PDF processing error:", error)
-      setAnalysisError("Could not extract text from PDF. The document might be scanned or image-based.")
+      console.error("[v0] Error details:", {
+        name: error instanceof Error ? error.name : "Unknown",
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : "No stack",
+      })
+
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      if (errorMessage.includes("Worker") || errorMessage.includes("worker")) {
+        setAnalysisError(
+          "PDF processing library failed to load. Please try refreshing the page or fill in details manually.",
+        )
+      } else if (errorMessage.includes("Invalid PDF")) {
+        setAnalysisError("Invalid or corrupted PDF file. Please try a different file or fill in details manually.")
+      } else {
+        setAnalysisError("Could not extract text from PDF. The document might be scanned or image-based.")
+      }
+
       toast({
         title: "Extraction Failed",
         description: "Fill in the tender details manually. Your PDF is uploaded and will be saved.",
