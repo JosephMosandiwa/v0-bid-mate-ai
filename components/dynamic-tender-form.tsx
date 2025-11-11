@@ -58,6 +58,12 @@ export function DynamicTenderForm({
   documents = [],
   tenderData,
 }: DynamicTenderFormProps) {
+  console.log("[v0] 🔵 DynamicTenderForm COMPONENT RENDERING")
+  console.log("[v0] Tender ID:", tenderId)
+  console.log("[v0] FormFields received:", formFields?.length || 0, "fields")
+  console.log("[v0] FormFields:", formFields)
+  console.log("[v0] Documents:", documents?.length || 0)
+
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -761,6 +767,7 @@ export function DynamicTenderForm({
   }
 
   if (loading) {
+    console.log("[v0] 🟡 Form is in LOADING state")
     return (
       <Card>
         <CardContent className="p-12 text-center">
@@ -772,8 +779,13 @@ export function DynamicTenderForm({
 
   const sections = Array.from(new Set(formFields.map((f) => f.section || "General Information")))
 
+  console.log("[v0] 🟢 Form LOADED - Rendering sections:", sections)
+  console.log("[v0] Total sections:", sections.length)
+
   return (
     <div className="space-y-6">
+      {console.log("[v0] 🟢 DynamicTenderForm JSX RENDERING")}
+
       {availableDocuments.length > 0 && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>

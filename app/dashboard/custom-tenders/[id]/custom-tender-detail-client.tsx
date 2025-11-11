@@ -69,6 +69,8 @@ export function CustomTenderDetailClient({
   console.log("[v0] Form data initialized:", formData)
   console.log("[v0] Has analysis?", !!analysis)
   console.log("[v0] Has form fields?", analysis?.formFields?.length || 0)
+  console.log("[v0] FormFields array:", analysis?.formFields)
+  console.log("[v0] Should show Response Form tab?", !!(analysis?.formFields && analysis.formFields.length > 0))
   console.log("[v0] Documents count:", documents?.length || 0)
 
   useEffect(() => {
@@ -1149,6 +1151,8 @@ export function CustomTenderDetailClient({
 
         {analysis?.formFields && analysis.formFields.length > 0 && (
           <TabsContent value="form" className="space-y-4 md:space-y-6">
+            {console.log("[v0] 🟢 Response Form Tab Content IS RENDERING")}
+            {console.log("[v0] Passing formFields to DynamicTenderForm:", analysis.formFields.length, "fields")}
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
