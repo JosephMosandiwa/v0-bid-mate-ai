@@ -59,6 +59,34 @@ export default function NewTenderPage() {
       console.log("[v0] File uploaded to blob:", url)
       setBlobUrl(url)
 
+      console.log("[v0] Step 1.5: Extracting text from PDF with PDF.js...")
+      let extractedText = ""
+
+      try {
+        const pdfjsLib = await import("pdfjs-dist")
+        // Use a stable, known-working version of the worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`
+
+        const fileBuffer = await file.arrayBuffer()
+        const pdf = await pdfjsLib.getDocument({ data: fileBuffer }).promise
+
+        console.log("[v0] PDF loaded successfully, pages:", pdf.numPages)
+
+        // Extract text from all pages
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i)
+          const textContent = await page.getTextContent()
+          const pageText = textContent.items.map((item: any) => item.str).join(" ")
+          extractedText += `\n--- Page ${i} ---\n${pageText}`
+        }
+
+        console.log("[v0] Successfully extracted text, length:", extractedText.length, "characters")
+      } catch (extractError: any) {
+        console.warn("[v0] PDF text extraction failed:", extractError.message)
+        console.warn("[v0] Continuing with document URL only...")
+        // Continue without text - API will handle it
+      }
+
       toast({
         title: "Analyzing Document",
         description: "AI is extracting tender details...",
@@ -72,7 +100,7 @@ export default function NewTenderPage() {
         },
         body: JSON.stringify({
           documentUrl: url,
-          documentText: "", // Empty string for URL-based analysis
+          documentText: extractedText, // Send extracted text instead of empty string
         }),
       })
 
