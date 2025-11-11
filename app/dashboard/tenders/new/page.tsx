@@ -97,14 +97,20 @@ export default function NewTenderPage() {
     setPaymentRequired(false)
     setDashboardUrl(null)
 
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768
+
+    console.log("[v0] Device detection:", {
+      userAgent: navigator.userAgent,
+      isMobile,
+      screenWidth: window.innerWidth,
+    })
 
     if (isMobile) {
       console.log("[v0] Mobile device detected - skipping automatic text extraction")
       setAnalyzing(false)
       toast({
-        title: "PDF Uploaded",
-        description: "Please fill in the tender details below. We'll analyze the document when you submit.",
+        title: "✅ PDF Uploaded Successfully",
+        description: "Fill in the details below and submit. We'll analyze the document and create your tender.",
       })
       return
     }
@@ -141,15 +147,27 @@ export default function NewTenderPage() {
       })
 
       console.log("[v0] Text extraction response status:", textResponse.status)
+      console.log("[v0] Text extraction response OK:", textResponse.ok)
 
       if (!textResponse.ok) {
-        const errorData = await textResponse.json()
-        console.error("[v0] Text extraction failed:", errorData)
+        let errorData
+        try {
+          errorData = await textResponse.json()
+          console.error("[v0] Text extraction failed with error:", errorData)
+        } catch (e) {
+          console.error("[v0] Could not parse error response:", e)
+          errorData = { error: "Unknown error occurred" }
+        }
 
         setAnalysisError(
-          "Could not automatically extract text. Please fill in the details below and we'll analyze the document when you submit.",
+          "Automatic text extraction is not available. Please fill in the form manually and we'll analyze the document when you submit.",
         )
         setAnalyzing(false)
+        toast({
+          title: "Manual Entry Required",
+          description:
+            "Fill in the tender details below. Your PDF is uploaded and will be processed with your submission.",
+        })
         return
       }
 
@@ -162,10 +180,12 @@ export default function NewTenderPage() {
 
       if (fullText.length < 100) {
         console.error("[v0] Insufficient text extracted")
-        setAnalysisError(
-          "Could not extract enough text. Please fill in the details below and we'll analyze the document when you submit.",
-        )
+        setAnalysisError("The PDF appears to be scanned or image-based. Please fill in the details manually.")
         setAnalyzing(false)
+        toast({
+          title: "Scanned Document Detected",
+          description: "Fill in the tender details below. Your PDF is uploaded and will be saved with your submission.",
+        })
         return
       }
 
@@ -192,6 +212,11 @@ export default function NewTenderPage() {
         } else {
           setAnalysisError(errorData.error || "Failed to analyze document")
         }
+        toast({
+          title: "Analysis Failed",
+          description: "Fill in the tender details manually. Your PDF is uploaded and will be saved.",
+          variant: "destructive",
+        })
         return
       }
 
@@ -211,6 +236,10 @@ export default function NewTenderPage() {
           description: summary.description || prev.description,
         }))
         console.log("[v0] Form auto-filled from analysis")
+        toast({
+          title: "✅ Analysis Complete",
+          description: "Tender details have been automatically extracted. Review and edit as needed.",
+        })
       }
     } catch (error) {
       console.error("[v0] Unexpected error during PDF processing:", error)
@@ -219,6 +248,11 @@ export default function NewTenderPage() {
         stack: error instanceof Error ? error.stack : undefined,
       })
       setAnalysisError("An error occurred during processing. Please fill in the details below.")
+      toast({
+        title: "Processing Error",
+        description: "Fill in the tender details manually. Your PDF is uploaded and will be saved.",
+        variant: "destructive",
+      })
     } finally {
       setAnalyzing(false)
       console.log("[v0] PDF processing completed")
