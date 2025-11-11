@@ -5,6 +5,8 @@ import type { NextRequest } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("[v0] Starting custom tender upload")
+
     const cookieStore = await cookies()
     const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
       cookies: {
@@ -24,17 +26,22 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
+      console.error("[v0] Auth error:", authError)
       return Response.json({ error: "Unauthorized" }, { status: 401 })
     }
+
+    console.log("[v0] User authenticated:", user.id)
 
     const formData = await request.formData()
     const file = formData.get("file") as File
 
     if (!file) {
+      console.error("[v0] No file in form data")
       return Response.json({ error: "No file provided" }, { status: 400 })
     }
 
     if (file.type !== "application/pdf") {
+      console.error("[v0] Invalid file type:", file.type)
       return Response.json({ error: "File must be a PDF" }, { status: 400 })
     }
 
@@ -49,8 +56,12 @@ export async function POST(request: NextRequest) {
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://bidmateai.vercel.app"
     const baseUrl = siteUrl.startsWith("http") ? siteUrl : `https://${siteUrl}`
+    const analyzeUrl = `${baseUrl}/api/analyze-tender`
 
-    const analyzeResponse = await fetch(`${baseUrl}/api/analyze-tender`, {
+    console.log("[v0] Calling analyze-tender API:", analyzeUrl)
+    console.log("[v0] With document URL:", blob.url)
+
+    const analyzeResponse = await fetch(analyzeUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -59,20 +70,26 @@ export async function POST(request: NextRequest) {
       }),
     })
 
+    console.log("[v0] Analyze response status:", analyzeResponse.status)
+
     if (!analyzeResponse.ok) {
       const errorText = await analyzeResponse.text()
-      console.error("[v0] Analysis failed:", errorText)
-      throw new Error("Failed to analyze tender")
+      console.error("[v0] Analysis failed with status:", analyzeResponse.status)
+      console.error("[v0] Analysis error response:", errorText)
+      throw new Error(`Failed to analyze tender: ${analyzeResponse.status} - ${errorText}`)
     }
 
     const analysis = await analyzeResponse.json()
     console.log("[v0] Analysis completed successfully")
+    console.log("[v0] Analysis structure:", Object.keys(analysis))
 
     const tenderSummary = analysis.tender_summary || {}
     const extractedTitle = tenderSummary.title || file.name.replace(".pdf", "")
     const extractedDescription = tenderSummary.entity
       ? `${tenderSummary.description || ""}\n\nIssued by: ${tenderSummary.entity}`
       : tenderSummary.description || ""
+
+    console.log("[v0] Creating tender with title:", extractedTitle)
 
     // Create custom tender record
     const { data: tender, error: tenderError } = await supabase
@@ -122,6 +139,8 @@ export async function POST(request: NextRequest) {
       console.error("[v0] Error storing analysis:", analysisError)
     }
 
+    console.log("[v0] Upload complete. Tender ID:", tender.id)
+
     return Response.json({
       success: true,
       tender: {
@@ -133,6 +152,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error("[v0] Error uploading custom tender:", error)
+    console.error("[v0] Error stack:", error.stack)
     return Response.json({ error: error.message || "Failed to upload tender" }, { status: 500 })
   }
 }
