@@ -98,6 +98,8 @@ export default function NewTenderPage() {
 
       const analysisData = await analysisResponse.json()
       console.log("[v0] ✓ Analysis complete successfully")
+      console.log("[v0] Analysis keys:", Object.keys(analysisData))
+      console.log("[v0] Full analysis structure:", JSON.stringify(analysisData, null, 2))
       console.log("[v0] Analysis has tender_summary:", !!analysisData.tender_summary)
       console.log("[v0] Analysis has formFields:", analysisData.formFields?.length || 0)
       setAnalysis(analysisData)
