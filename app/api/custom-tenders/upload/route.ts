@@ -29,8 +29,6 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData()
     const file = formData.get("file") as File
-    const title = formData.get("title") as string
-    const description = formData.get("description") as string
 
     if (!file) {
       return Response.json({ error: "No file provided" }, { status: 400 })
@@ -40,9 +38,8 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: "File must be a PDF" }, { status: 400 })
     }
 
-    console.log("[v0] Uploading custom tender:", title, "File:", file.name)
+    console.log("[v0] Uploading custom tender. File:", file.name, "Size:", file.size)
 
-    // Upload PDF to Vercel Blob
     const blob = await put(`custom-tenders/${user.id}/${Date.now()}-${file.name}`, file, {
       access: "public",
       addRandomSuffix: true,
@@ -50,47 +47,32 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] PDF uploaded to blob:", blob.url)
 
-    // Extract text from PDF
-    const extractFormData = new FormData()
-    extractFormData.append("file", file)
-
-    const extractResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/extract-pdf`,
-      {
-        method: "POST",
-        body: extractFormData,
-      },
-    )
-
-    if (!extractResponse.ok) {
-      throw new Error("Failed to extract text from PDF")
-    }
-
-    const { text } = await extractResponse.json()
-    console.log("[v0] Extracted text length:", text.length)
-
-    // Analyze with AI
     const analyzeResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/analyze-tender`,
+      `${process.env.NEXT_PUBLIC_SITE_URL || "https://bidmateai.vercel.app"}/api/analyze-tender`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentText: text }),
+        body: JSON.stringify({
+          documentUrl: blob.url,
+          documentText: "", // AI will fetch and read the PDF from the URL
+        }),
       },
     )
 
     if (!analyzeResponse.ok) {
+      const errorText = await analyzeResponse.text()
+      console.error("[v0] Analysis failed:", errorText)
       throw new Error("Failed to analyze tender")
     }
 
     const analysis = await analyzeResponse.json()
-    console.log("[v0] Analysis completed")
+    console.log("[v0] Analysis completed successfully")
 
     const tenderSummary = analysis.tender_summary || {}
-    const extractedTitle = tenderSummary.title || title || file.name.replace(".pdf", "")
+    const extractedTitle = tenderSummary.title || file.name.replace(".pdf", "")
     const extractedDescription = tenderSummary.entity
       ? `${tenderSummary.description || ""}\n\nIssued by: ${tenderSummary.entity}`
-      : tenderSummary.description || description || ""
+      : tenderSummary.description || ""
 
     // Create custom tender record
     const { data: tender, error: tenderError } = await supabase
