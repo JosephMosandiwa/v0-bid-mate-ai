@@ -39,8 +39,13 @@ export default function NewTenderPage() {
     setLoading(true)
 
     try {
-      console.log("[v0] Step 1: Uploading PDF to blob storage...")
+      console.log("[v0] ================================================")
+      console.log("[v0] STARTING CUSTOM TENDER UPLOAD PROCESS")
+      console.log("[v0] ================================================")
+      console.log("[v0] File name:", file.name)
+      console.log("[v0] File size:", (file.size / 1024 / 1024).toFixed(2), "MB")
 
+      console.log("[v0] Step 1: Uploading PDF to blob storage...")
       const uploadFormData = new FormData()
       uploadFormData.append("file", file)
 
@@ -52,39 +57,52 @@ export default function NewTenderPage() {
       if (!blobResponse.ok) {
         const errorText = await blobResponse.text()
         console.error("[v0] Blob upload error:", errorText)
-        throw new Error("Failed to upload file")
+        throw new Error("Failed to upload file to storage")
       }
 
       const { url } = await blobResponse.json()
-      console.log("[v0] File uploaded to blob:", url)
+      console.log("[v0] ✓ File uploaded to blob successfully")
+      console.log("[v0] Blob URL:", url)
       setBlobUrl(url)
 
-      console.log("[v0] Step 1.5: Extracting text from PDF with PDF.js...")
+      console.log("[v0] Step 2: Extracting text from PDF with PDF.js...")
       let extractedText = ""
+      let textExtractionSuccess = false
 
       try {
         const pdfjsLib = await import("pdfjs-dist")
-        // Use a stable, known-working version of the worker
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`
+        // Use the npm package version worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js`
 
         const fileBuffer = await file.arrayBuffer()
+        console.log("[v0] Loading PDF document...")
         const pdf = await pdfjsLib.getDocument({ data: fileBuffer }).promise
 
-        console.log("[v0] PDF loaded successfully, pages:", pdf.numPages)
+        console.log("[v0] ✓ PDF loaded, total pages:", pdf.numPages)
 
         // Extract text from all pages
         for (let i = 1; i <= pdf.numPages; i++) {
+          console.log("[v0] Extracting text from page", i, "/", pdf.numPages)
           const page = await pdf.getPage(i)
           const textContent = await page.getTextContent()
           const pageText = textContent.items.map((item: any) => item.str).join(" ")
-          extractedText += `\n--- Page ${i} ---\n${pageText}`
+          extractedText += `\n${pageText}\n`
         }
 
-        console.log("[v0] Successfully extracted text, length:", extractedText.length, "characters")
+        console.log("[v0] ✓ Text extraction complete")
+        console.log("[v0] Extracted text length:", extractedText.length, "characters")
+
+        if (extractedText.trim().length > 100) {
+          textExtractionSuccess = true
+          console.log("[v0] ✓ Sufficient text extracted")
+        } else {
+          console.warn("[v0] ⚠ Very little text extracted - PDF might be scanned")
+        }
       } catch (extractError: any) {
-        console.warn("[v0] PDF text extraction failed:", extractError.message)
-        console.warn("[v0] Continuing with document URL only...")
-        // Continue without text - API will handle it
+        console.error("[v0] ❌ PDF text extraction failed:")
+        console.error("[v0] Error type:", extractError.name)
+        console.error("[v0] Error message:", extractError.message)
+        console.error("[v0] This might be a scanned PDF or image-based document")
       }
 
       toast({
@@ -92,29 +110,42 @@ export default function NewTenderPage() {
         description: "AI is extracting tender details...",
       })
 
-      console.log("[v0] Step 2: Analyzing document with AI...")
+      console.log("[v0] Step 3: Analyzing document with AI...")
+      console.log("[v0] Sending to analyze-tender API:")
+      console.log("[v0] - Has blob URL:", !!url)
+      console.log("[v0] - Has extracted text:", textExtractionSuccess)
+      console.log("[v0] - Text length:", extractedText.length)
+
       const analysisResponse = await fetch("/api/analyze-tender", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          documentUrl: url,
-          documentText: extractedText, // Send extracted text instead of empty string
+          documentText: extractedText,
+          documentUrl: url, // Send as fallback
         }),
       })
 
+      console.log("[v0] Analyze API response status:", analysisResponse.status)
+
       if (!analysisResponse.ok) {
         const errorData = await analysisResponse.json().catch(() => ({ error: "Unknown error" }))
-        console.error("[v0] Analysis error:", errorData)
-        throw new Error(errorData.error || `Analysis failed with status ${analysisResponse.status}`)
+        console.error("[v0] ❌ Analysis API error:")
+        console.error("[v0] Status:", analysisResponse.status)
+        console.error("[v0] Error:", errorData)
+        throw new Error(
+          errorData.error || errorData.details || `Analysis failed with status ${analysisResponse.status}`,
+        )
       }
 
       const analysisData = await analysisResponse.json()
-      console.log("[v0] Analysis complete")
+      console.log("[v0] ✓ Analysis complete successfully")
+      console.log("[v0] Analysis has tender_summary:", !!analysisData.tender_summary)
+      console.log("[v0] Analysis has formFields:", analysisData.formFields?.length || 0)
       setAnalysis(analysisData)
 
-      console.log("[v0] Step 3: Creating tender record...")
+      console.log("[v0] Step 4: Creating tender record with analysis...")
 
       const result = await createCustomTender({
         title: analysisData.tender_summary?.title || file.name.replace(".pdf", ""),
@@ -124,21 +155,42 @@ export default function NewTenderPage() {
         description: analysisData.tender_summary?.description || "",
         category: "Custom",
         uploadedFile: file,
-        analysis: analysisData,
+        analysis: analysisData, // Pass the full analysis
       })
 
+      console.log("[v0] createCustomTender result:", result)
+
       if (result.success) {
+        console.log("[v0] ✓ Tender created successfully")
+        console.log("[v0] Tender ID:", result.tenderId)
+        console.log("[v0] Document saved:", result.documentSaved)
+        console.log("[v0] Analysis saved:", result.analysisSaved)
+
+        if (result.documentError) {
+          console.warn("[v0] Document error:", result.documentError)
+        }
+        if (result.analysisError) {
+          console.warn("[v0] Analysis error:", result.analysisError)
+        }
+
         toast({
           title: "Tender Created Successfully",
           description: "AI has analyzed your document and extracted all details.",
         })
 
+        console.log("[v0] Redirecting to:", `/dashboard/custom-tenders/${result.tenderId}`)
         router.push(`/dashboard/custom-tenders/${result.tenderId}`)
       } else {
+        console.error("[v0] ❌ Tender creation failed:", result.error)
         throw new Error(result.error || "Failed to create tender")
       }
     } catch (error: any) {
-      console.error("[v0] Error during upload/analysis:", error)
+      console.error("[v0] ================================================")
+      console.error("[v0] ❌ UPLOAD PROCESS FAILED")
+      console.error("[v0] ================================================")
+      console.error("[v0] Error:", error)
+      console.error("[v0] Error message:", error.message)
+      console.error("[v0] Error stack:", error.stack)
 
       toast({
         title: "Upload Failed",
