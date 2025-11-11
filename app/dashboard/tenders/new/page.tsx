@@ -149,9 +149,9 @@ export default function NewTenderPage() {
         console.log("[v0] ArrayBuffer created, size:", arrayBuffer.byteLength)
 
         const pdfjsLib = await import("pdfjs-dist")
-        console.log("[v0] PDF.js library loaded, version:", pdfjsLib.version)
+        console.log("[v0] PDF.js library loaded")
 
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`
         console.log("[v0] Worker source set:", pdfjsLib.GlobalWorkerOptions.workerSrc)
 
         pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
