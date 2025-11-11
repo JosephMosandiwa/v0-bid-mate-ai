@@ -119,27 +119,8 @@ export default function NewTenderPage() {
       console.log("[v0] Starting PDF processing on desktop...")
       console.log("[v0] File:", file.name, "Size:", file.size, "bytes")
 
-      // Step 1: Extract PDF form fields
-      console.log("[v0] Step 1: Extracting PDF form fields...")
-      const formDataFields = new FormData()
-      formDataFields.append("file", file)
-
-      const fieldsResponse = await fetch("/api/extract-pdf-fields", {
-        method: "POST",
-        body: formDataFields,
-      })
-
-      let pdfFields = null
-      if (fieldsResponse.ok) {
-        const fieldsData = await fieldsResponse.json()
-        pdfFields = fieldsData.fields
-        console.log("[v0] Extracted", pdfFields?.length || 0, "PDF form fields")
-      } else {
-        console.log("[v0] No form fields found or extraction failed")
-      }
-
-      // Step 2: Extract text using PDF.js on client
-      console.log("[v0] Step 2: Extracting text from PDF using PDF.js...")
+      // Step 1: Extract text using PDF.js on client
+      console.log("[v0] Step 1: Extracting text from PDF using PDF.js...")
 
       let fullText = ""
       let pdf = null
@@ -149,9 +130,9 @@ export default function NewTenderPage() {
         console.log("[v0] ArrayBuffer created, size:", arrayBuffer.byteLength)
 
         const pdfjsLib = await import("pdfjs-dist")
-        console.log("[v0] PDF.js library loaded")
+        console.log("[v0] PDF.js library loaded, version:", pdfjsLib.version)
 
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
         console.log("[v0] Worker source set:", pdfjsLib.GlobalWorkerOptions.workerSrc)
 
         pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
@@ -190,14 +171,13 @@ export default function NewTenderPage() {
         return
       }
 
-      // Step 3: Analyze with AI
-      console.log("[v0] Step 3: Analyzing with AI...")
+      // Step 2: Analyze with AI (AI will generate form fields intelligently)
+      console.log("[v0] Step 2: Analyzing with AI...")
       const analyzeResponse = await fetch("/api/analyze-tender", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           documentText: fullText,
-          pdfFields: pdfFields,
         }),
       })
 
@@ -224,6 +204,7 @@ export default function NewTenderPage() {
 
       const analysisResult = await analyzeResponse.json()
       console.log("[v0] Analysis complete. Result keys:", Object.keys(analysisResult))
+      console.log("[v0] AI-generated form fields:", analysisResult.formFields?.length || 0)
       setAnalysis(analysisResult)
 
       if (analysisResult.tender_summary) {
@@ -237,7 +218,7 @@ export default function NewTenderPage() {
           value: prev.value,
           description: summary.description || prev.description,
         }))
-        console.log("[v0] Form auto-filled from analysis")
+        console.log("[v0] Form auto-filled from AI analysis")
         toast({
           title: "✅ Analysis Complete",
           description: "Tender details have been automatically extracted. Review and edit as needed.",
