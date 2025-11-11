@@ -45,6 +45,13 @@ export function CustomTenderDetailClient({
   console.log("[v0] Documents prop:", initialDocuments?.length || 0, initialDocuments)
   console.log("[v0] Analysis prop:", initialAnalysis ? "EXISTS" : "NULL", initialAnalysis)
 
+  console.log("[v0] ===========================================")
+  console.log("[v0] ANALYZE BUTTON VISIBILITY CHECK:")
+  console.log("[v0] documents.length > 0:", initialDocuments?.length > 0)
+  console.log("[v0] !initialAnalysis:", !initialAnalysis)
+  console.log("[v0] Should show button:", initialDocuments?.length > 0 && !initialAnalysis)
+  console.log("[v0] ===========================================")
+
   const router = useRouter()
   const { toast } = useToast()
   const tenderId = tender.id
@@ -304,6 +311,18 @@ export function CustomTenderDetailClient({
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
+      {process.env.NODE_ENV === "development" && (
+        <div className="bg-purple-100 dark:bg-purple-900/20 border border-purple-300 dark:border-purple-800 rounded-lg p-4 text-sm font-mono">
+          <div>
+            <strong>Debug Info:</strong>
+          </div>
+          <div>Documents: {documents.length}</div>
+          <div>Analysis: {analysis ? "EXISTS" : "NULL"}</div>
+          <div>Analyzing: {analyzing ? "YES" : "NO"}</div>
+          <div>Show Analyze Button: {documents.length > 0 && !analysis && !analyzing ? "YES" : "NO"}</div>
+        </div>
+      )}
+
       <div>
         <div className="flex items-center gap-4 mb-4">
           <Button variant="ghost" size="icon" asChild>
@@ -360,25 +379,30 @@ export function CustomTenderDetailClient({
       )}
 
       {documents.length > 0 && !analysis && !analyzing && (
-        <Alert className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900">
-          <AlertCircle className="h-4 w-4 text-yellow-600" />
-          <AlertDescription className="flex items-center justify-between gap-4">
-            <span className="text-yellow-900 dark:text-yellow-100">
-              This tender hasn't been analyzed yet. Click the button to generate AI insights and form fields.
-            </span>
+        <Alert className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900 border-2">
+          <AlertCircle className="h-5 w-5 text-yellow-600" />
+          <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex-1">
+              <div className="font-semibold text-yellow-900 dark:text-yellow-100 mb-1">Analysis Required</div>
+              <span className="text-yellow-900 dark:text-yellow-100">
+                This tender has documents but hasn't been analyzed yet. Click the button to generate AI insights and
+                form fields.
+              </span>
+            </div>
             <Button
-              size="sm"
+              size="lg"
               onClick={() => handleManualAnalysis(documents[0].blob_url || documents[0].storage_path)}
               disabled={analyzing}
+              className="flex-shrink-0 bg-yellow-600 hover:bg-yellow-700 text-white"
             >
               {analyzing ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                   Analyzing...
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4 mr-2" />
+                  <Sparkles className="h-5 w-5 mr-2" />
                   Analyze Now
                 </>
               )}
