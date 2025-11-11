@@ -50,6 +50,8 @@ export default function NewTenderPage() {
       })
 
       if (!blobResponse.ok) {
+        const errorText = await blobResponse.text()
+        console.error("[v0] Blob upload error:", errorText)
         throw new Error("Failed to upload file")
       }
 
@@ -63,19 +65,25 @@ export default function NewTenderPage() {
       })
 
       console.log("[v0] Step 2: Analyzing document with AI...")
-
       const analysisResponse = await fetch("/api/analyze-tender", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentUrl: url }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          documentUrl: url,
+          documentText: "", // Empty string for URL-based analysis
+        }),
       })
 
       if (!analysisResponse.ok) {
-        throw new Error("Failed to analyze document")
+        const errorData = await analysisResponse.json().catch(() => ({ error: "Unknown error" }))
+        console.error("[v0] Analysis error:", errorData)
+        throw new Error(errorData.error || `Analysis failed with status ${analysisResponse.status}`)
       }
 
       const analysisData = await analysisResponse.json()
-      console.log("[v0] Analysis complete:", analysisData)
+      console.log("[v0] Analysis complete")
       setAnalysis(analysisData)
 
       console.log("[v0] Step 3: Creating tender record...")

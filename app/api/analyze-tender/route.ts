@@ -1,4 +1,4 @@
-import { generateObject, generateText } from "ai"
+import { generateObject } from "ai"
 import { z } from "zod"
 import { getAnalysisPrompt } from "@/lib/prompts"
 
@@ -189,37 +189,44 @@ export async function POST(request: Request) {
       return Response.json({ error: "Either document text or document URL is required" }, { status: 400 })
     }
 
-    let textToAnalyze = documentText
+    const textToAnalyze = documentText
 
-    if (!documentText && documentUrl) {
-      console.log("[v0] Fetching PDF from URL:", documentUrl)
+    if (documentUrl && (!documentText || documentText === "")) {
+      console.log("[v0] Using PDF URL for direct analysis with gpt-4o")
+      console.log("[v0] PDF URL:", documentUrl)
+
       try {
+        console.log("[v0] Fetching PDF from blob storage...")
         const pdfResponse = await fetch(documentUrl)
         if (!pdfResponse.ok) {
           throw new Error(`Failed to fetch PDF: ${pdfResponse.status}`)
         }
 
         const arrayBuffer = await pdfResponse.arrayBuffer()
-        console.log("[v0] PDF downloaded, size:", arrayBuffer.byteLength, "bytes")
-
-        console.log("[v0] Using OpenAI to extract text from PDF...")
-
         const base64Pdf = Buffer.from(arrayBuffer).toString("base64")
-        const dataUrl = `data:application/pdf;base64,${base64Pdf}`
+        console.log("[v0] PDF converted to base64, size:", base64Pdf.length, "characters")
 
-        const extractionResult = await generateText({
+        const basePrompt = getAnalysisPrompt()
+
+        console.log("[v0] Analyzing PDF with gpt-4o multimodal capabilities...")
+        const startTime = Date.now()
+
+        const result = await generateObject({
           model: "gpt-4o",
+          schema: tenderAnalysisSchema,
           messages: [
             {
               role: "user",
               content: [
                 {
                   type: "text",
-                  text: "Extract all text content from this PDF document. Return only the extracted text, no additional commentary.",
+                  text: `${basePrompt}
+
+Analyze the tender PDF document attached and provide your comprehensive analysis in the exact JSON format specified.`,
                 },
                 {
                   type: "file",
-                  data: dataUrl,
+                  data: `data:application/pdf;base64,${base64Pdf}`,
                   mimeType: "application/pdf",
                 },
               ],
@@ -227,33 +234,99 @@ export async function POST(request: Request) {
           ],
         })
 
-        textToAnalyze = extractionResult.text
-        console.log("[v0] Extracted text length:", textToAnalyze.length, "characters")
+        const endTime = Date.now()
+        console.log("[v0] PDF analysis completed in", (endTime - startTime) / 1000, "seconds")
 
-        if (textToAnalyze.length < 100) {
-          throw new Error("Extracted text is too short - PDF might be scanned or image-based")
+        const analysis = result.object
+        console.log("[v0] Analysis successful from PDF")
+
+        if (!analysis.action_plan) analysis.action_plan = { critical_dates: [], preparation_tasks: [] }
+        if (!analysis.formFields) analysis.formFields = []
+        if (!analysis.financial_requirements) {
+          analysis.financial_requirements = {
+            bank_guarantee: "Not specified",
+            performance_bond: "Not specified",
+            insurance_requirements: [],
+            financial_turnover: "Not specified",
+            audited_financials: "Not specified",
+            payment_terms: "Not specified",
+          }
         }
-      } catch (extractError: any) {
-        console.error("[v0] PDF text extraction failed:", extractError.message)
+        if (!analysis.legal_registration) {
+          analysis.legal_registration = {
+            cidb_grading: "Not specified",
+            cipc_registration: "Not specified",
+            professional_registration: [],
+            joint_venture_requirements: "Not specified",
+            subcontracting_limitations: "Not specified",
+          }
+        }
+        if (!analysis.labour_employment) {
+          analysis.labour_employment = {
+            local_content: "Not specified",
+            subcontracting_limit: "Not specified",
+            labour_composition: "Not specified",
+            skills_development: "Not specified",
+            employment_equity: "Not specified",
+          }
+        }
+        if (!analysis.technical_specs) {
+          analysis.technical_specs = {
+            minimum_experience: "Not specified",
+            project_references: "Not specified",
+            key_personnel: [],
+            equipment_resources: [],
+            methodology_requirements: "Not specified",
+          }
+        }
+        if (!analysis.submission_requirements) {
+          analysis.submission_requirements = {
+            number_of_copies: "Not specified",
+            formatting_requirements: "Not specified",
+            submission_address: "Not specified",
+            query_deadline: "Not specified",
+            late_submission_policy: "Not specified",
+          }
+        }
+        if (!analysis.penalties_payment) {
+          analysis.penalties_payment = {
+            late_completion_penalty: "Not specified",
+            non_performance_penalty: "Not specified",
+            warranty_period: "Not specified",
+            payment_schedule: "Not specified",
+            retention_amount: "Not specified",
+            payment_timeframe: "Not specified",
+          }
+        }
+
+        console.log("[v0] ========================================")
+        console.log("[v0] ANALYSIS RESULTS")
+        console.log("[v0] ========================================")
+        console.log("[v0] Tender title:", analysis.tender_summary?.title)
+        console.log("[v0] Requirements count:", analysis.compliance_summary?.requirements?.length || 0)
+        console.log("[v0] Form fields count:", analysis.formFields?.length || 0)
+        console.log("[v0] ========================================")
+
+        return Response.json(analysis)
+      } catch (pdfError: any) {
+        console.error("[v0] PDF analysis error:", pdfError)
         return Response.json(
           {
-            error: "Failed to extract text from PDF",
-            details: extractError.message,
-            errorType: "extraction_error",
+            error: "Failed to analyze PDF from URL",
+            details: pdfError.message,
+            errorType: "pdf_analysis_error",
           },
-          { status: 400 },
+          { status: 500 },
         )
       }
     }
 
     const truncatedText = textToAnalyze!.substring(0, 100000)
-    console.log("[v0] Using truncated text length:", truncatedText.length, "characters")
-    console.log("[v0] Truncation applied:", textToAnalyze!.length > 100000 ? "YES" : "NO")
+    console.log("[v0] Using text-based analysis, length:", truncatedText.length, "characters")
 
     const basePrompt = getAnalysisPrompt()
 
     console.log("[v0] Calling AI with model: gpt-4o-mini")
-    console.log("[v0] Using custom prompt:", process.env.USE_CUSTOM_PROMPT === "true" ? "YES" : "NO")
 
     let analysis
     try {
