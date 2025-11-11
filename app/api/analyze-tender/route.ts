@@ -207,8 +207,10 @@ export async function POST(request: Request) {
         const base64Pdf = Buffer.from(pdfBuffer).toString("base64")
         console.log("[v0] PDF fetched and encoded to base64, size:", (base64Pdf.length / 1024).toFixed(2), "KB")
 
-        console.log("[v0] Step 2: Using OpenAI GPT-4o vision API to extract text from PDF...")
+        console.log("[v0] Step 2: Using OpenAI GPT-4o to extract text from PDF...")
+        console.log("[v0] Using multi-turn approach for better extraction...")
 
+        // Try extraction with explicit instructions for multi-page PDFs
         const extractionResult = await generateText({
           model: "openai/gpt-4o",
           messages: [
@@ -217,14 +219,22 @@ export async function POST(request: Request) {
               content: [
                 {
                   type: "text",
-                  text: `Extract ALL text content from this tender document PDF. Include:
-- All headings, sections, and paragraphs
-- Requirements and specifications  
-- Dates, values, and contact information
-- Terms and conditions
-- Any forms or tables
+                  text: `You are analyzing a South African government tender document PDF. This is a MULTI-PAGE document.
 
-Return ONLY the extracted text content, nothing else. Be thorough and capture every piece of text you can see.`,
+INSTRUCTIONS:
+1. Read through EVERY PAGE of this PDF document
+2. Extract ALL text content from every page
+3. Include ALL sections: cover page, table of contents, specifications, terms, conditions, forms, schedules, annexures
+4. Capture ALL important information: tender numbers, dates, requirements, specifications, pricing schedules, compliance requirements
+5. Preserve the document structure and section headings
+6. Include all fine print and terms and conditions
+7. Don't skip any pages - this is critical
+
+If this is a scanned/image-based PDF:
+- Use OCR to extract all visible text
+- Be thorough - extract text from tables, forms, and fine print
+
+Return the complete extracted text with clear section markers. This is for a tender analysis system, so completeness is critical.`,
                 },
                 {
                   type: "image",
@@ -233,15 +243,27 @@ Return ONLY the extracted text content, nothing else. Be thorough and capture ev
               ],
             },
           ],
+          maxTokens: 16000, // Increased token limit for longer documents
         })
 
         textToAnalyze = extractionResult.text
         console.log("[v0] ✓ Text extracted successfully")
         console.log("[v0] Extracted text length:", textToAnalyze.length, "characters")
-        console.log("[v0] First 500 characters:", textToAnalyze.substring(0, 500))
+        console.log("[v0] First 1000 characters:", textToAnalyze.substring(0, 1000))
 
-        if (!textToAnalyze || textToAnalyze.length < 100) {
-          throw new Error("Insufficient text extracted from PDF - only got " + textToAnalyze.length + " characters")
+        if (!textToAnalyze || textToAnalyze.length < 50) {
+          throw new Error(
+            `Insufficient text extracted from PDF - only got ${textToAnalyze?.length || 0} characters. The PDF might be corrupted, password-protected, or contain only images without text.`,
+          )
+        }
+
+        if (textToAnalyze.length < 500) {
+          console.warn("[v0] ⚠️ WARNING: Extracted text is quite short (" + textToAnalyze.length + " characters)")
+          console.warn("[v0] This might indicate:")
+          console.warn("[v0] - A scanned/image-only PDF")
+          console.warn("[v0] - Only first page was extracted")
+          console.warn("[v0] - PDF has limited text content")
+          console.warn("[v0] Proceeding with analysis anyway...")
         }
       } catch (extractError: any) {
         console.error("[v0] ========================================")
@@ -257,20 +279,20 @@ Return ONLY the extracted text content, nothing else. Be thorough and capture ev
             error: "Failed to extract text from PDF",
             errorType: "pdf_extraction_error",
             details: extractError?.message || "Could not read PDF content",
-            hint: "The PDF might be scanned/image-based, corrupted, or password-protected. Please try uploading a text-based PDF.",
+            hint: "The PDF might be scanned/image-based, corrupted, or password-protected. Try: 1) Converting scanned PDFs to text-based PDFs, 2) Ensuring the PDF is not password-protected, 3) Using a different PDF file.",
           },
           { status: 500 },
         )
       }
     }
 
-    if (!textToAnalyze || textToAnalyze.length < 100) {
+    if (!textToAnalyze || textToAnalyze.length < 50) {
       console.error("[v0] Text too short for analysis:", textToAnalyze?.length || 0, "characters")
       return Response.json(
         {
           error: "Document text is too short to analyze",
           errorType: "insufficient_content",
-          details: `Only ${textToAnalyze?.length || 0} characters available. Need at least 100 characters.`,
+          details: `Only ${textToAnalyze?.length || 0} characters available. Need at least 50 characters for basic analysis.`,
         },
         { status: 400 },
       )
@@ -281,7 +303,7 @@ Return ONLY the extracted text content, nothing else. Be thorough and capture ev
 
     const basePrompt = getAnalysisPrompt()
 
-    console.log("[v0] Step 2: Calling AI with model: openai/gpt-4o-mini for structured analysis")
+    console.log("[v0] Step 3: Calling AI with model: openai/gpt-4o-mini for structured analysis")
 
     let analysis
     try {
