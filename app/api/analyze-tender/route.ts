@@ -1,4 +1,4 @@
-import { generateObject } from "ai"
+import { generateObject, generateText } from "ai"
 import { z } from "zod"
 import { getAnalysisPrompt } from "@/lib/prompts"
 
@@ -176,29 +176,79 @@ const tenderAnalysisSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const { documentText, pdfFields } = await request.json()
+    const { documentText, documentUrl, pdfFields } = await request.json()
 
     console.log("[v0] ========================================")
     console.log("[v0] TENDER ANALYSIS REQUEST")
     console.log("[v0] ========================================")
-    console.log("[v0] Document text length:", documentText?.length, "characters")
+    console.log("[v0] Document text length:", documentText?.length || 0, "characters")
+    console.log("[v0] Document URL provided:", documentUrl ? "YES" : "NO")
     console.log("[v0] PDF fields provided:", pdfFields?.length || 0)
 
-    if (documentText) {
-      console.log("[v0] First 1000 characters of document text:")
-      console.log(documentText.substring(0, 1000))
-      console.log("[v0] ...")
-      console.log("[v0] Last 500 characters of document text:")
-      console.log(documentText.substring(Math.max(0, documentText.length - 500)))
+    if (!documentText && !documentUrl) {
+      return Response.json({ error: "Either document text or document URL is required" }, { status: 400 })
     }
 
-    if (!documentText) {
-      return Response.json({ error: "Document text is required" }, { status: 400 })
+    let textToAnalyze = documentText
+
+    if (!documentText && documentUrl) {
+      console.log("[v0] Fetching PDF from URL:", documentUrl)
+      try {
+        const pdfResponse = await fetch(documentUrl)
+        if (!pdfResponse.ok) {
+          throw new Error(`Failed to fetch PDF: ${pdfResponse.status}`)
+        }
+
+        const arrayBuffer = await pdfResponse.arrayBuffer()
+        console.log("[v0] PDF downloaded, size:", arrayBuffer.byteLength, "bytes")
+
+        console.log("[v0] Using OpenAI to extract text from PDF...")
+
+        const base64Pdf = Buffer.from(arrayBuffer).toString("base64")
+        const dataUrl = `data:application/pdf;base64,${base64Pdf}`
+
+        const extractionResult = await generateText({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Extract all text content from this PDF document. Return only the extracted text, no additional commentary.",
+                },
+                {
+                  type: "file",
+                  data: dataUrl,
+                  mimeType: "application/pdf",
+                },
+              ],
+            },
+          ],
+        })
+
+        textToAnalyze = extractionResult.text
+        console.log("[v0] Extracted text length:", textToAnalyze.length, "characters")
+
+        if (textToAnalyze.length < 100) {
+          throw new Error("Extracted text is too short - PDF might be scanned or image-based")
+        }
+      } catch (extractError: any) {
+        console.error("[v0] PDF text extraction failed:", extractError.message)
+        return Response.json(
+          {
+            error: "Failed to extract text from PDF",
+            details: extractError.message,
+            errorType: "extraction_error",
+          },
+          { status: 400 },
+        )
+      }
     }
 
-    const truncatedText = documentText.substring(0, 100000)
+    const truncatedText = textToAnalyze!.substring(0, 100000)
     console.log("[v0] Using truncated text length:", truncatedText.length, "characters")
-    console.log("[v0] Truncation applied:", documentText.length > 100000 ? "YES" : "NO")
+    console.log("[v0] Truncation applied:", textToAnalyze!.length > 100000 ? "YES" : "NO")
 
     const basePrompt = getAnalysisPrompt()
 
