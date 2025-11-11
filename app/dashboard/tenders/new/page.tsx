@@ -18,17 +18,9 @@ export default function NewTenderPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [analyzing, setAnalyzing] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [analysis, setAnalysis] = useState<any>(null)
-
-  const [formData, setFormData] = useState({
-    title: "",
-    organization: "",
-    deadline: "",
-    value: "",
-    description: "",
-  })
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -44,106 +36,83 @@ export default function NewTenderPage() {
     }
 
     setUploadedFile(file)
-    setAnalyzing(true)
-
-    toast({
-      title: "Analyzing Document",
-      description: "AI is extracting tender details from your PDF...",
-    })
+    setLoading(true)
 
     try {
-      console.log("[v0] Starting PDF upload and analysis...")
+      console.log("[v0] Step 1: Uploading PDF to blob storage...")
 
-      // Upload to /api/custom-tenders/upload which handles everything
       const uploadFormData = new FormData()
       uploadFormData.append("file", file)
-      uploadFormData.append("title", file.name.replace(".pdf", ""))
-      uploadFormData.append("description", "Uploaded tender document")
 
-      const uploadResponse = await fetch("/api/custom-tenders/upload", {
+      const blobResponse = await fetch("/api/upload-to-blob", {
         method: "POST",
         body: uploadFormData,
       })
 
-      if (!uploadResponse.ok) {
-        const error = await uploadResponse.json()
-        throw new Error(error.error || "Upload failed")
+      if (!blobResponse.ok) {
+        throw new Error("Failed to upload file")
       }
 
-      const result = await uploadResponse.json()
-      console.log("[v0] Upload and analysis complete:", result)
-
-      // Redirect to the created tender
-      toast({
-        title: "Tender Created Successfully",
-        description: "AI has analyzed your document and extracted all details.",
-      })
-
-      router.push(`/dashboard/custom-tenders/${result.tender.id}`)
-    } catch (error: any) {
-      console.error("[v0] Upload/analysis error:", error)
+      const { url } = await blobResponse.json()
+      console.log("[v0] File uploaded to blob:", url)
+      setBlobUrl(url)
 
       toast({
-        title: "Analysis Failed",
-        description: error.message || "Could not analyze the document. Please try again.",
-        variant: "destructive",
+        title: "Analyzing Document",
+        description: "AI is extracting tender details...",
       })
 
-      // Reset file so user can try again
-      setUploadedFile(null)
-      setAnalyzing(false)
-    }
-  }
+      console.log("[v0] Step 2: Analyzing document with AI...")
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+      const analysisResponse = await fetch("/api/analyze-tender", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentUrl: url }),
+      })
 
-    try {
+      if (!analysisResponse.ok) {
+        throw new Error("Failed to analyze document")
+      }
+
+      const analysisData = await analysisResponse.json()
+      console.log("[v0] Analysis complete:", analysisData)
+      setAnalysis(analysisData)
+
+      console.log("[v0] Step 3: Creating tender record...")
+
       const result = await createCustomTender({
-        title: formData.title,
-        organization: formData.organization,
-        deadline: formData.deadline,
-        value: formData.value,
-        description: formData.description,
-        uploadedFile: uploadedFile || undefined,
-        analysis: analysis || undefined,
+        title: analysisData.tender_summary?.title || file.name.replace(".pdf", ""),
+        organization: analysisData.tender_summary?.entity || "Unknown Organization",
+        deadline: analysisData.tender_summary?.closing_date || "",
+        value: analysisData.tender_summary?.contract_duration || "",
+        description: analysisData.tender_summary?.description || "",
+        category: "Custom",
+        uploadedFile: file,
+        analysis: analysisData,
       })
 
       if (result.success) {
-        let description = "Your custom tender has been added to My Tenders with status 'in-progress'"
-
-        if (result.documentError) {
-          description += `\n\nDocument Error: ${result.documentError}`
-        } else if (result.documentSaved) {
-          description += "\n\nDocument uploaded successfully"
-        }
-
-        if (result.analysisError) {
-          description += `\n\nAnalysis Error: ${result.analysisError}`
-        } else if (result.analysisSaved) {
-          description += "\n\nAnalysis saved successfully"
-        }
-
         toast({
-          title: "Tender Created",
-          description,
+          title: "Tender Created Successfully",
+          description: "AI has analyzed your document and extracted all details.",
         })
 
         router.push(`/dashboard/custom-tenders/${result.tenderId}`)
       } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to create tender",
-          variant: "destructive",
-        })
+        throw new Error(result.error || "Failed to create tender")
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error("[v0] Error during upload/analysis:", error)
+
       toast({
-        title: "Error",
-        description: "Failed to create tender: " + (error as Error).message,
+        title: "Upload Failed",
+        description: error.message || "Could not process the document. Please try again.",
         variant: "destructive",
       })
+
+      setUploadedFile(null)
+      setBlobUrl(null)
+      setAnalysis(null)
     } finally {
       setLoading(false)
     }
@@ -176,13 +145,13 @@ export default function NewTenderPage() {
               <Label
                 htmlFor="pdf-upload"
                 className={`flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer transition-colors ${
-                  analyzing
+                  loading
                     ? "bg-muted text-muted-foreground cursor-not-allowed"
                     : "bg-primary text-primary-foreground hover:bg-primary/90"
                 }`}
               >
-                {analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                {analyzing ? "Analyzing..." : uploadedFile ? "Change Document" : "Upload PDF"}
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {loading ? "Processing..." : uploadedFile ? "Change Document" : "Upload PDF"}
               </Label>
               <Input
                 id="pdf-upload"
@@ -190,9 +159,9 @@ export default function NewTenderPage() {
                 accept="application/pdf"
                 onChange={handleFileUpload}
                 className="hidden"
-                disabled={analyzing}
+                disabled={loading}
               />
-              {uploadedFile && !analyzing && (
+              {uploadedFile && !loading && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <FileText className="h-4 w-4" />
                   {uploadedFile.name}
@@ -200,20 +169,20 @@ export default function NewTenderPage() {
               )}
             </div>
 
-            {analyzing && (
+            {loading && (
               <Alert className="border-blue-500/50 bg-blue-500/10">
                 <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
                 <AlertDescription className="text-blue-500">
-                  Analyzing your tender document with AI... This may take a moment.
+                  Processing your tender document... This may take a moment.
                 </AlertDescription>
               </Alert>
             )}
 
-            {uploadedFile && !analyzing && (
+            {uploadedFile && !loading && analysis && (
               <Alert className="border-green-500/50 bg-green-500/10">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
                 <AlertDescription className="text-green-500">
-                  PDF uploaded and analyzed successfully! You'll be redirected to the tender details page.
+                  Document analyzed successfully! Redirecting to tender details...
                 </AlertDescription>
               </Alert>
             )}
