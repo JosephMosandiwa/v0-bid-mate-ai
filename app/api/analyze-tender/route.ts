@@ -1,4 +1,4 @@
-import { generateObject } from "ai"
+import { generateObject, generateText } from "ai"
 import { z } from "zod"
 import { getAnalysisPrompt } from "@/lib/prompts"
 
@@ -192,60 +192,73 @@ export async function POST(request: Request) {
     let textToAnalyze = documentText
 
     if (documentUrl && (!documentText || documentText === "")) {
-      console.log("[v0] Fetching PDF from URL to extract text...")
+      console.log("[v0] No text provided - extracting from PDF URL...")
+      console.log("[v0] PDF URL:", documentUrl)
 
       try {
-        // Fetch the PDF from the URL
-        const pdfResponse = await fetch(documentUrl)
-        if (!pdfResponse.ok) {
-          throw new Error(`Failed to fetch PDF: ${pdfResponse.statusText}`)
+        console.log("[v0] Step 1: Using OpenAI GPT-4o to extract text from PDF...")
+
+        const extractionResult = await generateText({
+          model: "openai/gpt-4o",
+          prompt: `Extract ALL text content from this tender document PDF. Include:
+- All headings, sections, and paragraphs
+- Requirements and specifications
+- Dates, values, and contact information
+- Terms and conditions
+- Any forms or tables
+
+Return ONLY the extracted text content, nothing else.
+
+PDF URL: ${documentUrl}`,
+        })
+
+        textToAnalyze = extractionResult.text
+        console.log("[v0] ✓ Text extracted successfully")
+        console.log("[v0] Extracted text length:", textToAnalyze.length, "characters")
+        console.log("[v0] First 500 characters:", textToAnalyze.substring(0, 500))
+
+        if (!textToAnalyze || textToAnalyze.length < 100) {
+          throw new Error("Insufficient text extracted from PDF - only got " + textToAnalyze.length + " characters")
         }
+      } catch (extractError: any) {
+        console.error("[v0] ========================================")
+        console.error("[v0] PDF TEXT EXTRACTION FAILED")
+        console.error("[v0] ========================================")
+        console.error("[v0] Error type:", extractError?.constructor?.name)
+        console.error("[v0] Error message:", extractError?.message)
+        console.error("[v0] Error details:", extractError?.cause || extractError?.response)
+        console.error("[v0] ========================================")
 
-        const pdfBuffer = await pdfResponse.arrayBuffer()
-        console.log("[v0] PDF fetched, size:", pdfBuffer.byteLength, "bytes")
-
-        // Use pdf-lib to extract text (it's already in package.json and works in serverless)
-        const { PDFDocument } = await import("pdf-lib")
-        const pdfDoc = await PDFDocument.load(pdfBuffer)
-        const pages = pdfDoc.getPages()
-
-        console.log("[v0] PDF has", pages.length, "pages")
-
-        // Extract text using pdf-lib's built-in methods
-        let extractedText = ""
-        for (let i = 0; i < pages.length; i++) {
-          const page = pages[i]
-          // Get all text content from the page
-          const textContent = page.node.Contents()
-          if (textContent) {
-            extractedText += `\n--- Page ${i + 1} ---\n`
-            // This is a simplified extraction - pdf-lib doesn't have direct text extraction
-            // but we can try to get the content
-          }
-        }
-
-        // If pdf-lib extraction didn't work well, fall back to sending as document reference
-        if (!extractedText || extractedText.length < 100) {
-          console.log("[v0] Could not extract text from PDF with pdf-lib")
-          console.log("[v0] Using document URL as reference for AI analysis")
-          textToAnalyze = `This is a PDF tender document. The document URL is: ${documentUrl}\n\nPlease note: The actual PDF content could not be extracted. Provide a general analysis structure with placeholders.`
-        } else {
-          textToAnalyze = extractedText
-          console.log("[v0] Extracted text length:", textToAnalyze.length)
-        }
-      } catch (pdfError: any) {
-        console.error("[v0] PDF text extraction error:", pdfError.message)
-        // Fall back to document reference
-        textToAnalyze = `This is a PDF tender document. The document URL is: ${documentUrl}\n\nPlease note: The actual PDF content could not be extracted. Provide a general analysis structure with placeholders where specific information cannot be determined.`
+        return Response.json(
+          {
+            error: "Failed to extract text from PDF",
+            errorType: "pdf_extraction_error",
+            details: extractError?.message || "Could not read PDF content",
+            hint: "The PDF might be scanned/image-based, corrupted, or password-protected. Please try uploading a text-based PDF.",
+          },
+          { status: 500 },
+        )
       }
     }
 
+    if (!textToAnalyze || textToAnalyze.length < 100) {
+      console.error("[v0] Text too short for analysis:", textToAnalyze?.length || 0, "characters")
+      return Response.json(
+        {
+          error: "Document text is too short to analyze",
+          errorType: "insufficient_content",
+          details: `Only ${textToAnalyze?.length || 0} characters available. Need at least 100 characters.`,
+        },
+        { status: 400 },
+      )
+    }
+
     const truncatedText = textToAnalyze!.substring(0, 100000)
-    console.log("[v0] Using text-based analysis, length:", truncatedText.length, "characters")
+    console.log("[v0] Using text for analysis, length:", truncatedText.length, "characters")
 
     const basePrompt = getAnalysisPrompt()
 
-    console.log("[v0] Calling AI with model: gpt-4o-mini")
+    console.log("[v0] Step 2: Calling AI with model: openai/gpt-4o-mini for structured analysis")
 
     let analysis
     try {
@@ -253,7 +266,7 @@ export async function POST(request: Request) {
       const startTime = Date.now()
 
       const result = await generateObject({
-        model: "gpt-4o-mini",
+        model: "openai/gpt-4o-mini",
         schema: tenderAnalysisSchema,
         prompt: `${basePrompt}
 

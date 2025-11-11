@@ -65,56 +65,13 @@ export default function NewTenderPage() {
       console.log("[v0] Blob URL:", url)
       setBlobUrl(url)
 
-      console.log("[v0] Step 2: Extracting text from PDF with PDF.js...")
-      let extractedText = ""
-      let textExtractionSuccess = false
-
-      try {
-        const pdfjsLib = await import("pdfjs-dist")
-        // Use the npm package version worker
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js`
-
-        const fileBuffer = await file.arrayBuffer()
-        console.log("[v0] Loading PDF document...")
-        const pdf = await pdfjsLib.getDocument({ data: fileBuffer }).promise
-
-        console.log("[v0] ✓ PDF loaded, total pages:", pdf.numPages)
-
-        // Extract text from all pages
-        for (let i = 1; i <= pdf.numPages; i++) {
-          console.log("[v0] Extracting text from page", i, "/", pdf.numPages)
-          const page = await pdf.getPage(i)
-          const textContent = await page.getTextContent()
-          const pageText = textContent.items.map((item: any) => item.str).join(" ")
-          extractedText += `\n${pageText}\n`
-        }
-
-        console.log("[v0] ✓ Text extraction complete")
-        console.log("[v0] Extracted text length:", extractedText.length, "characters")
-
-        if (extractedText.trim().length > 100) {
-          textExtractionSuccess = true
-          console.log("[v0] ✓ Sufficient text extracted")
-        } else {
-          console.warn("[v0] ⚠ Very little text extracted - PDF might be scanned")
-        }
-      } catch (extractError: any) {
-        console.error("[v0] ❌ PDF text extraction failed:")
-        console.error("[v0] Error type:", extractError.name)
-        console.error("[v0] Error message:", extractError.message)
-        console.error("[v0] This might be a scanned PDF or image-based document")
-      }
-
       toast({
         title: "Analyzing Document",
-        description: "AI is extracting tender details...",
+        description: "AI is reading and analyzing your tender document...",
       })
 
-      console.log("[v0] Step 3: Analyzing document with AI...")
-      console.log("[v0] Sending to analyze-tender API:")
-      console.log("[v0] - Has blob URL:", !!url)
-      console.log("[v0] - Has extracted text:", textExtractionSuccess)
-      console.log("[v0] - Text length:", extractedText.length)
+      console.log("[v0] Step 2: Sending PDF to AI for direct analysis...")
+      console.log("[v0] Using OpenAI GPT-4o to read PDF directly from URL")
 
       const analysisResponse = await fetch("/api/analyze-tender", {
         method: "POST",
@@ -122,8 +79,8 @@ export default function NewTenderPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          documentText: extractedText,
-          documentUrl: url, // Send as fallback
+          documentUrl: url,
+          documentText: "", // Let the API handle PDF reading
         }),
       })
 
@@ -145,7 +102,7 @@ export default function NewTenderPage() {
       console.log("[v0] Analysis has formFields:", analysisData.formFields?.length || 0)
       setAnalysis(analysisData)
 
-      console.log("[v0] Step 4: Creating tender record with analysis...")
+      console.log("[v0] Step 3: Creating tender record with analysis...")
 
       const result = await createCustomTender({
         title: analysisData.tender_summary?.title || file.name.replace(".pdf", ""),
@@ -155,7 +112,7 @@ export default function NewTenderPage() {
         description: analysisData.tender_summary?.description || "",
         category: "Custom",
         uploadedFile: file,
-        analysis: analysisData, // Pass the full analysis
+        analysis: analysisData,
       })
 
       console.log("[v0] createCustomTender result:", result)
