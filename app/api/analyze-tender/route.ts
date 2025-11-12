@@ -184,6 +184,8 @@ export async function POST(request: Request) {
     console.log("[v0] Document text length:", documentText?.length || 0, "characters")
     console.log("[v0] Document URL provided:", documentUrl ? "YES" : "NO")
     console.log("[v0] PDF fields provided:", pdfFields?.length || 0)
+    console.log("[v0] OPENAI_API_KEY present:", !!process.env.OPENAI_API_KEY)
+    console.log("[v0] API key length:", process.env.OPENAI_API_KEY?.length || 0)
 
     if (!documentText && !documentUrl) {
       return Response.json({ error: "Either document text or document URL is required" }, { status: 400 })
@@ -219,22 +221,7 @@ export async function POST(request: Request) {
               content: [
                 {
                   type: "text",
-                  text: `You are analyzing a South African government tender document PDF. This is a MULTI-PAGE document.
-
-INSTRUCTIONS:
-1. Read through EVERY PAGE of this PDF document
-2. Extract ALL text content from every page
-3. Include ALL sections: cover page, table of contents, specifications, terms, conditions, forms, schedules, annexures
-4. Capture ALL important information: tender numbers, dates, requirements, specifications, pricing schedules, compliance requirements
-5. Preserve the document structure and section headings
-6. Include all fine print and terms and conditions
-7. Don't skip any pages - this is critical
-
-If this is a scanned/image-based PDF:
-- Use OCR to extract all visible text
-- Be thorough - extract text from tables, forms, and fine print
-
-Return the complete extracted text with clear section markers. This is for a tender analysis system, so completeness is critical.`,
+                  text: `Extract ALL text content from this tender document PDF. Read every page and return the complete text.`,
                 },
                 {
                   type: "image",
@@ -249,12 +236,10 @@ Return the complete extracted text with clear section markers. This is for a ten
         textToAnalyze = extractionResult.text
         console.log("[v0] ✓ Text extracted successfully")
         console.log("[v0] Extracted text length:", textToAnalyze.length, "characters")
-        console.log("[v0] First 1000 characters:", textToAnalyze.substring(0, 1000))
+        console.log("[v0] First 500 characters:", textToAnalyze.substring(0, 500))
 
         if (!textToAnalyze || textToAnalyze.length < 50) {
-          throw new Error(
-            `Insufficient text extracted from PDF - only got ${textToAnalyze?.length || 0} characters. The PDF might be corrupted, password-protected, or contain only images without text.`,
-          )
+          throw new Error(`Insufficient text extracted from PDF - only got ${textToAnalyze?.length || 0} characters.`)
         }
 
         if (textToAnalyze.length < 500) {
@@ -292,7 +277,7 @@ Return the complete extracted text with clear section markers. This is for a ten
         {
           error: "Document text is too short to analyze",
           errorType: "insufficient_content",
-          details: `Only ${textToAnalyze?.length || 0} characters available. Need at least 50 characters for basic analysis.`,
+          details: `Only ${textToAnalyze?.length || 0} characters available.`,
         },
         { status: 400 },
       )
@@ -308,6 +293,10 @@ Return the complete extracted text with clear section markers. This is for a ten
     let analysis
     try {
       console.log("[v0] Starting AI generation...")
+      console.log("[v0] Model: openai/gpt-4o-mini")
+      console.log("[v0] Schema fields:", Object.keys(tenderAnalysisSchema.shape))
+      console.log("[v0] Prompt length:", basePrompt.length + truncatedText.length, "characters")
+
       const startTime = Date.now()
 
       const result = await generateObject({
@@ -333,7 +322,7 @@ Now analyze the above tender document and provide your comprehensive analysis in
 
       analysis = result.object
 
-      console.log("[v0] Raw AI response received successfully")
+      console.log("[v0] ✓ Raw AI response received successfully")
       console.log("[v0] Response structure:", Object.keys(analysis))
 
       console.log(
