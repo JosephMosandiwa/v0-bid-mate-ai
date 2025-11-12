@@ -1,4 +1,5 @@
 import { generateObject, generateText } from "ai"
+import { openai } from "@ai-sdk/openai" // Import openai provider directly
 import { z } from "zod"
 import { getAnalysisPrompt } from "@/lib/prompts"
 
@@ -187,6 +188,10 @@ export async function POST(request: Request) {
     console.log("[v0] OPENAI_API_KEY present:", !!process.env.OPENAI_API_KEY)
     console.log("[v0] API key length:", process.env.OPENAI_API_KEY?.length || 0)
 
+    if (!process.env.OPENAI_API_KEY) {
+      return Response.json({ error: "OpenAI API key is not configured", errorType: "config_error" }, { status: 500 })
+    }
+
     if (!documentText && !documentUrl) {
       return Response.json({ error: "Either document text or document URL is required" }, { status: 400 })
     }
@@ -210,11 +215,10 @@ export async function POST(request: Request) {
         console.log("[v0] PDF fetched and encoded to base64, size:", (base64Pdf.length / 1024).toFixed(2), "KB")
 
         console.log("[v0] Step 2: Using OpenAI GPT-4o to extract text from PDF...")
-        console.log("[v0] Using multi-turn approach for better extraction...")
+        console.log("[v0] Using direct OpenAI provider...")
 
-        // Try extraction with explicit instructions for multi-page PDFs
         const extractionResult = await generateText({
-          model: "openai/gpt-4o",
+          model: openai("gpt-4o"), // Direct provider with your API key
           messages: [
             {
               role: "user",
@@ -230,7 +234,7 @@ export async function POST(request: Request) {
               ],
             },
           ],
-          maxTokens: 16000, // Increased token limit for longer documents
+          maxTokens: 16000,
         })
 
         textToAnalyze = extractionResult.text
@@ -288,19 +292,19 @@ export async function POST(request: Request) {
 
     const basePrompt = getAnalysisPrompt()
 
-    console.log("[v0] Step 3: Calling AI with model: openai/gpt-4o-mini for structured analysis")
+    console.log("[v0] Step 3: Calling AI with model: gpt-4o-mini for structured analysis")
 
     let analysis
     try {
       console.log("[v0] Starting AI generation...")
-      console.log("[v0] Model: openai/gpt-4o-mini")
+      console.log("[v0] Model: gpt-4o-mini (direct OpenAI SDK)")
       console.log("[v0] Schema fields:", Object.keys(tenderAnalysisSchema.shape))
       console.log("[v0] Prompt length:", basePrompt.length + truncatedText.length, "characters")
 
       const startTime = Date.now()
 
       const result = await generateObject({
-        model: "openai/gpt-4o-mini",
+        model: openai("gpt-4o-mini"), // Direct provider with your API key
         schema: tenderAnalysisSchema,
         prompt: `${basePrompt}
 
