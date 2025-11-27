@@ -1,6 +1,7 @@
-import { generateObject, generateText } from "ai"
+import { generateObject } from "ai"
 import { z } from "zod"
 import { getAnalysisPrompt } from "@/lib/prompts"
+import { Buffer } from "buffer"
 
 const tenderAnalysisSchema = z.object({
   tender_summary: z.object({
@@ -192,7 +193,7 @@ export async function POST(request: Request) {
     let textToAnalyze = documentText
 
     if (documentUrl && (!documentText || documentText === "")) {
-      console.log("[v0] No text provided - extracting from PDF URL...")
+      console.log("[v0] No text provided - extracting from PDF URL using pdf-parse...")
       console.log("[v0] PDF URL:", documentUrl)
 
       try {
@@ -203,44 +204,45 @@ export async function POST(request: Request) {
           throw new Error(`Failed to fetch PDF: ${pdfResponse.status} ${pdfResponse.statusText}`)
         }
 
-        const pdfBuffer = await pdfResponse.arrayBuffer()
-        const base64Pdf = Buffer.from(pdfBuffer).toString("base64")
-        console.log("[v0] PDF fetched and encoded to base64, size:", (base64Pdf.length / 1024).toFixed(2), "KB")
+        const pdfArrayBuffer = await pdfResponse.arrayBuffer()
+        const pdfBuffer = Buffer.from(pdfArrayBuffer)
+        console.log("[v0] PDF fetched successfully, size:", (pdfBuffer.length / 1024).toFixed(2), "KB")
 
-        console.log("[v0] Step 2: Using Vercel AI Gateway to extract text from PDF...")
+        console.log("[v0] Step 2: Extracting text using pdf-parse library...")
 
-        const extractionResult = await generateText({
-          model: "openai/gpt-4o",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: `Extract ALL text content from this tender document PDF. Read every page and return the complete text.`,
-                },
-                {
-                  type: "file",
-                  data: `data:application/pdf;base64,${base64Pdf}`,
-                  mimeType: "application/pdf",
-                },
-              ],
-            },
-          ],
-          maxTokens: 16000,
-        })
+        // Dynamic import of pdf-parse
+        let pdf
+        try {
+          pdf = (await import("pdf-parse")).default
+          console.log("[v0] pdf-parse imported successfully")
+        } catch (importError) {
+          console.error("[v0] Failed to import pdf-parse:", importError)
+          throw new Error("PDF parsing library not available")
+        }
 
-        textToAnalyze = extractionResult.text
-        console.log("[v0] ✓ Text extracted successfully")
+        // Extract text from PDF
+        const pdfData = await pdf(pdfBuffer, { max: 0 }) // Parse all pages
+
+        textToAnalyze = pdfData.text
+        console.log("[v0] ✓ Text extracted successfully using pdf-parse")
+        console.log("[v0] Total pages:", pdfData.numpages)
         console.log("[v0] Extracted text length:", textToAnalyze.length, "characters")
         console.log("[v0] First 500 characters:", textToAnalyze.substring(0, 500))
 
-        if (!textToAnalyze || textToAnalyze.length < 50) {
-          throw new Error(`Insufficient text extracted from PDF - only got ${textToAnalyze?.length || 0} characters.`)
+        // Check if we got meaningful text
+        if (!textToAnalyze || textToAnalyze.trim().length < 50) {
+          throw new Error(
+            `Insufficient text extracted from PDF - only got ${textToAnalyze?.length || 0} characters. The PDF might be scanned/image-based.`,
+          )
         }
 
-        if (textToAnalyze.length < 500) {
-          console.warn("[v0] ⚠️ WARNING: Extracted text is quite short (" + textToAnalyze.length + " characters)")
+        const wordCount = textToAnalyze.trim().split(/\s+/).length
+        const avgWordsPerPage = Math.round(wordCount / pdfData.numpages)
+        console.log("[v0] Word count:", wordCount)
+        console.log("[v0] Average words per page:", avgWordsPerPage)
+
+        if (avgWordsPerPage < 50) {
+          console.warn("[v0] ⚠️ WARNING: Low word density - PDF might be partially scanned")
         }
       } catch (extractError: any) {
         console.error("[v0] PDF TEXT EXTRACTION FAILED")
@@ -251,7 +253,7 @@ export async function POST(request: Request) {
             error: "Failed to extract text from PDF",
             errorType: "pdf_extraction_error",
             details: extractError?.message || "Could not read PDF content",
-            hint: "The PDF might be scanned/image-based, corrupted, or password-protected.",
+            hint: "The PDF might be scanned/image-based, corrupted, or password-protected. Try converting it to a text-based PDF first.",
           },
           { status: 500 },
         )
