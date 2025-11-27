@@ -1,7 +1,7 @@
 import { generateObject } from "ai"
 import { z } from "zod"
 import { getAnalysisPrompt } from "@/lib/prompts"
-import { Buffer } from "buffer"
+import { extractText } from "unpdf"
 
 const tenderAnalysisSchema = z.object({
   tender_summary: z.object({
@@ -193,7 +193,7 @@ export async function POST(request: Request) {
     let textToAnalyze = documentText
 
     if (documentUrl && (!documentText || documentText === "")) {
-      console.log("[v0] No text provided - extracting from PDF URL using pdf-parse...")
+      console.log("[v0] No text provided - extracting from PDF URL using unpdf...")
       console.log("[v0] PDF URL:", documentUrl)
 
       try {
@@ -205,31 +205,18 @@ export async function POST(request: Request) {
         }
 
         const pdfArrayBuffer = await pdfResponse.arrayBuffer()
-        const pdfBuffer = Buffer.from(pdfArrayBuffer)
-        console.log("[v0] PDF fetched successfully, size:", (pdfBuffer.length / 1024).toFixed(2), "KB")
+        console.log("[v0] PDF fetched successfully, size:", (pdfArrayBuffer.byteLength / 1024).toFixed(2), "KB")
 
-        console.log("[v0] Step 2: Extracting text using pdf-parse library...")
+        console.log("[v0] Step 2: Extracting text using unpdf library...")
 
-        // Dynamic import of pdf-parse
-        let pdf
-        try {
-          pdf = (await import("pdf-parse")).default
-          console.log("[v0] pdf-parse imported successfully")
-        } catch (importError) {
-          console.error("[v0] Failed to import pdf-parse:", importError)
-          throw new Error("PDF parsing library not available")
-        }
+        const { text, totalPages } = await extractText(pdfArrayBuffer, { mergePages: true })
 
-        // Extract text from PDF
-        const pdfData = await pdf(pdfBuffer, { max: 0 }) // Parse all pages
-
-        textToAnalyze = pdfData.text
-        console.log("[v0] ✓ Text extracted successfully using pdf-parse")
-        console.log("[v0] Total pages:", pdfData.numpages)
+        textToAnalyze = text
+        console.log("[v0] ✓ Text extracted successfully using unpdf")
+        console.log("[v0] Total pages:", totalPages)
         console.log("[v0] Extracted text length:", textToAnalyze.length, "characters")
         console.log("[v0] First 500 characters:", textToAnalyze.substring(0, 500))
 
-        // Check if we got meaningful text
         if (!textToAnalyze || textToAnalyze.trim().length < 50) {
           throw new Error(
             `Insufficient text extracted from PDF - only got ${textToAnalyze?.length || 0} characters. The PDF might be scanned/image-based.`,
@@ -237,7 +224,7 @@ export async function POST(request: Request) {
         }
 
         const wordCount = textToAnalyze.trim().split(/\s+/).length
-        const avgWordsPerPage = Math.round(wordCount / pdfData.numpages)
+        const avgWordsPerPage = Math.round(wordCount / totalPages)
         console.log("[v0] Word count:", wordCount)
         console.log("[v0] Average words per page:", avgWordsPerPage)
 
