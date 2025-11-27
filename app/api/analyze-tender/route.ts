@@ -1,5 +1,4 @@
 import { generateObject, generateText } from "ai"
-import { openai } from "@ai-sdk/openai" // Import openai provider directly
 import { z } from "zod"
 import { getAnalysisPrompt } from "@/lib/prompts"
 
@@ -185,12 +184,6 @@ export async function POST(request: Request) {
     console.log("[v0] Document text length:", documentText?.length || 0, "characters")
     console.log("[v0] Document URL provided:", documentUrl ? "YES" : "NO")
     console.log("[v0] PDF fields provided:", pdfFields?.length || 0)
-    console.log("[v0] OPENAI_API_KEY present:", !!process.env.OPENAI_API_KEY)
-    console.log("[v0] API key length:", process.env.OPENAI_API_KEY?.length || 0)
-
-    if (!process.env.OPENAI_API_KEY) {
-      return Response.json({ error: "OpenAI API key is not configured", errorType: "config_error" }, { status: 500 })
-    }
 
     if (!documentText && !documentUrl) {
       return Response.json({ error: "Either document text or document URL is required" }, { status: 400 })
@@ -214,11 +207,10 @@ export async function POST(request: Request) {
         const base64Pdf = Buffer.from(pdfBuffer).toString("base64")
         console.log("[v0] PDF fetched and encoded to base64, size:", (base64Pdf.length / 1024).toFixed(2), "KB")
 
-        console.log("[v0] Step 2: Using OpenAI GPT-4o to extract text from PDF...")
-        console.log("[v0] Using direct OpenAI provider...")
+        console.log("[v0] Step 2: Using Vercel AI Gateway to extract text from PDF...")
 
         const extractionResult = await generateText({
-          model: openai("gpt-4o"), // Direct provider with your API key
+          model: "openai/gpt-4o",
           messages: [
             {
               role: "user",
@@ -228,8 +220,9 @@ export async function POST(request: Request) {
                   text: `Extract ALL text content from this tender document PDF. Read every page and return the complete text.`,
                 },
                 {
-                  type: "image",
-                  image: `data:application/pdf;base64,${base64Pdf}`,
+                  type: "file",
+                  data: `data:application/pdf;base64,${base64Pdf}`,
+                  mimeType: "application/pdf",
                 },
               ],
             },
@@ -248,27 +241,17 @@ export async function POST(request: Request) {
 
         if (textToAnalyze.length < 500) {
           console.warn("[v0] ⚠️ WARNING: Extracted text is quite short (" + textToAnalyze.length + " characters)")
-          console.warn("[v0] This might indicate:")
-          console.warn("[v0] - A scanned/image-only PDF")
-          console.warn("[v0] - Only first page was extracted")
-          console.warn("[v0] - PDF has limited text content")
-          console.warn("[v0] Proceeding with analysis anyway...")
         }
       } catch (extractError: any) {
-        console.error("[v0] ========================================")
         console.error("[v0] PDF TEXT EXTRACTION FAILED")
-        console.error("[v0] ========================================")
-        console.error("[v0] Error type:", extractError?.constructor?.name)
         console.error("[v0] Error message:", extractError?.message)
-        console.error("[v0] Error details:", extractError?.cause || extractError?.response)
-        console.error("[v0] ========================================")
 
         return Response.json(
           {
             error: "Failed to extract text from PDF",
             errorType: "pdf_extraction_error",
             details: extractError?.message || "Could not read PDF content",
-            hint: "The PDF might be scanned/image-based, corrupted, or password-protected. Try: 1) Converting scanned PDFs to text-based PDFs, 2) Ensuring the PDF is not password-protected, 3) Using a different PDF file.",
+            hint: "The PDF might be scanned/image-based, corrupted, or password-protected.",
           },
           { status: 500 },
         )
@@ -276,7 +259,6 @@ export async function POST(request: Request) {
     }
 
     if (!textToAnalyze || textToAnalyze.length < 50) {
-      console.error("[v0] Text too short for analysis:", textToAnalyze?.length || 0, "characters")
       return Response.json(
         {
           error: "Document text is too short to analyze",
@@ -292,19 +274,14 @@ export async function POST(request: Request) {
 
     const basePrompt = getAnalysisPrompt()
 
-    console.log("[v0] Step 3: Calling AI with model: gpt-4o-mini for structured analysis")
+    console.log("[v0] Step 3: Calling Vercel AI Gateway with model: openai/gpt-4o-mini")
 
     let analysis
     try {
-      console.log("[v0] Starting AI generation...")
-      console.log("[v0] Model: gpt-4o-mini (direct OpenAI SDK)")
-      console.log("[v0] Schema fields:", Object.keys(tenderAnalysisSchema.shape))
-      console.log("[v0] Prompt length:", basePrompt.length + truncatedText.length, "characters")
-
       const startTime = Date.now()
 
       const result = await generateObject({
-        model: openai("gpt-4o-mini"), // Direct provider with your API key
+        model: "openai/gpt-4o-mini",
         schema: tenderAnalysisSchema,
         prompt: `${basePrompt}
 
@@ -325,110 +302,17 @@ Now analyze the above tender document and provide your comprehensive analysis in
       console.log("[v0] AI generation completed in", (endTime - startTime) / 1000, "seconds")
 
       analysis = result.object
-
       console.log("[v0] ✓ Raw AI response received successfully")
       console.log("[v0] Response structure:", Object.keys(analysis))
-
-      console.log(
-        "[v0] tender_summary keys:",
-        analysis.tender_summary ? Object.keys(analysis.tender_summary) : "MISSING",
-      )
-      console.log(
-        "[v0] compliance_summary keys:",
-        analysis.compliance_summary ? Object.keys(analysis.compliance_summary) : "MISSING",
-      )
-      console.log("[v0] evaluation keys:", analysis.evaluation ? Object.keys(analysis.evaluation) : "MISSING")
-      console.log("[v0] action_plan keys:", analysis.action_plan ? Object.keys(analysis.action_plan) : "MISSING")
-      console.log(
-        "[v0] financial_requirements keys:",
-        analysis.financial_requirements ? Object.keys(analysis.financial_requirements) : "MISSING",
-      )
-      console.log(
-        "[v0] legal_registration keys:",
-        analysis.legal_registration ? Object.keys(analysis.legal_registration) : "MISSING",
-      )
-      console.log(
-        "[v0] labour_employment keys:",
-        analysis.labour_employment ? Object.keys(analysis.labour_employment) : "MISSING",
-      )
-      console.log(
-        "[v0] technical_specs keys:",
-        analysis.technical_specs ? Object.keys(analysis.technical_specs) : "MISSING",
-      )
-      console.log(
-        "[v0] submission_requirements keys:",
-        analysis.submission_requirements ? Object.keys(analysis.submission_requirements) : "MISSING",
-      )
-      console.log(
-        "[v0] penalties_payment keys:",
-        analysis.penalties_payment ? Object.keys(analysis.penalties_payment) : "MISSING",
-      )
-      console.log("[v0] formFields present:", Array.isArray(analysis.formFields) ? "YES" : "NO")
     } catch (aiError: any) {
-      console.error("[v0] ========================================")
       console.error("[v0] AI GENERATION ERROR")
-      console.error("[v0] ========================================")
-      console.error("[v0] Error type:", aiError?.constructor?.name)
       console.error("[v0] Error message:", aiError?.message)
-      console.error("[v0] Error stack:", aiError?.stack?.substring(0, 1000))
-
-      if (aiError?.cause) {
-        console.error("[v0] Error cause:", aiError.cause)
-      }
-      if (aiError?.response) {
-        console.error("[v0] Error response:", aiError.response)
-      }
-
-      if (aiError?.message?.includes("schema")) {
-        console.error("[v0] Schema validation failed - AI response doesn't match expected structure")
-        console.error("[v0] This usually means the AI returned data in a different format than expected")
-      }
-
-      console.error("[v0] ========================================")
-
-      if (
-        aiError?.message?.includes("credit card") ||
-        aiError?.message?.includes("payment") ||
-        aiError?.message?.includes("billing")
-      ) {
-        return Response.json(
-          {
-            error: "AI Gateway requires a valid payment method. Please add a credit card to your Vercel account.",
-            errorType: "payment_required",
-            details: aiError?.message,
-          },
-          { status: 402 },
-        )
-      }
-
-      if (aiError?.message?.includes("API key") || aiError?.message?.includes("authentication")) {
-        return Response.json(
-          {
-            error: "OpenAI API key is missing or invalid. Please check your environment variables.",
-            errorType: "authentication_error",
-            details: aiError?.message,
-          },
-          { status: 401 },
-        )
-      }
-
-      if (aiError?.message?.includes("timeout") || aiError?.message?.includes("timed out")) {
-        return Response.json(
-          {
-            error: "AI analysis timed out. The document might be too large. Please try with a smaller document.",
-            errorType: "timeout_error",
-            details: aiError?.message,
-          },
-          { status: 504 },
-        )
-      }
 
       return Response.json(
         {
           error: "AI generation failed",
           errorType: "ai_generation_error",
           details: aiError?.message || "Unknown AI error",
-          hint: "Check the server logs for more details",
         },
         { status: 500 },
       )
