@@ -1,6 +1,69 @@
 import { generateText } from "ai"
 import { extractText } from "unpdf"
+import { PDFDocument } from "pdf-lib"
 import { getAnalysisPrompt } from "@/lib/prompts"
+
+async function extractPdfFormFields(pdfUrl: string): Promise<{
+  fields: Array<{ name: string; type: string; options?: string[] }>
+  hasFormFields: boolean
+}> {
+  try {
+    console.log("[v0] Extracting PDF form fields from:", pdfUrl)
+    const pdfResponse = await fetch(pdfUrl)
+    if (!pdfResponse.ok) {
+      throw new Error(`Failed to fetch PDF: ${pdfResponse.status}`)
+    }
+
+    const pdfBytes = await pdfResponse.arrayBuffer()
+    const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true })
+    const form = pdfDoc.getForm()
+    const fields = form.getFields()
+
+    const extractedFields = fields.map((field) => {
+      const name = field.getName()
+      const typeName = field.constructor.name
+
+      let type = "text"
+      let options: string[] | undefined
+
+      if (typeName === "PDFTextField") {
+        type = "text"
+      } else if (typeName === "PDFCheckBox") {
+        type = "checkbox"
+      } else if (typeName === "PDFRadioGroup") {
+        type = "radio"
+        try {
+          options = (field as any).getOptions?.() || []
+        } catch {
+          options = []
+        }
+      } else if (typeName === "PDFDropdown") {
+        type = "select"
+        try {
+          options = (field as any).getOptions?.() || []
+        } catch {
+          options = []
+        }
+      }
+
+      return { name, type, options }
+    })
+
+    console.log("[v0] Found", extractedFields.length, "PDF form fields")
+    console.log(
+      "[v0] PDF field names:",
+      extractedFields.map((f) => f.name),
+    )
+
+    return {
+      fields: extractedFields,
+      hasFormFields: extractedFields.length > 0,
+    }
+  } catch (error: any) {
+    console.log("[v0] Could not extract PDF form fields:", error.message)
+    return { fields: [], hasFormFields: false }
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -15,6 +78,16 @@ export async function POST(request: Request) {
 
     if (!documentText && !documentUrl) {
       return Response.json({ error: "Either document text or document URL is required" }, { status: 400 })
+    }
+
+    let pdfFormFields: Array<{ name: string; type: string; options?: string[] }> = []
+    let hasPdfFormFields = false
+
+    if (documentUrl) {
+      const pdfFieldsResult = await extractPdfFormFields(documentUrl)
+      pdfFormFields = pdfFieldsResult.fields
+      hasPdfFormFields = pdfFieldsResult.hasFormFields
+      console.log("[v0] PDF has interactive form fields:", hasPdfFormFields)
     }
 
     let textToAnalyze = documentText
@@ -90,6 +163,39 @@ export async function POST(request: Request) {
 
     const basePrompt = getAnalysisPrompt()
 
+    let pdfFieldsInstruction = ""
+    if (hasPdfFormFields && pdfFormFields.length > 0) {
+      pdfFieldsInstruction = `
+IMPORTANT - PDF FORM FIELDS DETECTED:
+This PDF document has ${pdfFormFields.length} interactive form fields. You MUST use these EXACT field names as the "id" for your formFields output so they can be auto-filled in the PDF.
+
+Here are the actual PDF form field names and their types:
+${pdfFormFields
+  .map((f) => {
+    let info = `- "${f.name}" (type: ${f.type})`
+    if (f.options && f.options.length > 0) {
+      info += ` [options: ${f.options.join(", ")}]`
+    }
+    return info
+  })
+  .join("\n")}
+
+For each PDF field above, create a corresponding formField entry with:
+- id: Use the EXACT field name from the PDF (e.g., "${pdfFormFields[0]?.name || "Text1"}")
+- label: A human-readable label describing what the field is for
+- type: Match the PDF field type (text, checkbox, select, etc.)
+- section: Group related fields together
+- required: true if the field appears mandatory
+- description: Help text for the user
+
+If the PDF has fewer than 20 form fields, also add additional formFields for any information requested in the document text that doesn't have a corresponding PDF field.
+`
+    } else {
+      pdfFieldsInstruction = `
+NOTE: This PDF does not have interactive form fields. Generate formFields based on ALL fillable information requested in the document text. Create 25-50 fields covering company details, pricing, declarations, technical responses, and all SBD/MBD forms referenced in the document.
+`
+    }
+
     console.log("[v0] Step 3: Calling Vercel AI Gateway with generateText...")
 
     try {
@@ -98,6 +204,8 @@ export async function POST(request: Request) {
       const { text: aiResponse } = await generateText({
         model: "openai/gpt-4o-mini",
         prompt: `${basePrompt}
+
+${pdfFieldsInstruction}
 
 IMPORTANT: You MUST respond with ONLY valid JSON. No markdown, no explanations, no code blocks. Just pure JSON.
 
@@ -186,16 +294,19 @@ Respond with ONLY the following JSON structure (no markdown, no code blocks, jus
   },
   "formFields": [
     {
-      "id": "unique_field_id",
+      "id": "unique_field_id_or_pdf_field_name",
       "label": "Field Label",
       "type": "text|textarea|number|date|select|checkbox|file|email|tel",
       "required": true/false,
       "section": "Section Name",
       "placeholder": "optional placeholder",
       "description": "optional description",
-      "options": ["for select fields only"]
+      "options": ["for select fields only"],
+      "pdfFieldName": "original PDF field name if applicable"
     }
-  ]
+  ],
+  "pdfFormFieldsDetected": ${hasPdfFormFields},
+  "pdfFormFieldCount": ${pdfFormFields.length}
 }`,
       })
 
@@ -233,6 +344,10 @@ Respond with ONLY the following JSON structure (no markdown, no code blocks, jus
           { status: 500 },
         )
       }
+
+      analysis.pdfFormFieldsDetected = hasPdfFormFields
+      analysis.pdfFormFieldCount = pdfFormFields.length
+      analysis.pdfFormFields = pdfFormFields
 
       const defaults = {
         tender_summary: {
@@ -328,6 +443,8 @@ Respond with ONLY the following JSON structure (no markdown, no code blocks, jus
       console.log("[v0] Disqualifiers count:", analysis.compliance_summary?.disqualifiers?.length || 0)
       console.log("[v0] Criteria count:", analysis.evaluation?.criteria?.length || 0)
       console.log("[v0] Form fields count:", analysis.formFields?.length || 0)
+      console.log("[v0] PDF form fields detected:", hasPdfFormFields)
+      console.log("[v0] PDF form field count:", pdfFormFields.length)
       console.log("[v0] ========================================")
 
       return Response.json(analysis)

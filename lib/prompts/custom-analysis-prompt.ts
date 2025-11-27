@@ -145,25 +145,120 @@ Identify financial penalties and payment structure:
 
 ---
 
-### STEP 11 — GENERATE FORM FIELDS
-Create 15-20 form fields covering:
-1. Company Information (name, registration, contact details)
-2. Compliance Documents (CSD, tax clearance, BBBEE, CIDB)
-3. Financial Information (turnover, banking details)
-4. Technical Capability (experience, equipment, staff)
-5. Project-Specific Requirements (methodology, timeline)
-6. Pricing Breakdown (rates, totals, VAT)
-7. References (previous projects, client contacts)
+### STEP 11 — EXTRACT ALL FILLABLE FORM FIELDS
+CRITICAL: You must scan the ENTIRE document and extract EVERY field that needs to be filled in by the bidder.
+
+**SCAN FOR THESE SPECIFIC ELEMENTS:**
+
+1. **Standard Bid Documents (SBD Forms)**:
+   - SBD 1: Invitation to Bid (company details, contact info, pricing totals)
+   - SBD 2: Tax Clearance Certificate requirements
+   - SBD 3.1: Pricing Schedule - Firm Prices (line items, quantities, rates, totals)
+   - SBD 3.2: Pricing Schedule - Non-Firm Prices
+   - SBD 3.3: Pricing Schedule - Professional Services
+   - SBD 4: Declaration of Interest (director details, relationships, conflicts)
+   - SBD 6.1: Preference Points Claim Form (BBBEE level, ownership)
+   - SBD 6.2: Local Content Declaration
+   - SBD 7.1: Contract Form - Purchase of Goods
+   - SBD 7.2: Contract Form - Rendering of Services
+   - SBD 7.3: Contract Form - Disposal of Assets
+   - SBD 8: Declaration of Bidder's Past SCM Practices
+   - SBD 9: Certificate of Independent Bid Determination
+
+2. **Municipal Bid Documents (MBD Forms)**:
+   - MBD 1: Invitation to Bid
+   - MBD 4: Declaration of Interest
+   - MBD 5: Declaration for Procurement above R10 million
+   - MBD 6.1: Preference Points Claim Form
+   - MBD 6.2: Local Content Declaration
+   - MBD 7.1-7.3: Contract Forms
+   - MBD 8: Declaration of Bidder's Past SCM Practices
+   - MBD 9: Certificate of Independent Bid Determination
+
+3. **Tables and Schedules to Complete**:
+   - Pricing schedules with columns (item, description, quantity, unit, rate, amount)
+   - Bill of Quantities (BOQ)
+   - Resource schedules (equipment, personnel)
+   - Project programme/timeline tables
+   - Experience/reference tables
+
+4. **Declaration and Certification Fields**:
+   - Signature blocks (name, designation, date, signature)
+   - Witness signatures
+   - Commissioner of Oaths sections
+   - Director/shareholder declarations
+   - Conflict of interest declarations
+
+5. **Company Information Fields**:
+   - Company name, trading name
+   - Registration number (CIPC)
+   - VAT number
+   - CSD MAAA number
+   - CIDB registration number and grading
+   - BBBEE certificate details (level, expiry, verification agency)
+   - Physical address, postal address
+   - Contact details (phone, fax, email)
+   - Banking details
+
+6. **Technical Response Fields**:
+   - Methodology descriptions (textarea)
+   - Project approach
+   - Implementation timeline
+   - Quality management approach
+   - Health and safety plan
+   - Environmental management
+
+7. **Personnel and Resources**:
+   - Key personnel tables (name, qualification, experience, role)
+   - CV summaries
+   - Equipment lists (type, quantity, owned/hired)
+   - Subcontractor details
+
+**FIELD TYPES TO USE:**
+- "text": Short text inputs (names, numbers, addresses)
+- "textarea": Long text responses (methodology, descriptions)
+- "number": Numeric values (prices, quantities, percentages)
+- "date": Date fields (YYYY-MM-DD format)
+- "email": Email addresses
+- "tel": Phone/fax numbers
+- "select": Dropdown choices (yes/no, levels, categories)
+- "checkbox": Agreement/declaration confirmations
+- "file": Document uploads (certificates, CVs)
+- "table": Repeating rows (pricing items, personnel, references)
+
+**FOR TABLE FIELDS, include:**
+- columns: Array of column definitions with { id, label, type }
+- minRows: Minimum number of rows required
+
+**GENERATE 25-50 FORM FIELDS** covering every fillable element in the document.
 
 Each field must have:
-- id: Unique identifier (e.g., "company_name", "tax_clearance")
-- label: Display name (e.g., "Company Name")
-- type: "text", "email", "tel", "number", "date", "textarea", "select", "file", or "checkbox"
-- required: true or false
-- section: "Company Information", "Compliance", "Technical Capability", "Pricing", or "References"
-- placeholder: Example text or empty string
-- description: Help text or empty string
-- options: Array of choices for select fields, empty array otherwise
+- id: Unique snake_case identifier (e.g., "sbd1_company_name", "pricing_item_1_rate")
+- label: Display name matching the document label
+- type: One of the types listed above
+- required: true for mandatory fields, false for optional
+- section: Group name (e.g., "SBD 1 - Invitation to Bid", "Pricing Schedule", "Declaration of Interest")
+- placeholder: Example value or hint
+- description: Help text explaining what to enter
+- options: Array for select fields (e.g., ["Yes", "No"], ["Level 1", "Level 2", ...])
+- validation: Optional regex pattern for validation
+- columns: For table type, array of column definitions
+- minRows: For table type, minimum rows required
+
+**SECTION NAMES TO USE:**
+- "SBD 1 - Invitation to Bid"
+- "SBD 3.1 - Pricing Schedule"
+- "SBD 4 - Declaration of Interest"
+- "SBD 6.1 - Preference Points"
+- "SBD 8 - Past SCM Practices"
+- "SBD 9 - Independent Bid"
+- "Company Information"
+- "Technical Response"
+- "Key Personnel"
+- "Equipment & Resources"
+- "Project References"
+- "Banking Details"
+- "Declarations & Signatures"
 
 ---
 
@@ -219,7 +314,418 @@ Return ONE valid JSON object with this exact structure:
     "retention_amount": "",
     "payment_timeframe": ""
   },
-  "formFields": []
+  "formFields": [
+    {
+      "id": "sbd1_company_name",
+      "label": "Company Name",
+      "type": "text",
+      "required": true,
+      "section": "SBD 1 - Invitation to Bid",
+      "placeholder": "",
+      "description": "Enter the name of your company",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_trading_name",
+      "label": "Trading Name",
+      "type": "text",
+      "required": false,
+      "section": "SBD 1 - Invitation to Bid",
+      "placeholder": "",
+      "description": "Enter your company's trading name if applicable",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_contact_email",
+      "label": "Contact Email",
+      "type": "email",
+      "required": true,
+      "section": "SBD 1 - Invitation to Bid",
+      "placeholder": "example@example.com",
+      "description": "Enter your company's contact email",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_contact_phone",
+      "label": "Contact Phone",
+      "type": "tel",
+      "required": true,
+      "section": "SBD 1 - Invitation to Bid",
+      "placeholder": "123-456-7890",
+      "description": "Enter your company's contact phone number",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_contact_fax",
+      "label": "Contact Fax",
+      "type": "tel",
+      "required": false,
+      "section": "SBD 1 - Invitation to Bid",
+      "placeholder": "123-456-7890",
+      "description": "Enter your company's contact fax number if applicable",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_physical_address",
+      "label": "Physical Address",
+      "type": "text",
+      "required": true,
+      "section": "SBD 1 - Invitation to Bid",
+      "placeholder": "",
+      "description": "Enter your company's physical address",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_postal_address",
+      "label": "Postal Address",
+      "type": "text",
+      "required": true,
+      "section": "SBD 1 - Invitation to Bid",
+      "placeholder": "",
+      "description": "Enter your company's postal address",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_cipc_registration",
+      "label": "CIPC Registration Number",
+      "type": "text",
+      "required": true,
+      "section": "Company Information",
+      "placeholder": "",
+      "description": "Enter your company's CIPC registration number",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_vat_number",
+      "label": "VAT Number",
+      "type": "text",
+      "required": true,
+      "section": "Company Information",
+      "placeholder": "",
+      "description": "Enter your company's VAT number",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_cidb_registration_number",
+      "label": "CIDB Registration Number",
+      "type": "text",
+      "required": true,
+      "section": "Company Information",
+      "placeholder": "",
+      "description": "Enter your company's CIDB registration number",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_cidb_grading",
+      "label": "CIDB Grading",
+      "type": "select",
+      "required": true,
+      "section": "Company Information",
+      "placeholder": "",
+      "description": "Select your company's CIDB grading",
+      "options": ["CE6", "GB4", "Other"],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_bbbee_level",
+      "label": "BBBEE Level",
+      "type": "select",
+      "required": true,
+      "section": "Company Information",
+      "placeholder": "",
+      "description": "Select your company's BBBEE level",
+      "options": ["Level 1", "Level 2", "Level 3", "Level 4"],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_bbbee_expiry",
+      "label": "BBBEE Certificate Expiry",
+      "type": "date",
+      "required": true,
+      "section": "Company Information",
+      "placeholder": "",
+      "description": "Enter the expiry date of your BBBEE certificate",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_bbbee_verification_agency",
+      "label": "BBBEE Verification Agency",
+      "type": "text",
+      "required": true,
+      "section": "Company Information",
+      "placeholder": "",
+      "description": "Enter the name of the BBBEE verification agency",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_director_name",
+      "label": "Director's Name",
+      "type": "text",
+      "required": true,
+      "section": "SBD 4 - Declaration of Interest",
+      "placeholder": "",
+      "description": "Enter the name of the director",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_director_designation",
+      "label": "Director's Designation",
+      "type": "text",
+      "required": true,
+      "section": "SBD 4 - Declaration of Interest",
+      "placeholder": "",
+      "description": "Enter the designation of the director",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_director_date",
+      "label": "Declaration Date",
+      "type": "date",
+      "required": true,
+      "section": "SBD 4 - Declaration of Interest",
+      "placeholder": "",
+      "description": "Enter the date of declaration",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_signature",
+      "label": "Signature",
+      "type": "file",
+      "required": true,
+      "section": "Declarations & Signatures",
+      "placeholder": "",
+      "description": "Upload your signature",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "sbd1_conflict_of_interest",
+      "label": "Conflict of Interest Declaration",
+      "type": "checkbox",
+      "required": true,
+      "section": "Declarations & Signatures",
+      "placeholder": "",
+      "description": "Confirm that there are no conflicts of interest",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "pricing_schedule",
+      "label": "Pricing Schedule",
+      "type": "table",
+      "required": true,
+      "section": "SBD 3.1 - Pricing Schedule",
+      "placeholder": "",
+      "description": "Enter pricing details",
+      "options": [],
+      "validation": "",
+      "columns": [
+        { "id": "item", "label": "Item", "type": "text" },
+        { "id": "description", "label": "Description", "type": "text" },
+        { "id": "quantity", "label": "Quantity", "type": "number" },
+        { "id": "unit", "label": "Unit", "type": "text" },
+        { "id": "rate", "label": "Rate", "type": "number" },
+        { "id": "amount", "label": "Amount", "type": "number" }
+      ],
+      "minRows": 5
+    },
+    {
+      "id": "project_references",
+      "label": "Project References",
+      "type": "table",
+      "required": true,
+      "section": "Project References",
+      "placeholder": "",
+      "description": "Enter your project references",
+      "options": [],
+      "validation": "",
+      "columns": [
+        { "id": "project_name", "label": "Project Name", "type": "text" },
+        { "id": "project_value", "label": "Project Value", "type": "number" },
+        { "id": "project_duration", "label": "Project Duration", "type": "text" }
+      ],
+      "minRows": 3
+    },
+    {
+      "id": "key_personnel",
+      "label": "Key Personnel",
+      "type": "table",
+      "required": true,
+      "section": "Key Personnel",
+      "placeholder": "",
+      "description": "Enter details of key personnel",
+      "options": [],
+      "validation": "",
+      "columns": [
+        { "id": "name", "label": "Name", "type": "text" },
+        { "id": "qualification", "label": "Qualification", "type": "text" },
+        { "id": "experience", "label": "Experience", "type": "number" },
+        { "id": "role", "label": "Role", "type": "text" }
+      ],
+      "minRows": 2
+    },
+    {
+      "id": "equipment_resources",
+      "label": "Equipment & Resources",
+      "type": "table",
+      "required": true,
+      "section": "Equipment & Resources",
+      "placeholder": "",
+      "description": "Enter details of required equipment and resources",
+      "options": [],
+      "validation": "",
+      "columns": [
+        { "id": "type", "label": "Type", "type": "text" },
+        { "id": "quantity", "label": "Quantity", "type": "number" },
+        { "id": "owned_hired", "label": "Owned/Hired", "type": "select", "options": ["Owned", "Hired"] }
+      ],
+      "minRows": 3
+    },
+    {
+      "id": "technical_response_methodology",
+      "label": "Methodology Description",
+      "type": "textarea",
+      "required": true,
+      "section": "Technical Response",
+      "placeholder": "",
+      "description": "Describe your methodology for the project",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "technical_response_project_approach",
+      "label": "Project Approach",
+      "type": "text",
+      "required": true,
+      "section": "Technical Response",
+      "placeholder": "",
+      "description": "Enter your project approach",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "technical_response_timeline",
+      "label": "Implementation Timeline",
+      "type": "textarea",
+      "required": true,
+      "section": "Technical Response",
+      "placeholder": "",
+      "description": "Enter your implementation timeline",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "technical_response_quality_management",
+      "label": "Quality Management Approach",
+      "type": "textarea",
+      "required": true,
+      "section": "Technical Response",
+      "placeholder": "",
+      "description": "Describe your quality management approach",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "technical_response_health_safety",
+      "label": "Health and Safety Plan",
+      "type": "textarea",
+      "required": true,
+      "section": "Technical Response",
+      "placeholder": "",
+      "description": "Describe your health and safety plan",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "technical_response_environmental",
+      "label": "Environmental Management",
+      "type": "textarea",
+      "required": true,
+      "section": "Technical Response",
+      "placeholder": "",
+      "description": "Describe your environmental management strategy",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    },
+    {
+      "id": "banking_details",
+      "label": "Banking Details",
+      "type": "textarea",
+      "required": true,
+      "section": "Banking Details",
+      "placeholder": "",
+      "description": "Enter your banking details",
+      "options": [],
+      "validation": "",
+      "columns": [],
+      "minRows": 0
+    }
+  ]
 }
 
 CRITICAL RULES:
