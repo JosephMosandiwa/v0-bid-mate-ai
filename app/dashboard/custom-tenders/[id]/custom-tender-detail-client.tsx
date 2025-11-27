@@ -24,6 +24,11 @@ import {
   Loader2,
   Save,
   ArrowLeft,
+  Target,
+  DollarSign,
+  Award,
+  HelpCircle,
+  RefreshCw,
 } from "lucide-react"
 import Link from "next/link"
 import { DynamicTenderForm } from "@/components/dynamic-tender-form"
@@ -63,6 +68,9 @@ export function CustomTenderDetailClient({
   const [analyzing, setAnalyzing] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+
+  const [generatingStrategy, setGeneratingStrategy] = useState(false)
+  const [strategyError, setStrategyError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     title: tender.title || "",
@@ -309,6 +317,31 @@ export function CustomTenderDetailClient({
     }
   }
 
+  const handleGenerateStrategy = async () => {
+    setGeneratingStrategy(true)
+    setStrategyError(null)
+
+    try {
+      const response = await fetch(`/api/custom-tenders/${tenderId}/negotiation-strategy`, {
+        method: "POST",
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate strategy")
+      }
+
+      // Refresh the page to show the new strategy
+      window.location.reload()
+    } catch (error: any) {
+      console.error("[v0] Strategy generation error:", error)
+      setStrategyError(error.message)
+    } finally {
+      setGeneratingStrategy(false)
+    }
+  }
+
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
       <div className="bg-purple-100 dark:bg-purple-900/20 border-2 border-purple-500 rounded-lg p-4 text-sm font-mono">
@@ -445,6 +478,13 @@ export function CustomTenderDetailClient({
                 AI Insights
               </TabsTrigger>
             </>
+          )}
+          {/* Add new tab for Negotiation Strategy */}
+          {analysis && (
+            <TabsTrigger value="strategy">
+              <Target className="h-4 w-4 mr-2" />
+              Strategy
+            </TabsTrigger>
           )}
           <TabsTrigger value="documents">
             <FileText className="h-4 w-4 mr-2" />
@@ -1225,6 +1265,332 @@ export function CustomTenderDetailClient({
                     )}
                 </CardContent>
               </Card>
+            )}
+          </TabsContent>
+        )}
+
+        {/* Add TabsContent for negotiation strategy */}
+        {analysis && (
+          <TabsContent value="strategy" className="space-y-4">
+            {!analysis.negotiation_strategy ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-primary" />
+                    Negotiation Strategy Generator
+                  </CardTitle>
+                  <CardDescription>
+                    Generate an AI-powered negotiation strategy based on the tender analysis, including pricing
+                    recommendations, B-BBEE optimization, and risk mitigation tactics.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {strategyError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{strategyError}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                    <h4 className="font-medium">What you'll get:</h4>
+                    <ul className="space-y-2 text-sm text-muted-foreground">
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        5-point actionable negotiation plan with talking points
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        Win probability assessment with reasoning
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        Pricing strategy and margin guidance
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        B-BBEE optimization tactics
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        Red flags and risk mitigation strategies
+                      </li>
+                    </ul>
+                  </div>
+
+                  <Button onClick={handleGenerateStrategy} disabled={generatingStrategy} className="w-full" size="lg">
+                    {generatingStrategy ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Generating Strategy...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Generate Negotiation Strategy
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Strategy Overview */}
+                <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-xl">{analysis.negotiation_strategy.strategy_title}</CardTitle>
+                        <CardDescription className="mt-2 text-base">
+                          {analysis.negotiation_strategy.overall_approach}
+                        </CardDescription>
+                      </div>
+                      {analysis.negotiation_strategy.win_probability_assessment && (
+                        <div className="text-center px-4 py-2 rounded-lg bg-background border">
+                          <div className="text-3xl font-bold text-primary">
+                            {analysis.negotiation_strategy.win_probability_assessment.score}%
+                          </div>
+                          <div className="text-xs text-muted-foreground">Win Probability</div>
+                        </div>
+                      )}
+                    </div>
+                  </CardHeader>
+                  {analysis.negotiation_strategy.win_probability_assessment?.reasoning && (
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground italic">
+                        {analysis.negotiation_strategy.win_probability_assessment.reasoning}
+                      </p>
+                    </CardContent>
+                  )}
+                </Card>
+
+                {/* 5-Point Negotiation Plan */}
+                {analysis.negotiation_strategy.negotiation_points && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <ClipboardList className="h-5 w-5 text-primary" />
+                        5-Point Negotiation Plan
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {analysis.negotiation_strategy.negotiation_points.map((point: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className="p-4 rounded-lg border border-border hover:border-primary/50 transition-colors"
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">
+                              {point.point_number || idx + 1}
+                            </div>
+                            <div className="flex-1 space-y-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <h4 className="font-semibold text-foreground">{point.title}</h4>
+                                <div className="flex gap-2 flex-shrink-0">
+                                  <Badge variant="outline">{point.category}</Badge>
+                                  <Badge
+                                    variant={
+                                      point.priority === "Critical"
+                                        ? "destructive"
+                                        : point.priority === "High"
+                                          ? "default"
+                                          : "secondary"
+                                    }
+                                  >
+                                    {point.priority}
+                                  </Badge>
+                                </div>
+                              </div>
+
+                              {point.challenge && (
+                                <p className="text-sm text-muted-foreground">
+                                  <span className="font-medium text-foreground">Challenge:</span> {point.challenge}
+                                </p>
+                              )}
+
+                              <p className="text-sm">{point.strategy}</p>
+
+                              {point.talking_points && point.talking_points.length > 0 && (
+                                <div className="bg-muted/50 rounded-lg p-3">
+                                  <div className="text-xs font-medium text-muted-foreground mb-2">TALKING POINTS:</div>
+                                  <ul className="space-y-1">
+                                    {point.talking_points.map((tp: string, tpIdx: number) => (
+                                      <li key={tpIdx} className="text-sm flex items-start gap-2">
+                                        <span className="text-primary">•</span>
+                                        {tp}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {point.expected_outcome && (
+                                <p className="text-sm text-green-600 dark:text-green-400">
+                                  <span className="font-medium">Expected Outcome:</span> {point.expected_outcome}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Pricing Recommendations */}
+                {analysis.negotiation_strategy.pricing_recommendations && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <DollarSign className="h-5 w-5 text-green-600" />
+                        Pricing Strategy
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900">
+                          <div className="text-sm font-medium text-muted-foreground mb-1">Recommended Approach</div>
+                          <div className="text-lg font-semibold text-green-700 dark:text-green-400">
+                            {analysis.negotiation_strategy.pricing_recommendations.approach}
+                          </div>
+                        </div>
+                        {analysis.negotiation_strategy.pricing_recommendations.margin_guidance && (
+                          <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
+                            <div className="text-sm font-medium text-muted-foreground mb-1">Margin Guidance</div>
+                            <div className="text-sm">
+                              {analysis.negotiation_strategy.pricing_recommendations.margin_guidance}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {analysis.negotiation_strategy.pricing_recommendations.rationale && (
+                        <p className="text-sm text-muted-foreground">
+                          {analysis.negotiation_strategy.pricing_recommendations.rationale}
+                        </p>
+                      )}
+                      {analysis.negotiation_strategy.pricing_recommendations.risk_pricing && (
+                        <div className="p-3 rounded-lg border bg-muted/50">
+                          <div className="text-sm font-medium mb-1">Risk Pricing Advice:</div>
+                          <p className="text-sm text-muted-foreground">
+                            {analysis.negotiation_strategy.pricing_recommendations.risk_pricing}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* B-BBEE Optimization */}
+                {analysis.negotiation_strategy.bbbee_optimization && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Award className="h-5 w-5 text-orange-600" />
+                        B-BBEE Optimization
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {analysis.negotiation_strategy.bbbee_optimization.current_potential && (
+                        <p className="text-sm">{analysis.negotiation_strategy.bbbee_optimization.current_potential}</p>
+                      )}
+
+                      {analysis.negotiation_strategy.bbbee_optimization.quick_wins &&
+                        analysis.negotiation_strategy.bbbee_optimization.quick_wins.length > 0 && (
+                          <div>
+                            <div className="text-sm font-medium mb-2">Quick Wins:</div>
+                            <ul className="space-y-2">
+                              {analysis.negotiation_strategy.bbbee_optimization.quick_wins.map(
+                                (win: string, idx: number) => (
+                                  <li key={idx} className="flex items-start gap-2 text-sm">
+                                    <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                    {win}
+                                  </li>
+                                ),
+                              )}
+                            </ul>
+                          </div>
+                        )}
+
+                      {analysis.negotiation_strategy.bbbee_optimization.subcontracting_strategy && (
+                        <div className="p-3 rounded-lg border bg-orange-50 dark:bg-orange-950/20">
+                          <div className="text-sm font-medium mb-1">Subcontracting Strategy:</div>
+                          <p className="text-sm">
+                            {analysis.negotiation_strategy.bbbee_optimization.subcontracting_strategy}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Red Flags */}
+                {analysis.negotiation_strategy.red_flags && analysis.negotiation_strategy.red_flags.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5 text-red-600" />
+                        Red Flags & Mitigation
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {analysis.negotiation_strategy.red_flags.map((flag: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="p-3 rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/20"
+                          >
+                            <div className="font-medium text-red-700 dark:text-red-400 mb-1">{flag.issue}</div>
+                            <p className="text-sm text-muted-foreground">{flag.recommendation}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Clarification Questions */}
+                {analysis.negotiation_strategy.clarification_questions &&
+                  analysis.negotiation_strategy.clarification_questions.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <HelpCircle className="h-5 w-5 text-blue-600" />
+                          Clarification Questions
+                        </CardTitle>
+                        <CardDescription>Ask these during the tender clarification period</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-2">
+                          {analysis.negotiation_strategy.clarification_questions.map((q: string, idx: number) => (
+                            <li key={idx} className="flex items-start gap-3 p-2 rounded hover:bg-muted/50">
+                              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 flex items-center justify-center text-xs font-medium">
+                                {idx + 1}
+                              </span>
+                              <span className="text-sm">{q}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                {/* Regenerate Button */}
+                <div className="flex justify-center pt-4">
+                  <Button variant="outline" onClick={handleGenerateStrategy} disabled={generatingStrategy}>
+                    {generatingStrategy ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Regenerating...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Regenerate Strategy
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </>
             )}
           </TabsContent>
         )}

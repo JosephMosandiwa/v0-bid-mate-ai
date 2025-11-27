@@ -262,6 +262,42 @@ Each field must have:
 
 ---
 
+### STEP 12 — RISK ASSESSMENT & B-BBEE ANALYSIS
+Analyze the tender for risks and B-BBEE scoring potential:
+
+**risk_assessment**:
+- **overall_risk_score**: Number from 1-10 (1=low risk, 10=high risk)
+- **risk_level**: "Low", "Medium", "High", or "Critical"
+- **risk_factors**: Array of specific risks identified, each with:
+  - factor: Description of the risk
+  - severity: "Low", "Medium", "High"
+  - mitigation: Suggested way to address this risk
+- **risk_reasoning**: 2-3 sentence summary of why this risk level was assigned
+
+**bbbee_analysis**:
+- **points_available**: Total B-BBEE preference points available (usually 10 or 20)
+- **pricing_system**: "80/20" or "90/10" preference point system
+- **level_points_breakdown**: Array showing points per B-BBEE level:
+  - level: "Level 1", "Level 2", etc.
+  - points: Points awarded for this level
+- **sub_contracting_requirements**: Any mandatory subcontracting to EMEs/QSEs
+- **local_content_bonus**: Additional points for local content commitment
+- **recommendations**: Array of 3-5 actionable recommendations to maximize B-BBEE points
+
+Consider these risk factors:
+- Tight deadlines or unrealistic timeframes
+- Onerous penalty clauses
+- Unusual payment terms (long payment periods, high retentions)
+- Complex technical requirements
+- High financial requirements (guarantees, bonds, insurance)
+- Mandatory certifications or registrations you may not have
+- Geographic constraints or local preference requirements
+- Joint venture or subcontracting complexities
+- Ambiguous scope or specifications
+- History of disputes or litigation with the entity
+
+---
+
 ### OUTPUT FORMAT
 Return ONE valid JSON object with this exact structure:
 
@@ -725,7 +761,21 @@ Return ONE valid JSON object with this exact structure:
       "columns": [],
       "minRows": 0
     }
-  ]
+  ],
+  "risk_assessment": {
+    "overall_risk_score": 0,
+    "risk_level": "",
+    "risk_factors": [],
+    "risk_reasoning": ""
+  },
+  "bbbee_analysis": {
+    "points_available": 0,
+    "pricing_system": "",
+    "level_points_breakdown": [],
+    "sub_contracting_requirements": "",
+    "local_content_bonus": "",
+    "recommendations": []
+  }
 }
 
 CRITICAL RULES:
