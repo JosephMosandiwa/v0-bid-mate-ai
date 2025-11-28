@@ -133,12 +133,8 @@ export function DynamicTenderForm({
   }
 
   const validateField = (field: FormField, value: any): string | null => {
-    if (field.required && !value) {
-      return `${field.label} is required`
-    }
-
-    if (field.validation) {
-      if (field.type === "number" && value) {
+    if (field.validation && value) {
+      if (field.type === "number") {
         const num = Number(value)
         if (field.validation.min !== undefined && num < field.validation.min) {
           return `Minimum value is ${field.validation.min}`
@@ -148,7 +144,7 @@ export function DynamicTenderForm({
         }
       }
 
-      if ((field.type === "text" || field.type === "textarea") && value) {
+      if (field.type === "text" || field.type === "textarea") {
         if (field.validation.maxLength && value.length > field.validation.maxLength) {
           return `Maximum length is ${field.validation.maxLength} characters`
         }
@@ -946,10 +942,7 @@ export function DynamicTenderForm({
             <CardContent className="space-y-4">
               {sectionFields.map((field) => (
                 <div key={field.id} className="space-y-2">
-                  <Label htmlFor={field.id}>
-                    {field.label}
-                    {field.required && <span className="text-red-500 ml-1">*</span>}
-                  </Label>
+                  <Label htmlFor={field.id}>{field.label}</Label>
                   {field.description && <p className="text-sm text-muted-foreground">{field.description}</p>}
                   {renderField(field)}
                   {errors[field.id] && <p className="text-sm text-red-500">{errors[field.id]}</p>}
