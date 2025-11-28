@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { PDFDocument, PDFTextField, PDFCheckBox, rgb, StandardFonts } from "pdf-lib"
 import { put } from "@vercel/blob"
 import type { NextRequest } from "next/server"
+import { findBestMatch } from "@/lib/utils" // Declare the findBestMatch function
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -44,7 +45,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       .single()
 
     const formFields = analysisData?.analysis_data?.formFields || []
+    const pdfFormFields = analysisData?.analysis_data?.pdfFormFields || []
     console.log("[v0] Form fields from analysis:", formFields.length)
+    console.log("[v0] PDF form fields with positions:", pdfFormFields.length)
 
     // Fetch form responses
     const { data: responseData } = await supabase
@@ -90,16 +93,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     let sourcePdf: PDFDocument
 
     try {
-      // Load the source PDF
       sourcePdf = await PDFDocument.load(originalPdfBytes, {
         ignoreEncryption: true,
         updateMetadata: false,
       })
 
-      // Create a new PDF document (ensures it's fully editable)
       pdfDoc = await PDFDocument.create()
 
-      // Copy ALL pages from the original document
       const pageIndices = sourcePdf.getPageIndices()
       const copiedPages = await pdfDoc.copyPages(sourcePdf, pageIndices)
 
@@ -117,22 +117,12 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
     const form = pdfDoc.getForm()
 
-    let existingFieldNames: string[] = []
-    try {
-      const sourceForm = sourcePdf.getForm()
-      existingFieldNames = sourceForm.getFields().map((f) => f.getName())
-      console.log("[v0] Source PDF has", existingFieldNames.length, "form fields")
-    } catch (e) {
-      console.log("[v0] Could not read source form fields")
-    }
-
     let fieldsFilled = 0
     let fieldsCreated = 0
 
     const existingFields = form.getFields()
 
     if (existingFields.length > 0) {
-      // PDF already has form fields from the copy - fill them
       console.log("[v0] Filling", existingFields.length, "existing form fields...")
 
       for (const field of existingFields) {
@@ -144,7 +134,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
             if (field instanceof PDFTextField) {
               field.setText(String(matchingResponse.value))
               fieldsFilled++
-              console.log("[v0] Filled existing field:", fieldName)
+              console.log("[v0] Filled existing field:", fieldName, "with value:", matchingResponse.value)
             } else if (field instanceof PDFCheckBox) {
               if (
                 matchingResponse.value === true ||
@@ -162,130 +152,135 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       }
     }
 
-    // create overlay fields on the document pages
-    if (formFields.length > 0 && fieldsFilled < formFields.length / 2) {
-      console.log("[v0] Creating overlay form fields on original pages...")
+    // Build a position map from the extracted PDF form fields
+    const positionMap = new Map<string, { x: number; y: number; width: number; height: number; page: number }>()
 
-      // Get page dimensions
-      const pages = pdfDoc.getPages()
-      const pageCount = pages.length
+    for (const pdfField of pdfFormFields) {
+      if (pdfField.position) {
+        positionMap.set(pdfField.name.toLowerCase(), pdfField.position)
+      }
+    }
 
-      // Group fields by page number if available, otherwise distribute across pages
-      const fieldsWithPosition = formFields.map((field: any, index: number) => {
-        // If field has page info from analysis, use it
-        const pageNum = field.pageNumber ? Math.min(field.pageNumber - 1, pageCount - 1) : 0
-        return { ...field, pageIndex: pageNum, originalIndex: index }
-      })
+    console.log("[v0] Position map has", positionMap.size, "entries")
 
-      // Group by page
-      const fieldsByPage: Record<number, any[]> = {}
-      fieldsWithPosition.forEach((field: any) => {
-        const pageIdx = field.pageIndex || 0
-        if (!fieldsByPage[pageIdx]) fieldsByPage[pageIdx] = []
-        fieldsByPage[pageIdx].push(field)
-      })
+    // Create overlay fields for responses that don't have existing PDF fields
+    const pages = pdfDoc.getPages()
+    const pageCount = pages.length
+    const filledFieldNames = new Set<string>()
 
-      // Process each page
-      for (const [pageIndexStr, pageFields] of Object.entries(fieldsByPage)) {
-        const pageIndex = Number.parseInt(pageIndexStr)
-        if (pageIndex >= pageCount) continue
+    // Track which responses already have fields
+    for (const field of existingFields) {
+      const fieldName = field.getName().toLowerCase()
+      filledFieldNames.add(fieldName)
+    }
 
-        const page = pages[pageIndex]
-        const { width, height } = page.getSize()
+    for (const formField of formFields) {
+      const fieldId = formField.id
+      const response = formResponses[fieldId]
 
-        // Calculate field positions - start from top of page, work down
-        let currentY = height - 80 // Start below typical header area
-        const fieldHeight = 16
-        const fieldSpacing = 8
-        const leftMargin = 50
-        const labelWidth = 150
-        const fieldWidth = Math.min(300, width - leftMargin - labelWidth - 50)
+      if (response === undefined || response === null || response === "") continue
 
-        for (const formField of pageFields as any[]) {
-          // Skip if we already filled this field
-          if (formResponses[formField.id] === undefined) continue
+      // Check if this field already exists
+      const normalizedId = fieldId.toLowerCase().replace(/[_\-\s]+/g, "")
+      let alreadyFilled = false
 
-          // Check if field has explicit position from analysis
-          let fieldX = leftMargin + labelWidth + 10
-          let fieldY = currentY
+      for (const filledName of filledFieldNames) {
+        const normalizedFilled = filledName.toLowerCase().replace(/[_\-\s]+/g, "")
+        if (normalizedFilled.includes(normalizedId) || normalizedId.includes(normalizedFilled)) {
+          alreadyFilled = true
+          break
+        }
+      }
 
-          if (formField.position) {
-            // Use position from analysis if available
-            fieldX = formField.position.x || fieldX
-            fieldY = formField.position.y ? height - formField.position.y : fieldY
-          }
+      if (alreadyFilled) continue
 
-          // Skip if we'd go off the page
-          if (fieldY < 50) continue
+      let position = formField.position
 
-          try {
-            const uniqueFieldName = `field_${formField.id}_${pageIndex}_${fieldsCreated}`
-            const value = formResponses[formField.id]
-
-            if (formField.type === "checkbox" || formField.type === "boolean") {
-              // Create checkbox
-              const checkbox = form.createCheckBox(uniqueFieldName)
-              checkbox.addToPage(page, {
-                x: fieldX,
-                y: fieldY - fieldHeight / 2,
-                width: fieldHeight,
-                height: fieldHeight,
-                borderColor: rgb(0.4, 0.4, 0.4),
-                backgroundColor: rgb(1, 1, 1),
-              })
-
-              if (value === true || value === "true" || value === "yes") {
-                checkbox.check()
-              }
-              fieldsCreated++
-              fieldsFilled++
-            } else {
-              // Create text field
-              const textField = form.createTextField(uniqueFieldName)
-              const actualFieldWidth = formField.type === "textarea" ? fieldWidth : Math.min(fieldWidth, 250)
-              const actualFieldHeight = formField.type === "textarea" ? fieldHeight * 3 : fieldHeight
-
-              textField.addToPage(page, {
-                x: fieldX,
-                y: fieldY - actualFieldHeight,
-                width: actualFieldWidth,
-                height: actualFieldHeight,
-                borderColor: rgb(0.6, 0.6, 0.6),
-                backgroundColor: rgb(1, 1, 1),
-                borderWidth: 0.5,
-              })
-
-              if (value !== undefined && value !== null && value !== "") {
-                textField.setText(String(value))
-                fieldsFilled++
-              }
-              fieldsCreated++
-            }
-
-            currentY -= fieldHeight + fieldSpacing
-            if (formField.type === "textarea") {
-              currentY -= fieldHeight * 2 // Extra space for textareas
-            }
-          } catch (error) {
-            console.log("[v0] Error creating overlay field:", formField.id, error)
+      if (!position) {
+        // Try to match with PDF form field positions
+        for (const [pdfFieldName, pos] of positionMap.entries()) {
+          if (pdfFieldName.includes(normalizedId) || normalizedId.includes(pdfFieldName)) {
+            position = pos
+            console.log(`[v0] Found position match for ${fieldId} from PDF field`)
+            break
           }
         }
+      }
+
+      // Determine page index
+      let pageIndex = 0
+      if (position?.page) {
+        pageIndex = Math.min(position.page - 1, pageCount - 1)
+      } else if (formField.pageNumber) {
+        pageIndex = Math.min(formField.pageNumber - 1, pageCount - 1)
+      }
+
+      const page = pages[pageIndex]
+      const { width, height } = page.getSize()
+
+      try {
+        const uniqueFieldName = `overlay_${fieldId}_${Date.now()}_${fieldsCreated}`
+
+        if (formField.type === "checkbox" || formField.type === "boolean") {
+          const fieldX = position?.x ?? 50
+          const fieldY = position?.y ?? height - 100 - fieldsCreated * 25
+          const fieldWidth = position?.width ?? 14
+          const fieldHeight = position?.height ?? 14
+
+          const checkbox = form.createCheckBox(uniqueFieldName)
+          checkbox.addToPage(page, {
+            x: fieldX,
+            y: fieldY,
+            width: fieldWidth,
+            height: fieldHeight,
+            borderColor: rgb(0.4, 0.4, 0.4),
+            backgroundColor: rgb(1, 1, 1),
+          })
+
+          if (response === true || response === "true" || response === "yes") {
+            checkbox.check()
+          }
+          fieldsCreated++
+          fieldsFilled++
+          console.log(`[v0] Created checkbox at (${fieldX}, ${fieldY}) on page ${pageIndex + 1}`)
+        } else {
+          const fieldX = position?.x ?? 200
+          const fieldY = position?.y ?? height - 100 - fieldsCreated * 25
+          const fieldWidth = position?.width ?? (formField.type === "textarea" ? 350 : 200)
+          const fieldHeight = position?.height ?? (formField.type === "textarea" ? 60 : 18)
+
+          const textField = form.createTextField(uniqueFieldName)
+          textField.addToPage(page, {
+            x: fieldX,
+            y: fieldY,
+            width: fieldWidth,
+            height: fieldHeight,
+            borderColor: rgb(0.6, 0.6, 0.6),
+            backgroundColor: rgb(1, 1, 1),
+            borderWidth: 0.5,
+          })
+
+          textField.setText(String(response))
+          fieldsCreated++
+          fieldsFilled++
+          console.log(`[v0] Created text field "${fieldId}" at (${fieldX}, ${fieldY}) on page ${pageIndex + 1}`)
+        }
+      } catch (error: any) {
+        console.log("[v0] Error creating overlay field:", fieldId, error.message)
       }
     }
 
     if (fieldsCreated === 0 && fieldsFilled === 0 && Object.keys(formResponses).length > 0) {
-      console.log("[v0] Creating response annotations on first page...")
+      console.log("[v0] No field positions available, creating response annotation...")
 
       const firstPage = pdfDoc.getPage(0)
       const { width, height } = firstPage.getSize()
 
-      // Add a small annotation box in the corner with response summary
       const boxX = width - 220
       const boxY = height - 120
       const boxWidth = 200
       const boxHeight = 100
 
-      // Draw semi-transparent background
       firstPage.drawRectangle({
         x: boxX,
         y: boxY,
@@ -297,7 +292,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         opacity: 0.95,
       })
 
-      // Add title
       firstPage.drawText("Form Responses Attached", {
         x: boxX + 10,
         y: boxY + boxHeight - 20,
@@ -306,7 +300,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         color: rgb(0.2, 0.2, 0.2),
       })
 
-      // Add count
       firstPage.drawText(`${Object.keys(formResponses).length} fields completed`, {
         x: boxX + 10,
         y: boxY + boxHeight - 35,
@@ -328,11 +321,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     console.log("[v0] Fields filled:", fieldsFilled)
     console.log("[v0] Total pages:", pdfDoc.getPageCount())
 
-    // Save the PDF
     const filledPdfBytes = await pdfDoc.save()
     console.log("[v0] PDF saved, size:", filledPdfBytes.byteLength, "bytes")
 
-    // Save to blob storage
     let savedBlobUrl = null
     if (saveToBlob) {
       try {
@@ -347,7 +338,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         savedBlobUrl = blob.url
         console.log("[v0] Saved to blob storage:", savedBlobUrl)
 
-        // Save reference in database
         await supabase.from("user_custom_tender_documents").insert({
           tender_id: id,
           user_id: user.id,
@@ -376,90 +366,4 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     console.error("[v0] Error generating filled editable PDF:", error)
     return Response.json({ error: error.message || "Failed to generate filled editable PDF" }, { status: 500 })
   }
-}
-
-function findBestMatch(
-  pdfFieldName: string,
-  responses: Record<string, any>,
-  formFields: any[],
-): { key: string; value: any; score: number } | null {
-  const normalizedFieldName = pdfFieldName.toLowerCase().replace(/[_\-\s]+/g, "")
-  let bestMatch: { key: string; value: any; score: number } | null = null
-
-  // First, try to match against our analyzed formFields to find the corresponding response
-  for (const formField of formFields) {
-    const fieldId = formField.id
-    const fieldLabel = formField.label || ""
-    const pdfFieldId = formField.pdfFieldName || ""
-
-    const normalizedId = fieldId.toLowerCase().replace(/[_\-\s]+/g, "")
-    const normalizedLabel = fieldLabel.toLowerCase().replace(/[_\-\s]+/g, "")
-    const normalizedPdfField = pdfFieldId.toLowerCase().replace(/[_\-\s]+/g, "")
-
-    let score = 0
-
-    // Exact match on PDF field name
-    if (normalizedPdfField && normalizedFieldName === normalizedPdfField) {
-      score = 100
-    }
-    // Exact match on field ID
-    else if (normalizedFieldName === normalizedId) {
-      score = 95
-    }
-    // Exact match on label
-    else if (normalizedFieldName === normalizedLabel) {
-      score = 90
-    }
-    // Contains match
-    else if (
-      normalizedFieldName.includes(normalizedId) ||
-      normalizedId.includes(normalizedFieldName) ||
-      normalizedFieldName.includes(normalizedLabel) ||
-      normalizedLabel.includes(normalizedFieldName)
-    ) {
-      score = 70
-    }
-    // Word overlap
-    else {
-      const fieldWords = normalizedFieldName.split(/(?=[A-Z])/).map((w) => w.toLowerCase())
-      const idWords = normalizedId.split(/(?=[A-Z])/).map((w) => w.toLowerCase())
-      const labelWords = normalizedLabel.split(/[^a-z]/).filter(Boolean)
-
-      const allTargetWords = [...idWords, ...labelWords]
-      const overlap = fieldWords.filter((w) => allTargetWords.some((tw) => tw.includes(w) || w.includes(tw))).length
-
-      score = overlap * 15
-    }
-
-    if (score > 0 && responses[fieldId] !== undefined) {
-      if (!bestMatch || score > bestMatch.score) {
-        bestMatch = { key: fieldId, value: responses[fieldId], score }
-      }
-    }
-  }
-
-  // If no match found via formFields, try direct response matching
-  if (!bestMatch) {
-    for (const [key, value] of Object.entries(responses)) {
-      const normalizedKey = key.toLowerCase().replace(/[_\-\s]+/g, "")
-      let score = 0
-
-      if (normalizedFieldName === normalizedKey) {
-        score = 100
-      } else if (normalizedFieldName.includes(normalizedKey) || normalizedKey.includes(normalizedFieldName)) {
-        score = 80
-      } else {
-        const fieldWords = normalizedFieldName.split(/(?=[A-Z])/).map((w) => w.toLowerCase())
-        const keyWords = normalizedKey.split(/(?=[A-Z])/).map((w) => w.toLowerCase())
-        const overlap = fieldWords.filter((w) => keyWords.some((kw) => kw.includes(w) || w.includes(kw))).length
-        score = overlap * 20
-      }
-
-      if (score > 0 && (!bestMatch || score > bestMatch.score)) {
-        bestMatch = { key, value, score }
-      }
-    }
-  }
-
-  return bestMatch && bestMatch.score >= 40 ? bestMatch : null
 }

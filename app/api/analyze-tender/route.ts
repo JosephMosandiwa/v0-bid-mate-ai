@@ -4,7 +4,12 @@ import { PDFDocument } from "pdf-lib"
 import { getAnalysisPrompt } from "@/lib/prompts"
 
 async function extractPdfFormFields(pdfUrl: string): Promise<{
-  fields: Array<{ name: string; type: string; options?: string[] }>
+  fields: Array<{
+    name: string
+    type: string
+    options?: string[]
+    position?: { x: number; y: number; width: number; height: number; page: number }
+  }>
   hasFormFields: boolean
 }> {
   try {
@@ -18,6 +23,7 @@ async function extractPdfFormFields(pdfUrl: string): Promise<{
     const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true })
     const form = pdfDoc.getForm()
     const fields = form.getFields()
+    const pages = pdfDoc.getPages()
 
     const extractedFields = fields.map((field) => {
       const name = field.getName()
@@ -25,6 +31,7 @@ async function extractPdfFormFields(pdfUrl: string): Promise<{
 
       let type = "text"
       let options: string[] | undefined
+      let position: { x: number; y: number; width: number; height: number; page: number } | undefined
 
       if (typeName === "PDFTextField") {
         type = "text"
@@ -46,14 +53,40 @@ async function extractPdfFormFields(pdfUrl: string): Promise<{
         }
       }
 
-      return { name, type, options }
+      try {
+        const widgets = field.acroField.getWidgets()
+        if (widgets.length > 0) {
+          const widget = widgets[0]
+          const rect = widget.getRectangle()
+
+          // Find which page this widget is on
+          let pageIndex = 0
+          for (let i = 0; i < pages.length; i++) {
+            const pageRef = pages[i].ref
+            const widgetPage = widget.P()
+            if (widgetPage && pageRef.toString() === widgetPage.toString()) {
+              pageIndex = i
+              break
+            }
+          }
+
+          position = {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+            page: pageIndex + 1, // 1-based page number
+          }
+          console.log(`[v0] Field "${name}" position:`, position)
+        }
+      } catch (posError) {
+        console.log(`[v0] Could not extract position for field "${name}"`)
+      }
+
+      return { name, type, options, position }
     })
 
-    console.log("[v0] Found", extractedFields.length, "PDF form fields")
-    console.log(
-      "[v0] PDF field names:",
-      extractedFields.map((f) => f.name),
-    )
+    console.log("[v0] Found", extractedFields.length, "PDF form fields with positions")
 
     return {
       fields: extractedFields,
@@ -80,7 +113,12 @@ export async function POST(request: Request) {
       return Response.json({ error: "Either document text or document URL is required" }, { status: 400 })
     }
 
-    let pdfFormFields: Array<{ name: string; type: string; options?: string[] }> = []
+    let pdfFormFields: Array<{
+      name: string
+      type: string
+      options?: string[]
+      position?: { x: number; y: number; width: number; height: number; page: number }
+    }> = []
     let hasPdfFormFields = false
 
     if (documentUrl) {
@@ -175,6 +213,9 @@ ${pdfFormFields
     let info = `- "${f.name}" (type: ${f.type})`
     if (f.options && f.options.length > 0) {
       info += ` [options: ${f.options.join(", ")}]`
+    }
+    if (f.position) {
+      info += ` [position: page ${f.position.page}, x ${f.position.x}, y ${f.position.y}, width ${f.position.width}, height ${f.position.height}]`
     }
     return info
   })
