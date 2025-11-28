@@ -882,8 +882,8 @@ export function DynamicTenderForm({
               Generate Filled Document
             </CardTitle>
             <CardDescription>
-              Download your tender document with all form fields filled in. The system will create an editable version
-              of the document with your responses, even if the original PDF is read-only or has no form fields.
+              Download an editable copy of your tender document with all form fields filled in. Your responses will be
+              overlaid directly onto the original document pages.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -915,7 +915,7 @@ export function DynamicTenderForm({
                 {fillingPdf ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating...
+                    Generating Filled Document...
                   </>
                 ) : (
                   <>
@@ -924,29 +924,11 @@ export function DynamicTenderForm({
                   </>
                 )}
               </Button>
-
-              <Button
-                onClick={handleDownloadResponsePdf}
-                disabled={fillingPdf || Object.keys(formData).length === 0}
-                size="lg"
-                variant="outline"
-              >
-                {fillingPdf ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Download Response Summary
-                  </>
-                )}
-              </Button>
             </div>
 
             <p className="text-xs text-muted-foreground">
-              The filled PDF will be saved to your documents for future reference.
+              The filled PDF will be saved to your documents. Your responses are overlaid directly on the original
+              tender document.
             </p>
           </CardContent>
         </Card>
