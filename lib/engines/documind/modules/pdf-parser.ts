@@ -1,14 +1,12 @@
 // ============================================
 // DOCUMIND ENGINE - PDF PARSER MODULE
-// Uses pdfjs-dist for parsing and pdf-lib for form fields
+// Uses unpdf for text extraction (server-compatible)
+// Uses pdf-lib for form field extraction
 // ============================================
 
 import type {
   ParsedPage,
   TextBlock,
-  LineElement,
-  RectElement,
-  ImageElement,
   FormField,
   FormFieldType,
   FormFieldOption,
@@ -21,17 +19,7 @@ import type {
 import { pdfToNormalized } from "../utils/position-mapper"
 import { DOCUMENT_TYPE_PATTERNS, OCR_CONFIG } from "../constants"
 
-let pdfjsLib: typeof import("pdfjs-dist") | null = null
 let PDFDocumentModule: typeof import("pdf-lib").PDFDocument | null = null
-
-async function getPdfJs() {
-  if (!pdfjsLib) {
-    pdfjsLib = await import("pdfjs-dist")
-    // Configure worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = ""
-  }
-  return pdfjsLib
-}
 
 async function getPdfLib() {
   if (!PDFDocumentModule) {
@@ -57,39 +45,44 @@ export interface PDFParseOptions {
 
 /**
  * Main PDF parsing function
+ * Now uses unpdf for server-compatible text extraction
  */
 export async function parsePDF(data: ArrayBuffer | Uint8Array, options: PDFParseOptions = {}): Promise<PDFParseResult> {
-  const { extractImages = false, maxPages, password } = options
+  const { maxPages } = options
 
-  const pdfjs = await getPdfJs()
+  const { getDocumentProxy, extractText } = await import("unpdf")
 
-  // Load with pdfjs-dist for text extraction
-  const loadingTask = pdfjs.getDocument({
-    data,
-    password,
-    useSystemFonts: true,
-  })
+  // Convert to Uint8Array if needed
+  const uint8Data = data instanceof ArrayBuffer ? new Uint8Array(data) : data
 
-  const pdfDoc = await loadingTask.promise
-
-  // Extract metadata
-  const metadata = await extractMetadata(pdfDoc, pdfjs)
+  // Load PDF with unpdf
+  const pdf = await getDocumentProxy(uint8Data)
+  const pageCount = pdf.numPages
 
   // Determine page range
-  const pageCount = pdfDoc.numPages
   const pagesToProcess = maxPages ? Math.min(pageCount, maxPages) : pageCount
 
-  // Parse each page
+  // Extract text using unpdf
+  const { text: fullText } = await extractText(pdf, { mergePages: true })
+
+  // Extract text per page
   const pages: ParsedPage[] = []
-  let fullText = ""
   let totalTextLength = 0
 
   for (let i = 1; i <= pagesToProcess; i++) {
-    const page = await pdfDoc.getPage(i)
-    const parsedPage = await parsePage(page, i, extractImages, pdfjs)
+    const pageResult = await extractText(pdf, { mergePages: false })
+    const pageTexts = pageResult.text.split("\n\n") // unpdf separates pages with double newlines
+    const pageText = pageTexts[i - 1] || ""
+
+    // Get page info from pdf-lib for dimensions
+    const PDFDocument = await getPdfLib()
+    const pdfDoc = await PDFDocument.load(uint8Data, { ignoreEncryption: true })
+    const page = pdfDoc.getPage(i - 1)
+    const { width, height } = page.getSize()
+
+    const parsedPage = createParsedPage(pageText, i, width, height)
     pages.push(parsedPage)
-    fullText += parsedPage.content.full_text + "\n\n"
-    totalTextLength += parsedPage.content.full_text.length
+    totalTextLength += pageText.length
   }
 
   // Detect if document is scanned (low text density)
@@ -97,12 +90,10 @@ export async function parsePDF(data: ArrayBuffer | Uint8Array, options: PDFParse
   const isScanned = avgTextPerPage < OCR_CONFIG.min_text_density * 1000
 
   // Extract form fields using pdf-lib
-  const formFields = await extractFormFields(data)
+  const formFields = await extractFormFields(uint8Data)
 
-  // Detect document type from content
-  metadata.detected_type = detectDocumentType(fullText)
-  metadata.is_scanned = isScanned
-  metadata.page_count = pageCount
+  // Extract metadata using pdf-lib
+  const metadata = await extractMetadataFromPdfLib(uint8Data, pageCount, isScanned, fullText)
 
   return {
     metadata,
@@ -114,64 +105,24 @@ export async function parsePDF(data: ArrayBuffer | Uint8Array, options: PDFParse
 }
 
 /**
- * Extract PDF metadata
+ * Create a parsed page from text content
+ * Simplified page creation without pdfjs position data
  */
-async function extractMetadata(pdfDoc: any, pdfjs: any): Promise<DocumentMetadata> {
-  const info = await pdfDoc.getMetadata()
-  const pdfInfo = info.info as Record<string, any>
-
-  return {
-    title: pdfInfo?.Title || null,
-    author: pdfInfo?.Author || null,
-    subject: pdfInfo?.Subject || null,
-    creator: pdfInfo?.Creator || null,
-    producer: pdfInfo?.Producer || null,
-    creation_date: pdfInfo?.CreationDate ? parsePDFDate(pdfInfo.CreationDate) : null,
-    modification_date: pdfInfo?.ModDate ? parsePDFDate(pdfInfo.ModDate) : null,
-    page_count: pdfDoc.numPages,
-    pdf_version: pdfInfo?.PDFFormatVersion || null,
-    is_encrypted: false,
-    is_scanned: false,
-    detected_language: "en",
-    detected_type: "unknown",
-  }
-}
-
-/**
- * Parse a single page
- */
-async function parsePage(page: any, pageNumber: number, extractImages: boolean, pdfjs: any): Promise<ParsedPage> {
-  const viewport = page.getViewport({ scale: 1.0 })
-  const pageDimensions = { width: viewport.width, height: viewport.height }
-
-  // Get text content with positions
-  const textContent = await page.getTextContent()
-  const textBlocks = processTextContent(textContent, pageDimensions, pageNumber)
-
-  // Get operator list for lines and rectangles
-  const operatorList = await page.getOperatorList()
-  const { lines, rectangles } = processOperatorList(operatorList, pageDimensions, pdfjs)
-
-  // Extract images if requested
-  const images: ImageElement[] = extractImages ? await extractPageImages(page, pageDimensions) : []
-
-  // Build full text from blocks
-  const fullText = textBlocks.map((b) => b.text).join(" ")
-
-  // Detect if page is scanned
-  const isScanned = fullText.length < OCR_CONFIG.min_text_density * 1000
+function createParsedPage(pageText: string, pageNumber: number, width: number, height: number): ParsedPage {
+  const textBlocks = createTextBlocks(pageText, pageNumber, width, height)
+  const isScanned = pageText.length < OCR_CONFIG.min_text_density * 1000
 
   return {
     page_number: pageNumber,
-    width: viewport.width,
-    height: viewport.height,
-    rotation: viewport.rotation,
+    width,
+    height,
+    rotation: 0,
     content: {
-      full_text: fullText,
+      full_text: pageText,
       text_blocks: textBlocks,
-      lines,
-      rectangles,
-      images,
+      lines: [], // Line detection requires visual analysis - will be enhanced later
+      rectangles: [], // Rectangle detection requires visual analysis
+      images: [],
     },
     is_scanned: isScanned,
     ocr_confidence: null,
@@ -179,255 +130,196 @@ async function parsePage(page: any, pageNumber: number, extractImages: boolean, 
 }
 
 /**
- * Process text content from PDF.js
+ * Create text blocks from page text
+ * Creates logical text blocks from extracted text
  */
-function processTextContent(
-  textContent: any,
-  pageDimensions: { width: number; height: number },
-  pageNumber: number,
-): TextBlock[] {
+function createTextBlocks(pageText: string, pageNumber: number, pageWidth: number, pageHeight: number): TextBlock[] {
   const blocks: TextBlock[] = []
-  let lineIndex = 0
-  let paragraphIndex = 0
-  let lastY = -1
+  const lines = pageText.split("\n").filter((line) => line.trim())
 
-  textContent.items.forEach((item: any, index: number) => {
-    if (!("str" in item) || !item.str.trim()) return
+  let yPosition = pageHeight - 50 // Start from top
+  const lineHeight = 14
 
-    const textItem = item
+  lines.forEach((line, index) => {
+    const trimmedLine = line.trim()
+    if (!trimmedLine) return
 
-    // Get transform matrix for position
-    const [, , , , x, y] = textItem.transform
-
-    // Create bounding box
+    // Estimate position based on line index
     const position: BoundingBox = {
-      x,
-      y,
-      width: textItem.width,
-      height: textItem.height,
+      x: 50,
+      y: yPosition,
+      width: Math.min(trimmedLine.length * 7, pageWidth - 100),
+      height: lineHeight,
     }
 
-    // Detect line/paragraph changes
-    if (lastY !== -1 && Math.abs(y - lastY) > textItem.height * 0.5) {
-      lineIndex++
-      if (Math.abs(y - lastY) > textItem.height * 2) {
-        paragraphIndex++
-      }
-    }
-    lastY = y
-
-    // Extract font info
-    const font = extractFontInfo(textItem)
-
-    // Classify block type
-    const blockType = classifyTextBlock(textItem.str, font, position, pageDimensions)
+    // Classify the block type
+    const blockType = classifyTextBlockFromContent(trimmedLine)
+    const font = estimateFontFromBlockType(blockType)
 
     blocks.push({
       id: `tb-${pageNumber}-${index}`,
-      text: textItem.str,
+      text: trimmedLine,
       position,
-      position_normalized: pdfToNormalized(position, pageDimensions),
+      position_normalized: pdfToNormalized(position, { width: pageWidth, height: pageHeight }),
       font,
       block_type: blockType,
-      line_index: lineIndex,
-      paragraph_index: paragraphIndex,
-      confidence: null,
+      line_index: index,
+      paragraph_index: Math.floor(index / 5),
+      confidence: 0.8, // Estimated confidence
       words: null,
     })
+
+    yPosition -= lineHeight * 1.5
   })
 
   return blocks
 }
 
 /**
- * Extract font information from text item
+ * Classify text block type from content
  */
-function extractFontInfo(textItem: any): FontInfo {
-  const fontName = textItem.fontName || "unknown"
-  const isBold = fontName.toLowerCase().includes("bold") || fontName.toLowerCase().includes("black")
-  const isItalic = fontName.toLowerCase().includes("italic") || fontName.toLowerCase().includes("oblique")
+function classifyTextBlockFromContent(text: string): TextBlockType {
+  const trimmed = text.trim()
 
-  return {
-    name: fontName,
-    family: fontName.split("-")[0] || null,
-    size: textItem.height || 12,
-    weight: isBold ? "bold" : "normal",
-    style: isItalic ? "italic" : "normal",
-    color: "#000000",
-  }
-}
-
-/**
- * Classify text block type based on characteristics
- */
-function classifyTextBlock(
-  text: string,
-  font: FontInfo,
-  position: BoundingBox,
-  pageDimensions: { width: number; height: number },
-): TextBlockType {
-  const normalizedY = position.y / pageDimensions.height
-  const normalizedX = position.x / pageDimensions.width
-
-  if (normalizedY > 0.9) {
-    return "header"
+  // Check for headings (all caps, short, or numbered sections)
+  if (trimmed === trimmed.toUpperCase() && trimmed.length < 100 && trimmed.length > 2) {
+    return "heading_1"
   }
 
-  if (normalizedY < 0.1) {
-    return "footer"
+  // Check for section numbers like "1.", "1.1", "Section 1"
+  if (/^(\d+\.?\d*\.?\d*|\w+\s+\d+)[.:]\s/.test(trimmed)) {
+    if (trimmed.length < 80) return "heading_2"
   }
 
-  if (text.match(/^\d+$/) && (normalizedY < 0.1 || normalizedY > 0.9)) {
-    return "page_number"
-  }
-
-  if (font.weight === "bold" && font.size > 14) {
-    if (font.size > 18) return "heading_1"
-    if (font.size > 16) return "heading_2"
-    return "heading_3"
-  }
-
-  if (text.trim().endsWith(":")) {
+  // Check for labels (ends with colon)
+  if (trimmed.endsWith(":") && trimmed.length < 50) {
     return "label"
   }
 
-  if (text.match(/^[\u2022\u2023\u25E6\u2043\u2219•-]\s/)) {
+  // Check for list items
+  if (/^[\u2022\u2023\u25E6\u2043\u2219•\-*]\s/.test(trimmed)) {
     return "list_item"
   }
-  if (text.match(/^\d+[.)]\s/)) {
+  if (/^\d+[.)]\s/.test(trimmed)) {
     return "list_item"
+  }
+
+  // Check for page numbers
+  if (/^(Page\s*)?\d+(\s*of\s*\d+)?$/i.test(trimmed)) {
+    return "page_number"
   }
 
   return "paragraph"
 }
 
 /**
- * Process operator list for lines and rectangles
+ * Estimate font info from block type
  */
-function processOperatorList(
-  operatorList: any,
-  pageDimensions: { width: number; height: number },
-  pdfjs: any,
-): { lines: LineElement[]; rectangles: RectElement[] } {
-  const lines: LineElement[] = []
-  const rectangles: RectElement[] = []
+function estimateFontFromBlockType(blockType: TextBlockType): FontInfo {
+  const baseFontSize = 12
 
-  const OPS = pdfjs.OPS
-
-  let lineId = 0
-  let rectId = 0
-  let currentPath: { x: number; y: number }[] = []
-  let currentColor = "#000000"
-  let lineWidth = 1
-
-  for (let i = 0; i < operatorList.fnArray.length; i++) {
-    const op = operatorList.fnArray[i]
-    const args = operatorList.argsArray[i]
-
-    switch (op) {
-      case OPS.setLineWidth:
-        lineWidth = args[0]
-        break
-
-      case OPS.setStrokeRGBColor:
-        currentColor = rgbToHex(args[0], args[1], args[2])
-        break
-
-      case OPS.moveTo:
-        currentPath = [{ x: args[0], y: args[1] }]
-        break
-
-      case OPS.lineTo:
-        if (currentPath.length > 0) {
-          currentPath.push({ x: args[0], y: args[1] })
-        }
-        break
-
-      case OPS.stroke:
-        if (currentPath.length >= 2) {
-          for (let j = 0; j < currentPath.length - 1; j++) {
-            const start = currentPath[j]
-            const end = currentPath[j + 1]
-
-            const isHorizontal = Math.abs(start.y - end.y) < 2
-            const isVertical = Math.abs(start.x - end.x) < 2
-
-            if (isHorizontal || isVertical) {
-              const lineLength = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2))
-
-              if (lineLength > 20) {
-                const isFormLine =
-                  isHorizontal && lineWidth <= 1.5 && lineLength > 50 && lineLength < pageDimensions.width * 0.8
-
-                lines.push({
-                  id: `line-${lineId++}`,
-                  type: isHorizontal ? "horizontal" : isVertical ? "vertical" : "diagonal",
-                  start,
-                  end,
-                  thickness: lineWidth,
-                  color: currentColor,
-                  style: "solid",
-                  is_form_line: isFormLine,
-                  associated_label_id: null,
-                })
-              }
-            }
-          }
-        }
-        currentPath = []
-        break
-
-      case OPS.rectangle:
-        const [x, y, w, h] = args
-        if (Math.abs(w) > 5 && Math.abs(h) > 5) {
-          const aspectRatio = Math.abs(w) / Math.abs(h)
-          const isSquare = aspectRatio > 0.8 && aspectRatio < 1.2
-          const isSmall = Math.abs(w) < 20 && Math.abs(h) < 20
-
-          let rectType: RectElement["rect_type"] = "unknown"
-          if (isSquare && isSmall) {
-            rectType = "checkbox"
-          } else if (Math.abs(h) < 30 && Math.abs(w) > 50) {
-            rectType = "text_box"
-          } else if (Math.abs(w) > pageDimensions.width * 0.9) {
-            rectType = "border"
-          }
-
-          rectangles.push({
-            id: `rect-${rectId++}`,
-            position: {
-              x: Math.min(x, x + w),
-              y: Math.min(y, y + h),
-              width: Math.abs(w),
-              height: Math.abs(h),
-            },
-            fill_color: null,
-            stroke_color: currentColor,
-            stroke_width: lineWidth,
-            rect_type: rectType,
-          })
-        }
-        break
-    }
+  switch (blockType) {
+    case "heading_1":
+      return {
+        name: "Helvetica-Bold",
+        family: "Helvetica",
+        size: 18,
+        weight: "bold",
+        style: "normal",
+        color: "#000000",
+      }
+    case "heading_2":
+      return {
+        name: "Helvetica-Bold",
+        family: "Helvetica",
+        size: 14,
+        weight: "bold",
+        style: "normal",
+        color: "#000000",
+      }
+    case "heading_3":
+      return {
+        name: "Helvetica-Bold",
+        family: "Helvetica",
+        size: 12,
+        weight: "bold",
+        style: "normal",
+        color: "#000000",
+      }
+    case "label":
+      return {
+        name: "Helvetica-Bold",
+        family: "Helvetica",
+        size: 11,
+        weight: "bold",
+        style: "normal",
+        color: "#000000",
+      }
+    default:
+      return {
+        name: "Helvetica",
+        family: "Helvetica",
+        size: baseFontSize,
+        weight: "normal",
+        style: "normal",
+        color: "#000000",
+      }
   }
-
-  return { lines, rectangles }
 }
 
 /**
- * Extract images from page (placeholder)
+ * Extract metadata using pdf-lib
+ * New function to get metadata from pdf-lib instead of pdfjs
  */
-async function extractPageImages(
-  page: any,
-  pageDimensions: { width: number; height: number },
-): Promise<ImageElement[]> {
-  return []
+async function extractMetadataFromPdfLib(
+  data: Uint8Array,
+  pageCount: number,
+  isScanned: boolean,
+  fullText: string,
+): Promise<DocumentMetadata> {
+  try {
+    const PDFDocument = await getPdfLib()
+    const pdfDoc = await PDFDocument.load(data, { ignoreEncryption: true })
+
+    return {
+      title: pdfDoc.getTitle() || null,
+      author: pdfDoc.getAuthor() || null,
+      subject: pdfDoc.getSubject() || null,
+      creator: pdfDoc.getCreator() || null,
+      producer: pdfDoc.getProducer() || null,
+      creation_date: pdfDoc.getCreationDate()?.toISOString() || null,
+      modification_date: pdfDoc.getModificationDate()?.toISOString() || null,
+      page_count: pageCount,
+      pdf_version: null,
+      is_encrypted: false,
+      is_scanned: isScanned,
+      detected_language: "en",
+      detected_type: detectDocumentType(fullText),
+    }
+  } catch (error) {
+    console.error("Error extracting metadata:", error)
+    return {
+      title: null,
+      author: null,
+      subject: null,
+      creator: null,
+      producer: null,
+      creation_date: null,
+      modification_date: null,
+      page_count: pageCount,
+      pdf_version: null,
+      is_encrypted: false,
+      is_scanned: isScanned,
+      detected_language: "en",
+      detected_type: detectDocumentType(fullText),
+    }
+  }
 }
 
 /**
  * Extract form fields using pdf-lib
  */
-async function extractFormFields(data: ArrayBuffer | Uint8Array): Promise<FormField[]> {
+async function extractFormFields(data: Uint8Array): Promise<FormField[]> {
   try {
     const PDFDocument = await getPdfLib()
     const pdfDoc = await PDFDocument.load(data, { ignoreEncryption: true })
@@ -569,33 +461,4 @@ function detectDocumentType(text: string): DocumentType {
   }
 
   return "unknown"
-}
-
-/**
- * Parse PDF date string to ISO format
- */
-function parsePDFDate(dateStr: string): string | null {
-  const match = dateStr.match(/D:(\d{4})(\d{2})(\d{2})(\d{2})?(\d{2})?(\d{2})?/)
-  if (!match) return null
-
-  const [, year, month, day, hour = "00", minute = "00", second = "00"] = match
-  return new Date(
-    Number.parseInt(year),
-    Number.parseInt(month) - 1,
-    Number.parseInt(day),
-    Number.parseInt(hour),
-    Number.parseInt(minute),
-    Number.parseInt(second),
-  ).toISOString()
-}
-
-/**
- * Convert RGB to hex
- */
-function rgbToHex(r: number, g: number, b: number): string {
-  const toHex = (n: number) =>
-    Math.round(n * 255)
-      .toString(16)
-      .padStart(2, "0")
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`
 }
