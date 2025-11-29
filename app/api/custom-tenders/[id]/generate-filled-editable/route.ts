@@ -123,6 +123,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const sourceForm = sourcePdf.getForm()
     const sourceFields = sourceForm.getFields()
     const positionMap = new Map<string, { x: number; y: number; width: number; height: number; page: number }>()
+    const fontSizeMap = new Map<string, number>()
+    let defaultFontSize = 10 // Default fallback
 
     console.log("[v0] Source PDF has", sourceFields.length, "form fields")
 
@@ -157,6 +159,28 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
           })
 
           console.log(`[v0] Mapped field "${fieldName}" at (${rect.x}, ${rect.y}) on page ${pageIndex + 1}`)
+
+          // Calculate font size based on field height (typically 70-80% of field height)
+          const calculatedFontSize = Math.max(8, Math.min(14, rect.height * 0.7))
+          fontSizeMap.set(fieldName.toLowerCase(), calculatedFontSize)
+
+          // Try to extract font size from default appearance if available
+          try {
+            const da = widget.getDefaultAppearance()
+            if (da) {
+              // Default appearance string format: "/FontName fontSize Tf"
+              const fontSizeMatch = da.match(/(\d+(?:\.\d+)?)\s+Tf/)
+              if (fontSizeMatch) {
+                const extractedSize = Number.parseFloat(fontSizeMatch[1])
+                if (extractedSize > 0 && extractedSize < 72) {
+                  fontSizeMap.set(fieldName.toLowerCase(), extractedSize)
+                  defaultFontSize = extractedSize // Use this as a reference
+                }
+              }
+            }
+          } catch (daError) {
+            // Use calculated size if DA extraction fails
+          }
         }
       } catch (e) {
         // Skip fields that can't be read
@@ -164,6 +188,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     console.log("[v0] Position map has", positionMap.size, "entries from source PDF")
+    console.log("[v0] Font size map has", fontSizeMap.size, "entries, default size:", defaultFontSize)
 
     // Also add positions from analysis data
     for (const pdfField of pdfFormFields) {
@@ -186,10 +211,17 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         if (matchingResponse) {
           try {
             if (field instanceof PDFTextField) {
+              const fontSize = fontSizeMap.get(fieldName.toLowerCase()) || defaultFontSize
+              try {
+                field.setFontSize(fontSize)
+              } catch (fontError) {
+                // Some fields may not support setFontSize
+              }
+
               field.setText(String(matchingResponse.value))
               fieldsFilled++
               filledFieldNames.add(fieldName.toLowerCase())
-              console.log("[v0] Filled existing field:", fieldName)
+              console.log("[v0] Filled existing field:", fieldName, "with font size:", fontSize)
             } else if (field instanceof PDFCheckBox) {
               if (
                 matchingResponse.value === true ||
@@ -290,11 +322,35 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
             borderWidth: 0.5,
           })
 
+          let fontSize = defaultFontSize
+
+          // Try to find a matching font size from position map
+          for (const [pdfFieldName, size] of fontSizeMap.entries()) {
+            const normalizedPdfName = pdfFieldName.replace(/[_\-\s]+/g, "")
+            if (normalizedPdfName.includes(normalizedId) || normalizedId.includes(normalizedPdfName)) {
+              fontSize = size
+              break
+            }
+          }
+
+          // If no match found, calculate based on field height
+          if (fontSize === defaultFontSize && position.height) {
+            fontSize = Math.max(8, Math.min(14, position.height * 0.7))
+          }
+
+          try {
+            textField.setFontSize(fontSize)
+          } catch (fontError) {
+            // Fallback if setFontSize fails
+          }
+
           textField.setText(String(response))
           fieldsCreated++
           fieldsFilled++
 
-          console.log(`[v0] Created text field "${fieldId}" at (${position.x}, ${position.y}) on page ${pageIndex + 1}`)
+          console.log(
+            `[v0] Created text field "${fieldId}" at (${position.x}, ${position.y}) on page ${pageIndex + 1} with font size ${fontSize}`,
+          )
         }
       } catch (error: any) {
         console.log("[v0] Error creating overlay field:", fieldId, error.message)
