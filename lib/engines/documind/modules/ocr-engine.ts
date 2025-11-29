@@ -3,10 +3,18 @@
 // Handles OCR for scanned documents
 // ============================================
 
-import Tesseract from "tesseract.js"
 import type { ParsedPage, TextBlock, WordInfo, BoundingBox, FontInfo } from "../types"
 import { pdfToNormalized } from "../utils/position-mapper"
 import { OCR_CONFIG } from "../constants"
+
+let TesseractModule: typeof import("tesseract.js") | null = null
+
+async function getTesseract() {
+  if (!TesseractModule) {
+    TesseractModule = await import("tesseract.js")
+  }
+  return TesseractModule.default
+}
 
 export interface OCRResult {
   pages: OCRPage[]
@@ -41,6 +49,8 @@ export async function performOCR(
   const startTime = Date.now()
 
   try {
+    const Tesseract = await getTesseract()
+
     // Use Tesseract.js for OCR
     const result = await Tesseract.recognize(imageData, language, {
       logger: () => {}, // Suppress logs

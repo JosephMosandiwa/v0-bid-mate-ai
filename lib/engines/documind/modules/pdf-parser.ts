@@ -3,8 +3,6 @@
 // Uses pdfjs-dist for parsing and pdf-lib for form fields
 // ============================================
 
-import * as pdfjsLib from "pdfjs-dist"
-import { PDFDocument } from "pdf-lib"
 import type {
   ParsedPage,
   TextBlock,
@@ -23,10 +21,24 @@ import type {
 import { pdfToNormalized } from "../utils/position-mapper"
 import { DOCUMENT_TYPE_PATTERNS, OCR_CONFIG } from "../constants"
 
-// Configure PDF.js worker
-if (typeof window === "undefined") {
-  // Server-side: use node worker
-  pdfjsLib.GlobalWorkerOptions.workerSrc = ""
+let pdfjsLib: typeof import("pdfjs-dist") | null = null
+let PDFDocumentModule: typeof import("pdf-lib").PDFDocument | null = null
+
+async function getPdfJs() {
+  if (!pdfjsLib) {
+    pdfjsLib = await import("pdfjs-dist")
+    // Configure worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = ""
+  }
+  return pdfjsLib
+}
+
+async function getPdfLib() {
+  if (!PDFDocumentModule) {
+    const pdfLib = await import("pdf-lib")
+    PDFDocumentModule = pdfLib.PDFDocument
+  }
+  return PDFDocumentModule
 }
 
 export interface PDFParseResult {
@@ -49,8 +61,10 @@ export interface PDFParseOptions {
 export async function parsePDF(data: ArrayBuffer | Uint8Array, options: PDFParseOptions = {}): Promise<PDFParseResult> {
   const { extractImages = false, maxPages, password } = options
 
+  const pdfjs = await getPdfJs()
+
   // Load with pdfjs-dist for text extraction
-  const loadingTask = pdfjsLib.getDocument({
+  const loadingTask = pdfjs.getDocument({
     data,
     password,
     useSystemFonts: true,
@@ -59,7 +73,7 @@ export async function parsePDF(data: ArrayBuffer | Uint8Array, options: PDFParse
   const pdfDoc = await loadingTask.promise
 
   // Extract metadata
-  const metadata = await extractMetadata(pdfDoc)
+  const metadata = await extractMetadata(pdfDoc, pdfjs)
 
   // Determine page range
   const pageCount = pdfDoc.numPages
@@ -72,7 +86,7 @@ export async function parsePDF(data: ArrayBuffer | Uint8Array, options: PDFParse
 
   for (let i = 1; i <= pagesToProcess; i++) {
     const page = await pdfDoc.getPage(i)
-    const parsedPage = await parsePage(page, i, extractImages)
+    const parsedPage = await parsePage(page, i, extractImages, pdfjs)
     pages.push(parsedPage)
     fullText += parsedPage.content.full_text + "\n\n"
     totalTextLength += parsedPage.content.full_text.length
@@ -102,7 +116,7 @@ export async function parsePDF(data: ArrayBuffer | Uint8Array, options: PDFParse
 /**
  * Extract PDF metadata
  */
-async function extractMetadata(pdfDoc: pdfjsLib.PDFDocumentProxy): Promise<DocumentMetadata> {
+async function extractMetadata(pdfDoc: any, pdfjs: any): Promise<DocumentMetadata> {
   const info = await pdfDoc.getMetadata()
   const pdfInfo = info.info as Record<string, any>
 
@@ -116,9 +130,9 @@ async function extractMetadata(pdfDoc: pdfjsLib.PDFDocumentProxy): Promise<Docum
     modification_date: pdfInfo?.ModDate ? parsePDFDate(pdfInfo.ModDate) : null,
     page_count: pdfDoc.numPages,
     pdf_version: pdfInfo?.PDFFormatVersion || null,
-    is_encrypted: false, // Would have failed earlier if encrypted without password
-    is_scanned: false, // Will be updated after parsing
-    detected_language: "en", // Default, can be updated by OCR
+    is_encrypted: false,
+    is_scanned: false,
+    detected_language: "en",
     detected_type: "unknown",
   }
 }
@@ -126,7 +140,7 @@ async function extractMetadata(pdfDoc: pdfjsLib.PDFDocumentProxy): Promise<Docum
 /**
  * Parse a single page
  */
-async function parsePage(page: pdfjsLib.PDFPageProxy, pageNumber: number, extractImages: boolean): Promise<ParsedPage> {
+async function parsePage(page: any, pageNumber: number, extractImages: boolean, pdfjs: any): Promise<ParsedPage> {
   const viewport = page.getViewport({ scale: 1.0 })
   const pageDimensions = { width: viewport.width, height: viewport.height }
 
@@ -136,7 +150,7 @@ async function parsePage(page: pdfjsLib.PDFPageProxy, pageNumber: number, extrac
 
   // Get operator list for lines and rectangles
   const operatorList = await page.getOperatorList()
-  const { lines, rectangles } = processOperatorList(operatorList, pageDimensions)
+  const { lines, rectangles } = processOperatorList(operatorList, pageDimensions, pdfjs)
 
   // Extract images if requested
   const images: ImageElement[] = extractImages ? await extractPageImages(page, pageDimensions) : []
@@ -168,7 +182,7 @@ async function parsePage(page: pdfjsLib.PDFPageProxy, pageNumber: number, extrac
  * Process text content from PDF.js
  */
 function processTextContent(
-  textContent: pdfjsLib.TextContent,
+  textContent: any,
   pageDimensions: { width: number; height: number },
   pageNumber: number,
 ): TextBlock[] {
@@ -177,10 +191,10 @@ function processTextContent(
   let paragraphIndex = 0
   let lastY = -1
 
-  textContent.items.forEach((item, index) => {
+  textContent.items.forEach((item: any, index: number) => {
     if (!("str" in item) || !item.str.trim()) return
 
-    const textItem = item as pdfjsLib.TextItem
+    const textItem = item
 
     // Get transform matrix for position
     const [, , , , x, y] = textItem.transform
@@ -228,7 +242,7 @@ function processTextContent(
 /**
  * Extract font information from text item
  */
-function extractFontInfo(textItem: pdfjsLib.TextItem): FontInfo {
+function extractFontInfo(textItem: any): FontInfo {
   const fontName = textItem.fontName || "unknown"
   const isBold = fontName.toLowerCase().includes("bold") || fontName.toLowerCase().includes("black")
   const isItalic = fontName.toLowerCase().includes("italic") || fontName.toLowerCase().includes("oblique")
@@ -239,7 +253,7 @@ function extractFontInfo(textItem: pdfjsLib.TextItem): FontInfo {
     size: textItem.height || 12,
     weight: isBold ? "bold" : "normal",
     style: isItalic ? "italic" : "normal",
-    color: "#000000", // PDF.js doesn't easily expose color
+    color: "#000000",
   }
 }
 
@@ -255,34 +269,28 @@ function classifyTextBlock(
   const normalizedY = position.y / pageDimensions.height
   const normalizedX = position.x / pageDimensions.width
 
-  // Headers are typically at top of page
   if (normalizedY > 0.9) {
     return "header"
   }
 
-  // Footers at bottom
   if (normalizedY < 0.1) {
     return "footer"
   }
 
-  // Page numbers are small and at edges
   if (text.match(/^\d+$/) && (normalizedY < 0.1 || normalizedY > 0.9)) {
     return "page_number"
   }
 
-  // Headings are typically bold and larger
   if (font.weight === "bold" && font.size > 14) {
     if (font.size > 18) return "heading_1"
     if (font.size > 16) return "heading_2"
     return "heading_3"
   }
 
-  // Labels often end with colon
   if (text.trim().endsWith(":")) {
     return "label"
   }
 
-  // List items start with bullets or numbers
   if (text.match(/^[\u2022\u2023\u25E6\u2043\u2219•-]\s/)) {
     return "list_item"
   }
@@ -297,14 +305,14 @@ function classifyTextBlock(
  * Process operator list for lines and rectangles
  */
 function processOperatorList(
-  operatorList: pdfjsLib.PDFOperatorList,
+  operatorList: any,
   pageDimensions: { width: number; height: number },
+  pdfjs: any,
 ): { lines: LineElement[]; rectangles: RectElement[] } {
   const lines: LineElement[] = []
   const rectangles: RectElement[] = []
 
-  // PDF operators for drawing
-  const OPS = pdfjsLib.OPS
+  const OPS = pdfjs.OPS
 
   let lineId = 0
   let rectId = 0
@@ -341,14 +349,12 @@ function processOperatorList(
             const start = currentPath[j]
             const end = currentPath[j + 1]
 
-            // Determine line type
             const isHorizontal = Math.abs(start.y - end.y) < 2
             const isVertical = Math.abs(start.x - end.x) < 2
 
             if (isHorizontal || isVertical) {
               const lineLength = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2))
 
-              // Only include significant lines (> 20 points)
               if (lineLength > 20) {
                 const isFormLine =
                   isHorizontal && lineWidth <= 1.5 && lineLength > 50 && lineLength < pageDimensions.width * 0.8
@@ -374,7 +380,6 @@ function processOperatorList(
       case OPS.rectangle:
         const [x, y, w, h] = args
         if (Math.abs(w) > 5 && Math.abs(h) > 5) {
-          // Classify rectangle type
           const aspectRatio = Math.abs(w) / Math.abs(h)
           const isSquare = aspectRatio > 0.8 && aspectRatio < 1.2
           const isSmall = Math.abs(w) < 20 && Math.abs(h) < 20
@@ -410,14 +415,12 @@ function processOperatorList(
 }
 
 /**
- * Extract images from page (placeholder - full implementation needs more work)
+ * Extract images from page (placeholder)
  */
 async function extractPageImages(
-  page: pdfjsLib.PDFPageProxy,
+  page: any,
   pageDimensions: { width: number; height: number },
 ): Promise<ImageElement[]> {
-  // Image extraction is complex and requires rendering
-  // For now, return empty array - can be enhanced later
   return []
 }
 
@@ -426,6 +429,7 @@ async function extractPageImages(
  */
 async function extractFormFields(data: ArrayBuffer | Uint8Array): Promise<FormField[]> {
   try {
+    const PDFDocument = await getPdfLib()
     const pdfDoc = await PDFDocument.load(data, { ignoreEncryption: true })
     const form = pdfDoc.getForm()
     const fields = form.getFields()
@@ -571,7 +575,6 @@ function detectDocumentType(text: string): DocumentType {
  * Parse PDF date string to ISO format
  */
 function parsePDFDate(dateStr: string): string | null {
-  // PDF date format: D:YYYYMMDDHHmmSSOHH'mm'
   const match = dateStr.match(/D:(\d{4})(\d{2})(\d{2})(\d{2})?(\d{2})?(\d{2})?/)
   if (!match) return null
 
