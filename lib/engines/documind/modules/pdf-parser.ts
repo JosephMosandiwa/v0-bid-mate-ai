@@ -62,25 +62,28 @@ export async function parsePDF(data: ArrayBuffer | Uint8Array, options: PDFParse
   // Determine page range
   const pagesToProcess = maxPages ? Math.min(pageCount, maxPages) : pageCount
 
-  // Extract text using unpdf
-  const { text: fullText } = await extractText(pdf, { mergePages: true })
+  const mergedResult = await extractText(pdf, { mergePages: true })
+  const fullText =
+    typeof mergedResult.text === "string" ? mergedResult.text : (mergedResult.text as string[]).join("\n\n")
 
-  // Extract text per page
+  // Extract text per page - returns array when mergePages: false
+  const perPageResult = await extractText(pdf, { mergePages: false })
+  const pageTexts: string[] = Array.isArray(perPageResult.text) ? perPageResult.text : [perPageResult.text as string]
+
+  // Get page dimensions from pdf-lib
+  const PDFDocument = await getPdfLib()
+  const pdfDoc = await PDFDocument.load(uint8Data, { ignoreEncryption: true })
+
+  // Build pages
   const pages: ParsedPage[] = []
   let totalTextLength = 0
 
-  for (let i = 1; i <= pagesToProcess; i++) {
-    const pageResult = await extractText(pdf, { mergePages: false })
-    const pageTexts = pageResult.text.split("\n\n") // unpdf separates pages with double newlines
-    const pageText = pageTexts[i - 1] || ""
-
-    // Get page info from pdf-lib for dimensions
-    const PDFDocument = await getPdfLib()
-    const pdfDoc = await PDFDocument.load(uint8Data, { ignoreEncryption: true })
-    const page = pdfDoc.getPage(i - 1)
+  for (let i = 0; i < pagesToProcess; i++) {
+    const pageText = pageTexts[i] || ""
+    const page = pdfDoc.getPage(i)
     const { width, height } = page.getSize()
 
-    const parsedPage = createParsedPage(pageText, i, width, height)
+    const parsedPage = createParsedPage(pageText, i + 1, width, height)
     pages.push(parsedPage)
     totalTextLength += pageText.length
   }
