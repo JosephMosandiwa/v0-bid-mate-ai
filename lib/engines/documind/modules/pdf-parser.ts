@@ -50,29 +50,55 @@ export interface PDFParseOptions {
 export async function parsePDF(data: ArrayBuffer | Uint8Array, options: PDFParseOptions = {}): Promise<PDFParseResult> {
   const { maxPages } = options
 
-  const { getDocumentProxy, extractText } = await import("unpdf")
+  let uint8Data: Uint8Array
+  if (data instanceof ArrayBuffer) {
+    uint8Data = new Uint8Array(data)
+  } else if (data instanceof Uint8Array) {
+    uint8Data = data
+  } else {
+    // Handle Buffer or other array-like objects
+    uint8Data = new Uint8Array(data as ArrayBufferLike)
+  }
 
-  // Convert to Uint8Array if needed
-  const uint8Data = data instanceof ArrayBuffer ? new Uint8Array(data) : data
+  const header = String.fromCharCode(...uint8Data.slice(0, 8))
+  console.log("[v0] PDF header check:", header.substring(0, 5), "Length:", uint8Data.length)
 
-  // Load PDF with unpdf
-  const pdf = await getDocumentProxy(uint8Data)
-  const pageCount = pdf.numPages
+  if (!header.startsWith("%PDF-")) {
+    throw new Error(`Invalid PDF: Expected %PDF- header but got: ${header.substring(0, 10)}`)
+  }
+
+  const PDFDocument = await getPdfLib()
+  const pdfDoc = await PDFDocument.load(uint8Data, { ignoreEncryption: true })
+  const pageCount = pdfDoc.getPageCount()
+
+  console.log("[v0] PDF loaded with pdf-lib, pages:", pageCount)
 
   // Determine page range
   const pagesToProcess = maxPages ? Math.min(pageCount, maxPages) : pageCount
 
-  const mergedResult = await extractText(pdf, { mergePages: true })
-  const fullText =
-    typeof mergedResult.text === "string" ? mergedResult.text : (mergedResult.text as string[]).join("\n\n")
+  let fullText = ""
+  let pageTexts: string[] = []
 
-  // Extract text per page - returns array when mergePages: false
-  const perPageResult = await extractText(pdf, { mergePages: false })
-  const pageTexts: string[] = Array.isArray(perPageResult.text) ? perPageResult.text : [perPageResult.text as string]
+  try {
+    const { getDocumentProxy, extractText } = await import("unpdf")
 
-  // Get page dimensions from pdf-lib
-  const PDFDocument = await getPdfLib()
-  const pdfDoc = await PDFDocument.load(uint8Data, { ignoreEncryption: true })
+    // Create a copy of the data for unpdf
+    const pdfData = uint8Data.slice()
+    const pdf = await getDocumentProxy(pdfData)
+
+    const mergedResult = await extractText(pdf, { mergePages: true })
+    fullText = typeof mergedResult.text === "string" ? mergedResult.text : (mergedResult.text as string[]).join("\n\n")
+
+    const perPageResult = await extractText(pdf, { mergePages: false })
+    pageTexts = Array.isArray(perPageResult.text) ? perPageResult.text : [perPageResult.text as string]
+
+    console.log("[v0] Text extracted via unpdf, length:", fullText.length)
+  } catch (unpdfError) {
+    console.log("[v0] unpdf extraction failed, using basic extraction:", unpdfError)
+    // Fallback: just use empty text - documents will be marked as scanned
+    pageTexts = new Array(pagesToProcess).fill("")
+    fullText = ""
+  }
 
   // Build pages
   const pages: ParsedPage[] = []
@@ -96,7 +122,7 @@ export async function parsePDF(data: ArrayBuffer | Uint8Array, options: PDFParse
   const formFields = await extractFormFields(uint8Data)
 
   // Extract metadata using pdf-lib
-  const metadata = await extractMetadataFromPdfLib(uint8Data, pageCount, isScanned, fullText)
+  const metadata = await extractMetadataFromPdfLib(pdfDoc, pageCount, isScanned, fullText)
 
   return {
     metadata,
@@ -272,18 +298,15 @@ function estimateFontFromBlockType(blockType: TextBlockType): FontInfo {
 
 /**
  * Extract metadata using pdf-lib
- * New function to get metadata from pdf-lib instead of pdfjs
+ * Now accepts pre-loaded pdfDoc instead of raw data
  */
 async function extractMetadataFromPdfLib(
-  data: Uint8Array,
+  pdfDoc: import("pdf-lib").PDFDocument,
   pageCount: number,
   isScanned: boolean,
   fullText: string,
 ): Promise<DocumentMetadata> {
   try {
-    const PDFDocument = await getPdfLib()
-    const pdfDoc = await PDFDocument.load(data, { ignoreEncryption: true })
-
     return {
       title: pdfDoc.getTitle() || null,
       author: pdfDoc.getAuthor() || null,
