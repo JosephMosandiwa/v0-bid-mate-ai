@@ -211,30 +211,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const pages = pdfDoc.getPages()
     const pageCount = pages.length
 
-    // Map sections to approximate page numbers
-    const sectionPageMap: Record<string, number> = {
-      sbd1: 0,
-      sbd2: 1,
-      sbd3: 2,
-      sbd4: 3,
-      sbd6: 4,
-      sbd8: 5,
-      sbd9: 6,
-      company: 0,
-      contact: 0,
-      registration: 1,
-      tax: 1,
-      banking: 2,
-      pricing: 3,
-      experience: 4,
-      references: 5,
-      declaration: Math.max(0, pageCount - 2),
-      signature: Math.max(0, pageCount - 1),
-    }
-
-    // Track field positions per page to avoid overlapping
-    const pageFieldCounts: number[] = new Array(pageCount).fill(0)
-
     // Create overlay fields for responses that don't have existing PDF fields
     for (const formField of formFields) {
       const fieldId = formField.id
@@ -256,6 +232,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
       if (alreadyFilled) continue
 
+      // Try to find exact position from the source PDF
       let position: { x: number; y: number; width: number; height: number; page: number } | null = null
 
       // First try exact match
@@ -272,58 +249,25 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         }
       }
 
-      let pageIndex = 0
-      if (position?.page !== undefined) {
-        pageIndex = Math.min(position.page, pageCount - 1)
-      } else if (formField.pageNumber) {
-        pageIndex = Math.min(formField.pageNumber - 1, pageCount - 1)
-      } else if (formField.section) {
-        // Use section to determine page
-        const sectionLower = formField.section.toLowerCase()
-        for (const [key, page] of Object.entries(sectionPageMap)) {
-          if (sectionLower.includes(key)) {
-            pageIndex = Math.min(page, pageCount - 1)
-            break
-          }
-        }
-      } else {
-        // Distribute fields evenly across pages
-        pageIndex = Math.min(Math.floor((fieldsCreated / Math.max(1, formFields.length)) * pageCount), pageCount - 1)
+      // We only create overlay fields when we have actual coordinates from the source PDF
+      if (!position) {
+        console.log(`[v0] Skipping field "${fieldId}" - no position available from source PDF`)
+        continue
       }
 
+      const pageIndex = Math.min(position.page, pageCount - 1)
       const page = pages[pageIndex]
-      const { width, height } = page.getSize()
-
-      const fieldIndexOnPage = pageFieldCounts[pageIndex]
-      const margin = 50
-      const fieldHeight = formField.type === "textarea" ? 60 : 20
-      const fieldSpacing = 30
-      const maxFieldsPerColumn = Math.floor((height - 2 * margin) / (fieldHeight + fieldSpacing))
-
-      // Calculate column and row
-      const column = Math.floor(fieldIndexOnPage / maxFieldsPerColumn)
-      const row = fieldIndexOnPage % maxFieldsPerColumn
-
-      // Calculate x and y position
-      const columnWidth = (width - 2 * margin) / 2
-      const defaultX = margin + column * columnWidth + 100 // Offset for label space
-      const defaultY = height - margin - row * (fieldHeight + fieldSpacing) - fieldHeight
 
       try {
         const uniqueFieldName = `overlay_${fieldId}_${Date.now()}_${fieldsCreated}`
 
         if (formField.type === "checkbox" || formField.type === "boolean") {
-          const fieldX = position?.x ?? defaultX
-          const fieldY = position?.y ?? defaultY
-          const fieldWidth = position?.width ?? 14
-          const fHeight = position?.height ?? 14
-
           const checkbox = form.createCheckBox(uniqueFieldName)
           checkbox.addToPage(page, {
-            x: fieldX,
-            y: fieldY,
-            width: fieldWidth,
-            height: fHeight,
+            x: position.x,
+            y: position.y,
+            width: position.width || 14,
+            height: position.height || 14,
             borderColor: rgb(0.4, 0.4, 0.4),
             backgroundColor: rgb(1, 1, 1),
           })
@@ -333,20 +277,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
           }
           fieldsCreated++
           fieldsFilled++
-          pageFieldCounts[pageIndex]++
-          console.log(`[v0] Created checkbox at (${fieldX}, ${fieldY}) on page ${pageIndex + 1}`)
+          console.log(`[v0] Created checkbox at (${position.x}, ${position.y}) on page ${pageIndex + 1}`)
         } else {
-          const fieldX = position?.x ?? defaultX
-          const fieldY = position?.y ?? defaultY
-          const fieldWidth = position?.width ?? (formField.type === "textarea" ? 300 : 200)
-          const fHeight = position?.height ?? fieldHeight
-
           const textField = form.createTextField(uniqueFieldName)
           textField.addToPage(page, {
-            x: fieldX,
-            y: fieldY,
-            width: fieldWidth,
-            height: fHeight,
+            x: position.x,
+            y: position.y,
+            width: position.width || 200,
+            height: position.height || 20,
             borderColor: rgb(0.6, 0.6, 0.6),
             backgroundColor: rgb(1, 1, 1),
             borderWidth: 0.5,
@@ -355,18 +293,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
           textField.setText(String(response))
           fieldsCreated++
           fieldsFilled++
-          pageFieldCounts[pageIndex]++
 
-          // Also draw the label next to the field
-          page.drawText(formField.label?.substring(0, 30) + ":" || fieldId + ":", {
-            x: Math.max(margin, fieldX - 95),
-            y: fieldY + 4,
-            size: 8,
-            font: font,
-            color: rgb(0.3, 0.3, 0.3),
-          })
-
-          console.log(`[v0] Created text field "${fieldId}" at (${fieldX}, ${fieldY}) on page ${pageIndex + 1}`)
+          console.log(`[v0] Created text field "${fieldId}" at (${position.x}, ${position.y}) on page ${pageIndex + 1}`)
         }
       } catch (error: any) {
         console.log("[v0] Error creating overlay field:", fieldId, error.message)
@@ -374,66 +302,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     if (fieldsCreated === 0 && fieldsFilled === 0 && Object.keys(formResponses).length > 0) {
-      console.log("[v0] No field positions available, creating response summary pages...")
-
-      // Add new pages with form responses
-      const responsesPerPage = 15
-      const responseEntries = Object.entries(formResponses).filter(([_, v]) => v !== null && v !== "")
-      const totalResponsePages = Math.ceil(responseEntries.length / responsesPerPage)
-
-      for (let pageNum = 0; pageNum < totalResponsePages; pageNum++) {
-        const newPage = pdfDoc.addPage([612, 792]) // Letter size
-        const { width, height } = newPage.getSize()
-
-        // Header
-        newPage.drawText("TENDER RESPONSE - FORM DATA", {
-          x: 50,
-          y: height - 50,
-          size: 16,
-          font: boldFont,
-          color: rgb(0.1, 0.1, 0.4),
-        })
-
-        newPage.drawText(`Page ${pageNum + 1} of ${totalResponsePages}`, {
-          x: width - 120,
-          y: height - 50,
-          size: 10,
-          font: font,
-          color: rgb(0.5, 0.5, 0.5),
-        })
-
-        // Draw responses
-        const startIdx = pageNum * responsesPerPage
-        const endIdx = Math.min(startIdx + responsesPerPage, responseEntries.length)
-        let yPos = height - 90
-
-        for (let i = startIdx; i < endIdx; i++) {
-          const [fieldId, value] = responseEntries[i]
-          const formField = formFields.find((f: any) => f.id === fieldId)
-          const label = formField?.label || fieldId
-
-          // Draw label
-          newPage.drawText(label.substring(0, 50) + ":", {
-            x: 50,
-            y: yPos,
-            size: 10,
-            font: boldFont,
-            color: rgb(0.2, 0.2, 0.2),
-          })
-
-          // Draw value
-          const valueStr = String(value).substring(0, 80)
-          newPage.drawText(valueStr, {
-            x: 50,
-            y: yPos - 15,
-            size: 10,
-            font: font,
-            color: rgb(0.3, 0.3, 0.3),
-          })
-
-          yPos -= 45
-        }
-      }
+      console.log("[v0] No PDF form fields found - responses will be saved but not overlaid on PDF")
+      console.log("[v0] The original document may not have editable form fields")
     }
 
     console.log("[v0] Fields created:", fieldsCreated)
