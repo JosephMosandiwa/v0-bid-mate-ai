@@ -8,6 +8,8 @@ import { type ApiResponse, type ParsedDocument, Errors } from "@/lib/engines/doc
 import { getCachedDocument, deleteCachedDocument } from "@/lib/engines/documind/services/cache-service"
 import { getDocument, deleteDocument } from "@/lib/engines/documind/services/database-service"
 
+export const dynamic = "force-dynamic"
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ documentId: string }> }) {
   const startTime = Date.now()
   const requestId = crypto.randomUUID()

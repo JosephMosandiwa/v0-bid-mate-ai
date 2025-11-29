@@ -8,6 +8,8 @@ import { Redis } from "@upstash/redis"
 import { createClient } from "@/lib/supabase/server"
 import { type ApiResponse, API_VERSION } from "@/lib/engines/documind"
 
+export const dynamic = "force-dynamic"
+
 interface HealthStatus {
   status: "healthy" | "degraded" | "unhealthy"
   version: string

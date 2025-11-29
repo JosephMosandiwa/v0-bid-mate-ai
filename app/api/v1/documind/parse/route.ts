@@ -18,6 +18,8 @@ import { cacheDocument, getDocumentIdByHash, getCachedDocument } from "@/lib/eng
 import { saveDocument, logError } from "@/lib/engines/documind/services/database-service"
 import { generateContentHash } from "@/lib/engines/documind/utils/fingerprint"
 
+export const dynamic = "force-dynamic"
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
   const requestId = crypto.randomUUID()

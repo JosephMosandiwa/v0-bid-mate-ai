@@ -17,6 +17,8 @@ import {
   incrementTemplateUsage,
 } from "@/lib/engines/documind/services/database-service"
 
+export const dynamic = "force-dynamic"
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
   const requestId = crypto.randomUUID()

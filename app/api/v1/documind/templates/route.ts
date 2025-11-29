@@ -8,6 +8,8 @@ import { type ApiResponse, type PaginatedResponse, type DocumentTemplate, Errors
 import { getCachedTemplateList, cacheTemplateList } from "@/lib/engines/documind/services/cache-service"
 import { getTemplates } from "@/lib/engines/documind/services/database-service"
 
+export const dynamic = "force-dynamic"
+
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
   const requestId = crypto.randomUUID()
