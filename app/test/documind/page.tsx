@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { useDropzone } from "react-dropzone"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,7 +9,19 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Upload, FileText, CheckCircle, XCircle, Eye, Layers, FormInput, Hash } from "lucide-react"
+import {
+  Loader2,
+  Upload,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Eye,
+  Layers,
+  FormInput,
+  Hash,
+  FileSearch,
+  ListChecks,
+} from "lucide-react"
 
 interface ParsedDocument {
   document_id: string
@@ -86,29 +98,85 @@ interface ApiResponse {
   meta: { request_id: string; processing_time_ms: number }
 }
 
+interface Template {
+  id: string
+  name: string
+  code: string
+  category: string
+  subcategory: string | null
+  description: string | null
+  field_mappings: Array<{
+    field_id: string
+    field_name: string
+    label_pattern: string
+    data_type: string
+    is_required: boolean
+    profile_mapping: string | null
+  }>
+  usage_count: number
+  accuracy_score: number | null
+}
+
+interface TemplateMatch {
+  template_id: string
+  template_name: string
+  template_code: string
+  category: string
+  match_score: number
+  matched_fields: number
+  total_fields: number
+  field_mappings: Template["field_mappings"]
+}
+
+interface TemplatesResponse {
+  success: boolean
+  data?: {
+    items: Template[]
+    total: number
+  }
+  error?: { code: string; message: string }
+}
+
+interface MatchResponse {
+  success: boolean
+  data?: {
+    matches: TemplateMatch[]
+    best_match: TemplateMatch | null
+  }
+  error?: { code: string; message: string }
+}
+
 export default function DocuMindTestPage() {
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ApiResponse | null>(null)
   const [activeTab, setActiveTab] = useState("overview")
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0) {
-      setFile(acceptedFiles[0])
-      setResult(null)
-    }
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [templatesLoading, setTemplatesLoading] = useState(false)
+  const [matchResult, setMatchResult] = useState<MatchResponse | null>(null)
+  const [matchLoading, setMatchLoading] = useState(false)
+
+  useEffect(() => {
+    loadTemplates()
   }, [])
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      "application/pdf": [".pdf"],
-    },
-    maxFiles: 1,
-    maxSize: 50 * 1024 * 1024,
-  })
+  const loadTemplates = async () => {
+    setTemplatesLoading(true)
+    try {
+      const response = await fetch("/api/v1/documind/templates")
+      const data: TemplatesResponse = await response.json()
+      if (data.success && data.data) {
+        setTemplates(data.data.items)
+      }
+    } catch (error) {
+      console.error("[v0] Failed to load templates:", error)
+    } finally {
+      setTemplatesLoading(false)
+    }
+  }
 
-  const handleParse = async () => {
+  const handleParse = useCallback(async () => {
     if (!file) return
 
     setLoading(true)
@@ -148,9 +216,9 @@ export default function DocuMindTestPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [file])
 
-  const handleTestHealth = async () => {
+  const handleTestHealth = useCallback(async () => {
     try {
       const response = await fetch("/api/v1/documind/health")
       const data = await response.json()
@@ -159,7 +227,51 @@ export default function DocuMindTestPage() {
     } catch (error) {
       console.error("[v0] Health check error:", error)
     }
-  }
+  }, [])
+
+  const handleMatchTemplate = useCallback(async () => {
+    if (!result?.data?.document_id) return
+
+    setMatchLoading(true)
+    setMatchResult(null)
+
+    try {
+      const response = await fetch("/api/v1/documind/match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          document_id: result.data.document_id,
+        }),
+      })
+
+      const data: MatchResponse = await response.json()
+      console.log("[v0] Match response:", data)
+      setMatchResult(data)
+    } catch (error) {
+      console.error("[v0] Match error:", error)
+      setMatchResult({
+        success: false,
+        error: { code: "NETWORK_ERROR", message: error instanceof Error ? error.message : "Unknown error" },
+      })
+    } finally {
+      setMatchLoading(false)
+    }
+  }, [result])
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: (acceptedFiles: File[]) => {
+      if (acceptedFiles.length > 0) {
+        setFile(acceptedFiles[0])
+        setResult(null)
+        setMatchResult(null)
+      }
+    },
+    accept: {
+      "application/pdf": [".pdf"],
+    },
+    maxFiles: 1,
+    maxSize: 50 * 1024 * 1024,
+  })
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -169,10 +281,71 @@ export default function DocuMindTestPage() {
             <h1 className="text-3xl font-bold tracking-tight">DocuMind Engine Test</h1>
             <p className="text-muted-foreground">Upload a PDF to test document parsing and analysis</p>
           </div>
-          <Button variant="outline" onClick={handleTestHealth}>
-            Test Health Endpoint
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={loadTemplates} disabled={templatesLoading}>
+              {templatesLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <ListChecks className="mr-2 h-4 w-4" />
+              )}
+              Reload Templates
+            </Button>
+            <Button variant="outline" onClick={handleTestHealth}>
+              Test Health Endpoint
+            </Button>
+          </div>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ListChecks className="h-5 w-5" />
+              Available Templates ({templates.length})
+            </CardTitle>
+            <CardDescription>SA Government and Municipal tender form templates for matching</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {templatesLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : templates.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                No templates found. Templates may not be seeded yet.
+              </div>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {templates.map((template) => (
+                  <Card key={template.id} className="bg-muted/30">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="shrink-0">
+                              {template.code}
+                            </Badge>
+                            <span className="truncate text-sm font-medium">{template.name}</span>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">{template.category}</p>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        <Badge variant="outline" className="text-xs">
+                          {template.field_mappings.length} fields
+                        </Badge>
+                        {template.usage_count > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            Used {template.usage_count}x
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
@@ -222,12 +395,28 @@ export default function DocuMindTestPage() {
                   </>
                 )}
               </Button>
+              {result?.success && result.data && (
+                <Button onClick={handleMatchTemplate} disabled={matchLoading} variant="secondary">
+                  {matchLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Matching...
+                    </>
+                  ) : (
+                    <>
+                      <FileSearch className="mr-2 h-4 w-4" />
+                      Match Template
+                    </>
+                  )}
+                </Button>
+              )}
               {file && (
                 <Button
                   variant="outline"
                   onClick={() => {
                     setFile(null)
                     setResult(null)
+                    setMatchResult(null)
                   }}
                 >
                   Clear
@@ -236,6 +425,79 @@ export default function DocuMindTestPage() {
             </div>
           </CardContent>
         </Card>
+
+        {matchResult && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <FileSearch className="h-5 w-5" />
+                  Template Match Results
+                </CardTitle>
+                {matchResult.success && matchResult.data?.best_match && (
+                  <Badge className="bg-green-600">
+                    Best: {matchResult.data.best_match.template_code} (
+                    {(matchResult.data.best_match.match_score * 100).toFixed(0)}%)
+                  </Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {matchResult.success ? (
+                matchResult.data?.matches && matchResult.data.matches.length > 0 ? (
+                  <div className="space-y-3">
+                    {matchResult.data.matches.map((match, index) => (
+                      <Card key={match.template_id} className={index === 0 ? "border-green-500 bg-green-500/5" : ""}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                {index === 0 && <Badge className="bg-green-600">Best Match</Badge>}
+                                <Badge variant="secondary">{match.template_code}</Badge>
+                                <span className="font-medium">{match.template_name}</span>
+                              </div>
+                              <p className="mt-1 text-sm text-muted-foreground">{match.category}</p>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-2xl font-bold">{(match.match_score * 100).toFixed(0)}%</div>
+                              <p className="text-xs text-muted-foreground">
+                                {match.matched_fields}/{match.total_fields} fields
+                              </p>
+                            </div>
+                          </div>
+                          {match.field_mappings && match.field_mappings.length > 0 && (
+                            <div className="mt-3">
+                              <p className="mb-2 text-xs font-medium text-muted-foreground">Expected Fields:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {match.field_mappings.slice(0, 6).map((field) => (
+                                  <Badge key={field.field_id} variant="outline" className="text-xs">
+                                    {field.field_name}
+                                    {field.is_required && <span className="ml-1 text-red-500">*</span>}
+                                  </Badge>
+                                ))}
+                                {match.field_mappings.length > 6 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{match.field_mappings.length - 6} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-muted-foreground">
+                    No matching templates found. The document structure doesn't match any known SA tender forms.
+                  </div>
+                )
+              ) : (
+                <div className="py-4 text-center text-red-500">Error: {matchResult.error?.message}</div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {result && (
           <Card>
@@ -536,12 +798,9 @@ export default function DocuMindTestPage() {
                   </TabsContent>
                 </Tabs>
               ) : (
-                <Alert variant="destructive">
-                  <XCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>{result.error?.code}</strong>: {result.error?.message}
-                  </AlertDescription>
-                </Alert>
+                <div className="py-4 text-center text-red-500">
+                  {result.error?.code}: {result.error?.message}
+                </div>
               )}
             </CardContent>
           </Card>
