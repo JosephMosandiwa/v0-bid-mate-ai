@@ -358,8 +358,180 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     if (fieldsCreated === 0 && fieldsFilled === 0 && Object.keys(formResponses).length > 0) {
-      console.log("[v0] No PDF form fields found - responses will be saved but not overlaid on PDF")
-      console.log("[v0] The original document may not have editable form fields")
+      console.log("[v0] No PDF form fields found - drawing responses directly onto PDF pages")
+
+      // Group responses by section for better organization
+      const responsesBySection: Record<string, Array<{ id: string; label: string; value: string }>> = {}
+
+      for (const formField of formFields) {
+        const response = formResponses[formField.id]
+        if (response === undefined || response === null || response === "") continue
+
+        const section = formField.section || "General"
+        if (!responsesBySection[section]) {
+          responsesBySection[section] = []
+        }
+        responsesBySection[section].push({
+          id: formField.id,
+          label: formField.label || formField.id,
+          value: String(response),
+        })
+      }
+
+      // Add a response summary page at the end
+      const summaryPage = pdfDoc.addPage()
+      const { width: summaryWidth, height: summaryHeight } = summaryPage.getSize()
+
+      let yPosition = summaryHeight - 50
+      const leftMargin = 50
+      const lineHeight = 16
+      const sectionGap = 25
+
+      // Draw header
+      summaryPage.drawText("TENDER RESPONSE SUMMARY", {
+        x: leftMargin,
+        y: yPosition,
+        size: 16,
+        font: boldFont,
+        color: rgb(0, 0, 0),
+      })
+      yPosition -= 30
+
+      summaryPage.drawText(`Tender: ${tenderData.title || "Untitled"}`, {
+        x: leftMargin,
+        y: yPosition,
+        size: 10,
+        font: font,
+        color: rgb(0.3, 0.3, 0.3),
+      })
+      yPosition -= lineHeight
+
+      summaryPage.drawText(`Generated: ${new Date().toLocaleDateString()}`, {
+        x: leftMargin,
+        y: yPosition,
+        size: 10,
+        font: font,
+        color: rgb(0.3, 0.3, 0.3),
+      })
+      yPosition -= sectionGap
+
+      // Draw responses by section
+      for (const [section, fields] of Object.entries(responsesBySection)) {
+        // Check if we need a new page
+        if (yPosition < 100) {
+          const newPage = pdfDoc.addPage()
+          yPosition = newPage.getSize().height - 50
+        }
+
+        const currentPage = pdfDoc.getPages()[pdfDoc.getPageCount() - 1]
+
+        // Section header
+        currentPage.drawText(section.toUpperCase(), {
+          x: leftMargin,
+          y: yPosition,
+          size: 12,
+          font: boldFont,
+          color: rgb(0.2, 0.2, 0.2),
+        })
+        yPosition -= lineHeight + 5
+
+        // Draw underline
+        currentPage.drawLine({
+          start: { x: leftMargin, y: yPosition + 8 },
+          end: { x: summaryWidth - leftMargin, y: yPosition + 8 },
+          thickness: 0.5,
+          color: rgb(0.7, 0.7, 0.7),
+        })
+        yPosition -= 10
+
+        for (const field of fields) {
+          // Check if we need a new page
+          if (yPosition < 80) {
+            const newPage = pdfDoc.addPage()
+            yPosition = newPage.getSize().height - 50
+          }
+
+          const currentDrawPage = pdfDoc.getPages()[pdfDoc.getPageCount() - 1]
+
+          // Truncate label if too long
+          const maxLabelWidth = 200
+          let displayLabel = field.label
+          if (font.widthOfTextAtSize(displayLabel, 10) > maxLabelWidth) {
+            while (font.widthOfTextAtSize(displayLabel + "...", 10) > maxLabelWidth && displayLabel.length > 10) {
+              displayLabel = displayLabel.slice(0, -1)
+            }
+            displayLabel += "..."
+          }
+
+          // Draw field label
+          currentDrawPage.drawText(`${displayLabel}:`, {
+            x: leftMargin,
+            y: yPosition,
+            size: 10,
+            font: boldFont,
+            color: rgb(0.3, 0.3, 0.3),
+          })
+
+          // Draw value - handle multi-line text
+          const valueX = leftMargin + 210
+          const maxValueWidth = summaryWidth - valueX - leftMargin
+          const valueText = field.value
+
+          // Word wrap for long values
+          const words = valueText.split(" ")
+          let currentLine = ""
+          let lineCount = 0
+          const maxLines = 5
+
+          for (const word of words) {
+            const testLine = currentLine ? `${currentLine} ${word}` : word
+            if (font.widthOfTextAtSize(testLine, 10) < maxValueWidth) {
+              currentLine = testLine
+            } else {
+              if (currentLine) {
+                currentDrawPage.drawText(currentLine, {
+                  x: valueX,
+                  y: yPosition - lineCount * lineHeight,
+                  size: 10,
+                  font: font,
+                  color: rgb(0, 0, 0),
+                })
+                lineCount++
+                if (lineCount >= maxLines) {
+                  currentDrawPage.drawText("...", {
+                    x: valueX,
+                    y: yPosition - lineCount * lineHeight,
+                    size: 10,
+                    font: font,
+                    color: rgb(0.5, 0.5, 0.5),
+                  })
+                  break
+                }
+              }
+              currentLine = word
+            }
+          }
+
+          // Draw remaining text
+          if (currentLine && lineCount < maxLines) {
+            currentDrawPage.drawText(currentLine, {
+              x: valueX,
+              y: yPosition - lineCount * lineHeight,
+              size: 10,
+              font: font,
+              color: rgb(0, 0, 0),
+            })
+            lineCount++
+          }
+
+          yPosition -= Math.max(lineHeight, lineCount * lineHeight) + 8
+          fieldsFilled++
+        }
+
+        yPosition -= sectionGap - 10
+      }
+
+      console.log("[v0] Added response summary page with", fieldsFilled, "responses")
     }
 
     console.log("[v0] Fields created:", fieldsCreated)
