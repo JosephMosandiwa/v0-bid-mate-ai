@@ -246,30 +246,131 @@ export async function getTemplate(templateId: string): Promise<DocumentTemplate 
 /**
  * Find templates matching a fingerprint
  */
-export async function findMatchingTemplates(structureHash: string, threshold = 0.8): Promise<TemplateMatch[]> {
+export async function findMatchingTemplates(
+  structureHash: string,
+  threshold = 0.5,
+  documentText?: string,
+): Promise<TemplateMatch[]> {
   const supabase = await createClient()
 
-  // First try exact match
-  const { data: exactMatch } = await supabase
+  // Get all templates
+  const { data: templates } = await supabase
     .from("documind_templates")
     .select("*")
-    .eq("fingerprint_structure", structureHash)
+    .order("usage_count", { ascending: false })
 
-  if (exactMatch && exactMatch.length > 0) {
-    return exactMatch.map((t) => ({
-      template_id: t.id,
-      template_name: t.name,
-      template_code: t.code,
-      match_score: 1.0,
-      matched_fields: t.field_mappings?.length || 0,
-      total_fields: t.field_mappings?.length || 0,
-      field_matches: [],
-    }))
+  if (!templates || templates.length === 0) {
+    return []
   }
 
-  // If no exact match, we'd need a more sophisticated matching algorithm
-  // For now, return empty array
-  return []
+  const matches: TemplateMatch[] = []
+
+  for (const template of templates) {
+    let matchScore = 0
+    let matchedFields = 0
+    const fieldMappings =
+      (template.field_mappings as Array<{
+        field_id: string
+        field_name: string
+        label_pattern: string
+        is_required: boolean
+      }>) || []
+
+    // 1. Check for exact fingerprint match (highest priority)
+    if (template.fingerprint_structure === structureHash) {
+      matchScore = 1.0
+      matchedFields = fieldMappings.length
+    }
+    // 2. If document text provided, use content-based matching
+    else if (documentText) {
+      const upperText = documentText.toUpperCase()
+
+      // Check for template identifiers in text
+      const templateIdentifiers: Record<string, string[]> = {
+        SBD1: ["SBD 1", "SBD1", "INVITATION TO BID", "PART A: INVITATION TO BID"],
+        SBD2: ["SBD 2", "SBD2", "TAX CLEARANCE", "TAX COMPLIANCE"],
+        "SBD3.1": ["SBD 3.1", "SBD3.1", "PRICING SCHEDULE", "FIRM PRICES"],
+        "SBD3.2": ["SBD 3.2", "SBD3.2", "PRICING SCHEDULE", "NON-FIRM PRICES"],
+        "SBD3.3": ["SBD 3.3", "SBD3.3", "PRICING SCHEDULE", "PROFESSIONAL SERVICES"],
+        SBD4: ["SBD 4", "SBD4", "DECLARATION OF INTEREST"],
+        SBD5: ["SBD 5", "SBD5", "NATIONAL INDUSTRIAL PARTICIPATION"],
+        "SBD6.1": ["SBD 6.1", "SBD6.1", "PREFERENCE POINTS CLAIM", "B-BBEE STATUS"],
+        "SBD6.2": ["SBD 6.2", "SBD6.2", "LOCAL PRODUCTION AND CONTENT"],
+        "SBD7.1": ["SBD 7.1", "SBD7.1", "CONTRACT FORM", "PURCHASE OF GOODS"],
+        "SBD7.2": ["SBD 7.2", "SBD7.2", "CONTRACT FORM", "RENDERING OF SERVICES"],
+        SBD8: ["SBD 8", "SBD8", "DECLARATION OF PAST", "SCM PRACTICES"],
+        SBD9: ["SBD 9", "SBD9", "CERTIFICATE OF INDEPENDENT BID", "INDEPENDENT BID DETERMINATION"],
+        MBD1: ["MBD 1", "MBD1", "MUNICIPAL BID", "INVITATION TO BID"],
+        MBD4: ["MBD 4", "MBD4", "MUNICIPAL DECLARATION", "DECLARATION OF INTEREST"],
+        MBD5: ["MBD 5", "MBD5", "NATIONAL INDUSTRIAL"],
+        "MBD6.1": ["MBD 6.1", "MBD6.1", "PREFERENCE POINTS"],
+        MBD8: ["MBD 8", "MBD8", "DECLARATION OF PAST"],
+        MBD9: ["MBD 9", "MBD9", "CERTIFICATE OF INDEPENDENT"],
+        CSD: ["CSD", "CENTRAL SUPPLIER DATABASE", "MAAA", "SUPPLIER NUMBER"],
+        BOQ: ["BILL OF QUANTITIES", "BOQ", "SCHEDULE OF QUANTITIES"],
+        GCC: ["GENERAL CONDITIONS OF CONTRACT", "GCC"],
+        CIDB: ["CIDB", "CONSTRUCTION INDUSTRY"],
+        NEC: ["NEC CONTRACT", "NEW ENGINEERING CONTRACT"],
+        JBCC: ["JBCC", "JOINT BUILDING CONTRACTS"],
+        FIDIC: ["FIDIC"],
+      }
+
+      // Check if template code matches identifiers in text
+      const templateCode = template.code?.toUpperCase() || ""
+      const identifiers = templateIdentifiers[templateCode] || []
+
+      let identifierMatches = 0
+      for (const identifier of identifiers) {
+        if (upperText.includes(identifier)) {
+          identifierMatches++
+        }
+      }
+
+      // If any identifier found, boost score significantly
+      if (identifierMatches > 0) {
+        matchScore += 0.4 * Math.min(identifierMatches / 2, 1)
+      }
+
+      // Check field label patterns
+      for (const field of fieldMappings) {
+        if (field.label_pattern) {
+          try {
+            const regex = new RegExp(field.label_pattern, "i")
+            if (regex.test(documentText)) {
+              matchedFields++
+            }
+          } catch {
+            // Invalid regex, skip
+            if (upperText.includes(field.label_pattern.toUpperCase())) {
+              matchedFields++
+            }
+          }
+        }
+      }
+
+      // Calculate score based on matched fields
+      if (fieldMappings.length > 0) {
+        const fieldMatchRatio = matchedFields / fieldMappings.length
+        matchScore += 0.6 * fieldMatchRatio
+      }
+    }
+
+    // Only include if above threshold
+    if (matchScore >= threshold) {
+      matches.push({
+        template_id: template.id,
+        template_name: template.name,
+        template_code: template.code,
+        match_score: Math.min(matchScore, 1.0),
+        matched_fields: matchedFields,
+        total_fields: fieldMappings.length,
+        field_matches: [],
+      })
+    }
+  }
+
+  // Sort by score descending
+  return matches.sort((a, b) => b.match_score - a.match_score)
 }
 
 /**

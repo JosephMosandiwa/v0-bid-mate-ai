@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     let structureHash: string
+    let documentText: string | undefined
 
     if (document_id) {
       // Check cache for existing match
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Get document to extract fingerprint
+      // Get document to extract fingerprint and text
       let document = await getCachedDocument(document_id)
       if (!document) {
         document = await getDocument(document_id)
@@ -80,12 +81,13 @@ export async function POST(request: NextRequest) {
       }
 
       structureHash = document.fingerprints.structure_hash
+
+      documentText = document.pages.map((page) => page.content.full_text || "").join("\n")
     } else {
       structureHash = fingerprint
     }
 
-    // Find matching templates
-    const matches = await findMatchingTemplates(structureHash)
+    const matches = await findMatchingTemplates(structureHash, 0.3, documentText)
 
     // Cache the result
     if (document_id) {
@@ -100,7 +102,7 @@ export async function POST(request: NextRequest) {
           match.matched_fields,
           match.total_fields,
         )
-        if (match.match_score > 0.9) {
+        if (match.match_score > 0.7) {
           await incrementTemplateUsage(match.template_id)
         }
       }
