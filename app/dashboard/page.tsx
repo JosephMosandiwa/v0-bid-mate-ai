@@ -5,6 +5,7 @@ import { FileText, Search, Sparkles, Clock, AlertCircle, TrendingUp, CheckCircle
 import Link from "next/link"
 import { getDashboardStats } from "@/app/actions/tender-actions"
 import { formatDistanceToNow, format } from "date-fns"
+import { StrategistDashboardWidget } from "@/components/strategist/dashboard-widget"
 
 export default async function DashboardPage() {
   const { stats } = await getDashboardStats()
@@ -63,71 +64,80 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg md:text-xl font-semibold text-foreground">Quick Actions</h2>
-          <Button asChild size="sm" className="gap-2">
-            <Link href="/dashboard/tenders/new">
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">New Tender</span>
-            </Link>
-          </Button>
+      {/* AI Strategist Widget in a new section */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* AI Strategist Widget - takes 1 column on large screens */}
+        <div className="lg:col-span-1">
+          <StrategistDashboardWidget />
         </div>
-        <div className="grid gap-3 md:gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Card className="border-border hover:border-primary transition-colors cursor-pointer">
-            <Link href="/dashboard/search" className="block">
-              <CardHeader className="pb-3">
-                <div className="h-10 w-10 md:h-12 md:w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
-                  <Search className="h-5 w-5 md:h-6 md:w-6 text-primary" />
-                </div>
-                <CardTitle className="text-base md:text-lg">Search Tenders</CardTitle>
-                <CardDescription className="text-xs md:text-sm">
-                  Find relevant government tenders from eTenders
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button className="w-full" size="sm">
-                  Start Search
-                </Button>
-              </CardContent>
-            </Link>
-          </Card>
 
-          <Card className="border-border hover:border-primary transition-colors cursor-pointer">
-            <Link href="/dashboard/tenders/new" className="block">
-              <CardHeader className="pb-3">
-                <div className="h-10 w-10 md:h-12 md:w-12 rounded-lg bg-secondary/10 flex items-center justify-center mb-2">
-                  <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-secondary" />
-                </div>
-                <CardTitle className="text-base md:text-lg">Upload & Analyze</CardTitle>
-                <CardDescription className="text-xs md:text-sm">
-                  AI-powered analysis and form generation
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button className="w-full" size="sm">
-                  Analyze Now
-                </Button>
-              </CardContent>
-            </Link>
-          </Card>
+        {/* Quick Actions - takes 2 columns on large screens */}
+        <div className="lg:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg md:text-xl font-semibold text-foreground">Quick Actions</h2>
+            <Button asChild size="sm" className="gap-2">
+              <Link href="/dashboard/tenders/new">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">New Tender</span>
+              </Link>
+            </Button>
+          </div>
+          <div className="grid gap-3 md:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Card className="border-border hover:border-primary transition-colors cursor-pointer">
+              <Link href="/dashboard/search" className="block">
+                <CardHeader className="pb-3">
+                  <div className="h-10 w-10 md:h-12 md:w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
+                    <Search className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+                  </div>
+                  <CardTitle className="text-base md:text-lg">Search Tenders</CardTitle>
+                  <CardDescription className="text-xs md:text-sm">
+                    Find relevant government tenders from eTenders
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button className="w-full" size="sm">
+                    Start Search
+                  </Button>
+                </CardContent>
+              </Link>
+            </Card>
 
-          <Card className="border-border hover:border-primary transition-colors cursor-pointer">
-            <Link href="/dashboard/tenders" className="block">
-              <CardHeader className="pb-3">
-                <div className="h-10 w-10 md:h-12 md:w-12 rounded-lg bg-accent/10 flex items-center justify-center mb-2">
-                  <FileText className="h-5 w-5 md:h-6 md:w-6 text-accent" />
-                </div>
-                <CardTitle className="text-base md:text-lg">My Tenders</CardTitle>
-                <CardDescription className="text-xs md:text-sm">View and manage all submissions</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button className="w-full bg-transparent" variant="outline" size="sm">
-                  View Tenders
-                </Button>
-              </CardContent>
-            </Link>
-          </Card>
+            <Card className="border-border hover:border-primary transition-colors cursor-pointer">
+              <Link href="/dashboard/tenders/new" className="block">
+                <CardHeader className="pb-3">
+                  <div className="h-10 w-10 md:h-12 md:w-12 rounded-lg bg-secondary/10 flex items-center justify-center mb-2">
+                    <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-secondary" />
+                  </div>
+                  <CardTitle className="text-base md:text-lg">Upload & Analyze</CardTitle>
+                  <CardDescription className="text-xs md:text-sm">
+                    AI-powered analysis and form generation
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button className="w-full" size="sm">
+                    Analyze Now
+                  </Button>
+                </CardContent>
+              </Link>
+            </Card>
+
+            <Card className="border-border hover:border-primary transition-colors cursor-pointer">
+              <Link href="/dashboard/tenders" className="block">
+                <CardHeader className="pb-3">
+                  <div className="h-10 w-10 md:h-12 md:w-12 rounded-lg bg-accent/10 flex items-center justify-center mb-2">
+                    <FileText className="h-5 w-5 md:h-6 md:w-6 text-accent" />
+                  </div>
+                  <CardTitle className="text-base md:text-lg">My Tenders</CardTitle>
+                  <CardDescription className="text-xs md:text-sm">View and manage all submissions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button className="w-full bg-transparent" variant="outline" size="sm">
+                    View Tenders
+                  </Button>
+                </CardContent>
+              </Link>
+            </Card>
+          </div>
         </div>
       </div>
 
