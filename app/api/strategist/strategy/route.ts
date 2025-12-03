@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server"
 import { StrategistService, buildStrategyGenerationPrompt } from "@/lib/engines/strategist"
 import type { StrategyType, StrategyContent } from "@/lib/engines/strategist"
 
-export const maxDuration = 240
+export const maxDuration = 60
 
 export async function POST(request: Request) {
   try {
