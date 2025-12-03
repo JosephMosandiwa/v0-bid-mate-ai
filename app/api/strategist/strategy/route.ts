@@ -161,6 +161,105 @@ export async function GET(request: Request) {
   }
 }
 
+// Delete a strategy
+export async function DELETE(request: Request) {
+  try {
+    const supabase = await createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const strategyId = searchParams.get("id")
+
+    if (!strategyId) {
+      return Response.json({ error: "Strategy ID is required" }, { status: 400 })
+    }
+
+    // Verify ownership before deleting
+    const { data: existingStrategy } = await supabase
+      .from("strategist_strategies")
+      .select("id")
+      .eq("id", strategyId)
+      .eq("user_id", user.id)
+      .single()
+
+    if (!existingStrategy) {
+      return Response.json({ error: "Strategy not found" }, { status: 404 })
+    }
+
+    const { error } = await supabase.from("strategist_strategies").delete().eq("id", strategyId).eq("user_id", user.id)
+
+    if (error) {
+      console.error("[Strategist] Error deleting strategy:", error)
+      return Response.json({ error: "Failed to delete strategy" }, { status: 500 })
+    }
+
+    return Response.json({ success: true, message: "Strategy deleted" })
+  } catch (error: any) {
+    console.error("[Strategist] DELETE strategy error:", error)
+    return Response.json({ error: "Failed to delete strategy" }, { status: 500 })
+  }
+}
+
+// Update strategy status
+export async function PATCH(request: Request) {
+  try {
+    const supabase = await createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { strategy_id, updates } = await request.json()
+
+    if (!strategy_id) {
+      return Response.json({ error: "Strategy ID is required" }, { status: 400 })
+    }
+
+    // Allowed update fields
+    const allowedFields = ["title", "status", "summary"]
+    const sanitizedUpdates: Record<string, any> = {}
+
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        sanitizedUpdates[field] = updates[field]
+      }
+    }
+
+    if (Object.keys(sanitizedUpdates).length === 0) {
+      return Response.json({ error: "No valid updates provided" }, { status: 400 })
+    }
+
+    sanitizedUpdates.updated_at = new Date().toISOString()
+
+    const { data, error } = await supabase
+      .from("strategist_strategies")
+      .update(sanitizedUpdates)
+      .eq("id", strategy_id)
+      .eq("user_id", user.id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error("[Strategist] Error updating strategy:", error)
+      return Response.json({ error: "Failed to update strategy" }, { status: 500 })
+    }
+
+    return Response.json({ strategy: data })
+  } catch (error: any) {
+    console.error("[Strategist] PATCH strategy error:", error)
+    return Response.json({ error: "Failed to update strategy" }, { status: 500 })
+  }
+}
+
 // Helper functions
 function calculateViabilityScore(content: StrategyContent): number {
   let score = 0.5 // Base score

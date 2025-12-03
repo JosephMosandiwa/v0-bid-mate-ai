@@ -1,6 +1,6 @@
 import type React from "react"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import type { Metadata, Viewport } from "next"
+import { Inter, Poppins } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ErrorBoundary } from "@/components/error-boundary"
@@ -11,10 +11,28 @@ const inter = Inter({
   variable: "--font-sans",
 })
 
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-heading",
+})
+
 export const metadata: Metadata = {
   title: "BidMate - AI-Powered Tender Assistance",
-  description: "Win more tenders with AI-powered document analysis and intelligent tender search",
+  description:
+    "Win more tenders with AI-powered document analysis, intelligent tender search, and strategic bid guidance",
   generator: "v0.app",
+  keywords: ["tender", "bidding", "procurement", "South Africa", "government tenders", "AI", "bid strategy"],
+  authors: [{ name: "BidMate" }],
+}
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#005B8F" },
+    { media: "(prefers-color-scheme: dark)", color: "#19A7CE" },
+  ],
+  width: "device-width",
+  initialScale: 1,
 }
 
 export default function RootLayout({
@@ -51,23 +69,13 @@ export default function RootLayout({
                 
                 console.error('[v0] Unhandled promise rejection:', event.reason);
               });
-              
-              // Intercept fetch to log all requests
-              const originalFetch = window.fetch;
-              window.fetch = function(...args) {
-                console.log('[v0] Fetch request:', args[0]);
-                return originalFetch.apply(this, args).catch(error => {
-                  console.error('[v0] Fetch failed for:', args[0], error);
-                  throw error;
-                });
-              };
             `,
           }}
         />
       </head>
-      <body className={`font-sans ${inter.variable}`}>
+      <body className={`font-sans ${inter.variable} ${poppins.variable}`}>
         <ErrorBoundary>
-          <Suspense fallback={<div>Loading...</div>}>
+          <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
             <ThemeProvider defaultTheme="dark" storageKey="bidmate-theme">
               {children}
             </ThemeProvider>

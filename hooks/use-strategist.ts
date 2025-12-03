@@ -5,7 +5,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { useChat as useAIChat } from "ai/react"
+import { useChat as useAIChat } from "@ai-sdk/react"
 import useSWR from "swr"
 import type {
   StrategistConversation,
@@ -185,13 +185,53 @@ export function useStrategistOpportunities(options?: { saved?: boolean }) {
   }, [mutate])
 
   const saveOpportunity = useCallback(
+    async (opportunityId: string, isSaved = true) => {
+      const response = await fetch("/api/strategist/opportunities", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          opportunity_id: opportunityId,
+          updates: { is_saved: isSaved },
+        }),
+      })
+
+      if (response.ok) {
+        mutate()
+      }
+
+      return response.ok
+    },
+    [mutate],
+  )
+
+  const markViewed = useCallback(
     async (opportunityId: string) => {
       const response = await fetch("/api/strategist/opportunities", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           opportunity_id: opportunityId,
-          updates: { is_saved: true },
+          updates: { is_viewed: true },
+        }),
+      })
+
+      if (response.ok) {
+        mutate()
+      }
+
+      return response.ok
+    },
+    [mutate],
+  )
+
+  const dismissOpportunity = useCallback(
+    async (opportunityId: string) => {
+      const response = await fetch("/api/strategist/opportunities", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          opportunity_id: opportunityId,
+          updates: { is_dismissed: true },
         }),
       })
 
@@ -210,6 +250,8 @@ export function useStrategistOpportunities(options?: { saved?: boolean }) {
     error,
     discoverOpportunities,
     saveOpportunity,
+    markViewed,
+    dismissOpportunity,
     refresh: mutate,
   }
 }
