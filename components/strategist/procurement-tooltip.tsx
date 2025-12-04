@@ -151,6 +151,11 @@ export function ProcurementTooltip({ term, children, className, showIcon = true 
 
 // Auto-highlight terms in text
 export function HighlightProcurementTerms({ text, className }: { text: string; className?: string }) {
+  // Return empty span if text is undefined or null
+  if (!text) {
+    return <span className={className}></span>
+  }
+
   const termPatterns = Object.keys(PROCUREMENT_TERMS).join("|")
   const regex = new RegExp(`\\b(${termPatterns})\\b`, "gi")
 
@@ -159,8 +164,8 @@ export function HighlightProcurementTerms({ text, className }: { text: string; c
   return (
     <span className={className}>
       {parts.map((part, i) => {
-        const termKey = part.toLowerCase()
-        if (PROCUREMENT_TERMS[termKey]) {
+        const termKey = part?.toLowerCase()
+        if (termKey && PROCUREMENT_TERMS[termKey]) {
           return (
             <ProcurementTooltip key={i} term={termKey} showIcon={false}>
               {part}

@@ -281,9 +281,9 @@ export function StrategistPageClient({ showOnboarding }: StrategistPageClientPro
                         >
                           <div className="whitespace-pre-wrap text-sm">
                             {message.role === "assistant" ? (
-                              <HighlightProcurementTerms text={message.content} />
+                              <HighlightProcurementTerms text={message.content || ""} />
                             ) : (
-                              message.content
+                              message.content || ""
                             )}
                           </div>
                         </div>
