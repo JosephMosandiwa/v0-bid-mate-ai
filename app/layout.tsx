@@ -5,6 +5,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { Suspense } from "react"
+import { CookieBanner } from "@/components/cookie-banner"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -78,6 +79,7 @@ export default function RootLayout({
           <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
             <ThemeProvider defaultTheme="dark" storageKey="bidmate-theme">
               {children}
+              <CookieBanner />
             </ThemeProvider>
           </Suspense>
         </ErrorBoundary>
