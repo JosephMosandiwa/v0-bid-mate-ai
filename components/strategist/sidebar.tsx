@@ -28,6 +28,10 @@ interface StrategistSidebarProps {
 }
 
 export function StrategistSidebar({ conversations, alerts, unreadCount, score, onClose }: StrategistSidebarProps) {
+  const overallScore = score?.overall_score ?? 0
+  const complianceScore = score?.compliance_score ?? 0
+  const documentationScore = score?.documentation_score ?? 0
+
   return (
     <div className="flex flex-col h-full">
       {/* Score Overview */}
@@ -36,27 +40,27 @@ export function StrategistSidebar({ conversations, alerts, unreadCount, score, o
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-foreground">Your Readiness</span>
             <Badge variant="outline" className="text-xs">
-              {Math.round(score.overall_score * 100)}%
+              {Math.round(overallScore * 100)}%
             </Badge>
           </div>
-          <Progress value={score.overall_score * 100} className="h-2 mb-3" />
+          <Progress value={overallScore * 100} className="h-2 mb-3" />
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="flex items-center gap-1.5">
               <Shield className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">Compliance</span>
-              <span className="ml-auto font-medium">{Math.round(score.compliance_score * 100)}%</span>
+              <span className="ml-auto font-medium">{Math.round(complianceScore * 100)}%</span>
             </div>
             <div className="flex items-center gap-1.5">
               <FileText className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">Docs</span>
-              <span className="ml-auto font-medium">{Math.round(score.documentation_score * 100)}%</span>
+              <span className="ml-auto font-medium">{Math.round(documentationScore * 100)}%</span>
             </div>
           </div>
         </div>
       )}
 
       {/* Alerts */}
-      {alerts.length > 0 && (
+      {alerts && alerts.length > 0 && (
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -85,8 +89,8 @@ export function StrategistSidebar({ conversations, alerts, unreadCount, score, o
                   }`}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-foreground line-clamp-1">{alert.title}</p>
-                  <p className="text-xs text-muted-foreground line-clamp-1">{alert.message}</p>
+                  <p className="text-xs font-medium text-foreground line-clamp-1">{alert.title || "Alert"}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-1">{alert.message || ""}</p>
                 </div>
               </div>
             ))}
@@ -104,7 +108,7 @@ export function StrategistSidebar({ conversations, alerts, unreadCount, score, o
         </div>
         <ScrollArea className="flex-1 px-4">
           <div className="space-y-1 pb-4">
-            {conversations.length > 0 ? (
+            {conversations && conversations.length > 0 ? (
               conversations.slice(0, 10).map((conv) => (
                 <button
                   key={conv.id}

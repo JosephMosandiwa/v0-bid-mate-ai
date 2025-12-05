@@ -61,6 +61,8 @@ export function StrategistPageClient({ showOnboarding }: StrategistPageClientPro
   const { score } = useCompetitivenessScore() || {}
   const { conversations = [] } = useStrategistConversations() || {}
 
+  const safeInput = input ?? ""
+
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -219,7 +221,7 @@ export function StrategistPageClient({ showOnboarding }: StrategistPageClientPro
                       ))}
                     </div>
 
-                    {/* Stats Cards - Add null check for score */}
+                    {/* Stats Cards */}
                     {score && (
                       <div className="grid gap-4 sm:grid-cols-3">
                         <Card className="border-border">
@@ -281,9 +283,9 @@ export function StrategistPageClient({ showOnboarding }: StrategistPageClientPro
                         >
                           <div className="whitespace-pre-wrap text-sm">
                             {message.role === "assistant" ? (
-                              <HighlightProcurementTerms text={message.content || ""} />
+                              <HighlightProcurementTerms text={String(message.content || "")} />
                             ) : (
-                              message.content || ""
+                              String(message.content || "")
                             )}
                           </div>
                         </div>
@@ -307,12 +309,12 @@ export function StrategistPageClient({ showOnboarding }: StrategistPageClientPro
                 </ScrollArea>
               )}
 
-              {/* Input Area */}
+              {/* Input Area - Using safeInput instead of input */}
               <div className="border-t border-border p-4">
                 <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
                   <div className="relative">
                     <Textarea
-                      value={input}
+                      value={safeInput}
                       onChange={handleInputChange}
                       placeholder="Ask me anything about tendering..."
                       className="min-h-[60px] max-h-[200px] pr-12 resize-none rounded-xl"
@@ -326,7 +328,7 @@ export function StrategistPageClient({ showOnboarding }: StrategistPageClientPro
                     <Button
                       type="submit"
                       size="icon"
-                      disabled={!input.trim() || isLoading}
+                      disabled={!safeInput.trim() || isLoading}
                       className="absolute right-2 bottom-2 h-8 w-8 rounded-lg"
                     >
                       {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

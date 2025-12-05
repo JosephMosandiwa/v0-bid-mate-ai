@@ -151,8 +151,8 @@ export function ProcurementTooltip({ term, children, className, showIcon = true 
 
 // Auto-highlight terms in text
 export function HighlightProcurementTerms({ text, className }: { text: string; className?: string }) {
-  // Return empty span if text is undefined or null
-  if (!text) {
+  // Return empty span if text is undefined, null, or not a string
+  if (!text || typeof text !== "string") {
     return <span className={className}></span>
   }
 
@@ -164,7 +164,11 @@ export function HighlightProcurementTerms({ text, className }: { text: string; c
   return (
     <span className={className}>
       {parts.map((part, i) => {
-        const termKey = part?.toLowerCase()
+        // Skip undefined/null parts
+        if (part === undefined || part === null) {
+          return null
+        }
+        const termKey = part.toLowerCase()
         if (termKey && PROCUREMENT_TERMS[termKey]) {
           return (
             <ProcurementTooltip key={i} term={termKey} showIcon={false}>
@@ -172,7 +176,7 @@ export function HighlightProcurementTerms({ text, className }: { text: string; c
             </ProcurementTooltip>
           )
         }
-        return part
+        return <span key={i}>{part}</span>
       })}
     </span>
   )
