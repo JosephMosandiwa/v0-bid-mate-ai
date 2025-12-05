@@ -56,10 +56,10 @@ export function StrategistPageClient({ showOnboarding }: StrategistPageClientPro
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, conversationId, setInput } = useStrategistChat()
 
-  const { alerts, unreadCount } = useStrategistAlerts({ limit: 5 })
-  const { preferences } = useStrategistPreferences()
-  const { score } = useCompetitivenessScore()
-  const { conversations } = useStrategistConversations()
+  const { alerts = [], unreadCount = 0 } = useStrategistAlerts({ limit: 5 }) || {}
+  const { preferences } = useStrategistPreferences() || {}
+  const { score } = useCompetitivenessScore() || {}
+  const { conversations = [] } = useStrategistConversations() || {}
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -219,7 +219,7 @@ export function StrategistPageClient({ showOnboarding }: StrategistPageClientPro
                       ))}
                     </div>
 
-                    {/* Stats Cards */}
+                    {/* Stats Cards - Add null check for score */}
                     {score && (
                       <div className="grid gap-4 sm:grid-cols-3">
                         <Card className="border-border">
@@ -229,7 +229,7 @@ export function StrategistPageClient({ showOnboarding }: StrategistPageClientPro
                               <TrendingUp className="h-4 w-4 text-muted-foreground" />
                             </div>
                             <div className="text-2xl font-bold text-foreground mt-1">
-                              {Math.round(score.overall_score * 100)}%
+                              {Math.round((score.overall_score || 0) * 100)}%
                             </div>
                           </CardContent>
                         </Card>
@@ -251,7 +251,7 @@ export function StrategistPageClient({ showOnboarding }: StrategistPageClientPro
                               <Shield className="h-4 w-4 text-muted-foreground" />
                             </div>
                             <div className="text-2xl font-bold text-foreground mt-1">
-                              {Math.round(score.compliance_score * 100)}%
+                              {Math.round((score.compliance_score || 0) * 100)}%
                             </div>
                           </CardContent>
                         </Card>

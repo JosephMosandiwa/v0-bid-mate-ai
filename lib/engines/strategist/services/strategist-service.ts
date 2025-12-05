@@ -291,11 +291,17 @@ export class StrategistService {
       return null
     }
 
-    // Update conversation metadata
+    // Update conversation metadata with separate query
+    const { data: conversation } = await supabase
+      .from("strategist_conversations")
+      .select("message_count")
+      .eq("id", conversationId)
+      .single()
+
     await supabase
       .from("strategist_conversations")
       .update({
-        message_count: supabase.sql`message_count + 1`,
+        message_count: (conversation?.message_count || 0) + 1,
         last_message_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })

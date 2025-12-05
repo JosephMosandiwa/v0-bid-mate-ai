@@ -16,7 +16,11 @@ import type {
   ConversationContextType,
 } from "@/lib/engines/strategist"
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = (url: string) =>
+  fetch(url).then((res) => {
+    if (!res.ok) throw new Error("Failed to fetch")
+    return res.json()
+  })
 
 /**
  * Hook for strategist chat functionality
@@ -41,6 +45,9 @@ export function useStrategistChat(options?: {
       if (newConversationId && newConversationId !== conversationId) {
         setConversationId(newConversationId)
       }
+    },
+    onError: (error) => {
+      console.error("[useStrategistChat] Error:", error)
     },
   })
 
@@ -112,7 +119,10 @@ export function useStrategistAlerts(options?: { unreadOnly?: boolean; limit?: nu
   const { data, error, isLoading, mutate } = useSWR<{
     alerts: StrategistAlert[]
     unreadCount: number
-  }>(`/api/strategist/alerts?${params.toString()}`, fetcher)
+  }>(`/api/strategist/alerts?${params.toString()}`, fetcher, {
+    fallbackData: { alerts: [], unreadCount: 0 },
+    shouldRetryOnError: false,
+  })
 
   const markAsRead = useCallback(
     async (alertId: string) => {
@@ -264,7 +274,9 @@ export function useCompetitivenessScore(tenderId?: string) {
 
   const { data, error, isLoading, mutate } = useSWR<{
     score: StrategistCompetitivenessScore
-  }>(`/api/strategist/readiness${params}`, fetcher)
+  }>(`/api/strategist/readiness${params}`, fetcher, {
+    shouldRetryOnError: false,
+  })
 
   const recalculate = useCallback(async () => {
     const response = await fetch("/api/strategist/readiness", {
@@ -281,7 +293,7 @@ export function useCompetitivenessScore(tenderId?: string) {
   }, [mutate, tenderId])
 
   return {
-    score: data?.score,
+    score: data?.score || undefined,
     isLoading,
     error,
     recalculate,

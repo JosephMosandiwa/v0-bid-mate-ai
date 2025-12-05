@@ -2,7 +2,7 @@
 // AI STRATEGIST - CHAT MESSAGE ENDPOINT
 // ============================================
 
-import { streamText, convertToModelMessages } from "ai"
+import { streamText } from "ai"
 import { createClient } from "@/lib/supabase/server"
 import { StrategistService, buildStrategistPrompt } from "@/lib/engines/strategist"
 import type { ConversationContextType } from "@/lib/engines/strategist"
@@ -21,15 +21,20 @@ export async function POST(request: Request) {
       return Response.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const {
-      message,
-      conversation_id,
-      context_type = "general",
-      tender_id,
-      include_context = true,
-    } = await request.json()
+    const body = await request.json()
 
-    if (!message || typeof message !== "string") {
+    let userMessage: string
+    if (body.messages && Array.isArray(body.messages)) {
+      // useChat sends messages array - get the last user message
+      const lastUserMessage = body.messages.filter((m: any) => m.role === "user").pop()
+      userMessage = lastUserMessage?.content || ""
+    } else {
+      userMessage = body.message || ""
+    }
+
+    const { conversation_id, context_type = "general", tender_id, include_context = true } = body
+
+    if (!userMessage || typeof userMessage !== "string") {
       return Response.json({ error: "Message is required" }, { status: 400 })
     }
 
@@ -52,7 +57,7 @@ export async function POST(request: Request) {
     }
 
     // Save user message
-    await StrategistService.addMessage(conversationId, "user", message)
+    await StrategistService.addMessage(conversationId, "user", userMessage)
 
     // Get conversation history
     const messages = await StrategistService.getConversationMessages(conversationId)
@@ -69,14 +74,13 @@ export async function POST(request: Request) {
       })
     }
 
-    // Convert messages to AI format
-    const aiMessages = convertToModelMessages([
-      { role: "system", content: systemPrompt },
+    const aiMessages = [
+      { role: "system" as const, content: systemPrompt },
       ...messages.map((m) => ({
-        role: m.role as "user" | "assistant" | "system",
+        role: m.role as "user" | "assistant",
         content: m.content,
       })),
-    ])
+    ]
 
     console.log("[Strategist] Calling AI with", aiMessages.length, "messages")
 
@@ -95,7 +99,6 @@ export async function POST(request: Request) {
       },
     })
 
-    // Return response with conversation ID header
     const response = result.toUIMessageStreamResponse()
     response.headers.set("X-Conversation-Id", conversationId)
 
