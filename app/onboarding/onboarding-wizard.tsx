@@ -115,54 +115,73 @@ export function OnboardingWizard({ userId, userEmail }: OnboardingWizardProps) {
     const supabase = createBrowserClient()
 
     try {
-      // Update profile
+      // 1. Update profile with basic info (only fields that exist in profiles table)
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
-          company_name: companyName,
-          registration_number: registrationNumber || null,
-          vat_number: vatNumber || null,
           phone: contactPhone || null,
-          province,
-          city: city || null,
-          industries,
-          cidb_grade: cidbGrade || null,
-          bbbee_level: bbbeeLevel || null,
-          has_tax_clearance: hasTaxClearance,
-          has_coida: hasCoida,
-          has_csd: hasCsd,
-          tender_min_value: minValue ? Number.parseInt(minValue) : null,
-          tender_max_value: maxValue ? Number.parseInt(maxValue) : null,
-          preferred_provinces: preferredProvinces.length > 0 ? preferredProvinces : [province],
-          email_alerts: emailAlerts,
-          weekly_digest: weeklyDigest,
-          onboarding_completed: true,
           updated_at: new Date().toISOString(),
         })
         .eq("id", userId)
 
-      if (profileError) throw profileError
+      if (profileError) {
+        console.error("Profile update error:", profileError)
+        throw profileError
+      }
 
-      // Save strategist preferences
-      await supabase.from("strategist_user_preferences").upsert({
-        user_id: userId,
-        company_size: "small",
-        experience_level: "beginner",
-        industries,
-        provinces: preferredProvinces.length > 0 ? preferredProvinces : [province],
-        budget_range: {
-          min: minValue ? Number.parseInt(minValue) : 0,
-          max: maxValue ? Number.parseInt(maxValue) : 10000000,
+      // 2. Upsert company info to companies table
+      const { error: companyError } = await supabase.from("companies").upsert(
+        {
+          user_id: userId,
+          company_name: companyName,
+          registration_number: registrationNumber || null,
+          vat_number: vatNumber || null,
+          province,
+          city: city || null,
+          industry: industries[0] || null, // Primary industry
+          bee_status: bbbeeLevel || null,
+          updated_at: new Date().toISOString(),
         },
-        certifications: {
-          cidb_grade: cidbGrade,
-          bbbee_level: bbbeeLevel,
-          tax_clearance: hasTaxClearance,
-          coida: hasCoida,
-          csd: hasCsd,
+        {
+          onConflict: "user_id",
         },
-        updated_at: new Date().toISOString(),
-      })
+      )
+
+      if (companyError) {
+        console.error("Company upsert error:", companyError)
+        throw companyError
+      }
+
+      // 3. Upsert strategist preferences (this table has all the detailed fields)
+      const { error: prefsError } = await supabase.from("strategist_user_preferences").upsert(
+        {
+          user_id: userId,
+          industries,
+          provinces: preferredProvinces.length > 0 ? preferredProvinces : [province],
+          cidb_grading: cidbGrade && cidbGrade !== "none" ? cidbGrade : null,
+          bee_level: bbbeeLevel || null,
+          has_tax_clearance: hasTaxClearance,
+          has_coida: hasCoida,
+          has_csd_registration: hasCsd,
+          notification_preferences: {
+            email_alerts: emailAlerts,
+            weekly_digest: weeklyDigest,
+            min_value: minValue ? Number.parseInt(minValue) : null,
+            max_value: maxValue ? Number.parseInt(maxValue) : null,
+          },
+          onboarding_completed: true,
+          onboarding_completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "user_id",
+        },
+      )
+
+      if (prefsError) {
+        console.error("Preferences upsert error:", prefsError)
+        throw prefsError
+      }
 
       toast.success("Profile setup complete!")
       router.push("/dashboard")
@@ -485,9 +504,10 @@ export function OnboardingWizard({ userId, userEmail }: OnboardingWizardProps) {
                 <ChevronLeft className="w-4 h-4" />
                 Back
               </Button>
+
               {currentStep < 4 ? (
                 <Button onClick={() => setCurrentStep((s) => s + 1)} disabled={!canProceed()} className="gap-2">
-                  Continue
+                  Next
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               ) : (

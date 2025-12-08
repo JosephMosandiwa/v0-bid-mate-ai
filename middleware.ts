@@ -63,14 +63,14 @@ export async function middleware(request: NextRequest) {
 
     // Check if user has completed onboarding for dashboard routes
     if (pathname.startsWith("/dashboard")) {
-      const { data: profile } = await supabase
-        .from("profiles")
+      const { data: prefs } = await supabase
+        .from("strategist_user_preferences")
         .select("onboarding_completed")
-        .eq("id", user.id)
+        .eq("user_id", user.id)
         .single()
 
-      // If no profile or onboarding not completed, redirect to onboarding
-      if (!profile || !profile.onboarding_completed) {
+      // If no preferences record or onboarding not completed, redirect to onboarding
+      if (!prefs || !prefs.onboarding_completed) {
         const url = request.nextUrl.clone()
         url.pathname = "/onboarding"
         return NextResponse.redirect(url)
