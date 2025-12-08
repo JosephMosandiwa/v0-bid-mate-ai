@@ -1,30 +1,195 @@
 import { createClient } from "@supabase/supabase-js"
 import { ScraperFactory } from "../scrapers/scraper-factory"
 import type { ScrapedTender } from "../scrapers/base-scraper"
-import { DocumentService } from "./document-service" // Import DocumentService
+import { DocumentService } from "./document-service"
+
+interface PostScrapeHook {
+  name: string
+  execute: (tenders: any[], supabase: any) => Promise<void>
+}
 
 export class ScrapingService {
   private supabase
-  private documentService // Add document service
+  private documentService
+  private postScrapeHooks: PostScrapeHook[] = []
 
   constructor() {
-    // Use service role key for server-side operations
     this.supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
-    this.documentService = new DocumentService() // Initialize document service
+    this.documentService = new DocumentService()
+
+    this.registerHooks()
+  }
+
+  private registerHooks() {
+    // Hook 1: Generate opportunities for users based on new tenders
+    this.postScrapeHooks.push({
+      name: "opportunity_matcher",
+      execute: async (tenders, supabase) => {
+        if (tenders.length === 0) return
+
+        console.log(`[ScrapingService] Running opportunity matcher for ${tenders.length} tenders`)
+
+        // Get all users with preferences
+        const { data: users } = await supabase
+          .from("strategist_user_preferences")
+          .select("user_id, provinces, industries, experience_level, annual_turnover")
+          .eq("onboarding_completed", true)
+
+        if (!users || users.length === 0) return
+
+        for (const user of users) {
+          for (const tender of tenders) {
+            const matchScore = this.calculateMatchScore(tender, user)
+
+            if (matchScore >= 0.3) {
+              // Create opportunity record
+              await supabase.from("strategist_opportunities").upsert(
+                {
+                  user_id: user.user_id,
+                  scraped_tender_id: tender.id,
+                  match_score: matchScore,
+                  match_reasons: this.getMatchReasons(tender, user),
+                  opportunity_type: matchScore >= 0.7 ? "high_margin" : matchScore >= 0.5 ? "strategic" : "growth",
+                  is_viewed: false,
+                  is_saved: false,
+                  is_dismissed: false,
+                  expires_at: tender.close_date,
+                },
+                { onConflict: "user_id, scraped_tender_id" },
+              )
+            }
+          }
+        }
+
+        console.log(`[ScrapingService] Opportunity matching complete`)
+      },
+    })
+
+    // Hook 2: Create alerts for high-match opportunities
+    this.postScrapeHooks.push({
+      name: "alert_generator",
+      execute: async (tenders, supabase) => {
+        if (tenders.length === 0) return
+
+        console.log(`[ScrapingService] Checking for alert-worthy tenders`)
+
+        // Get users with notification preferences enabled
+        const { data: users } = await supabase
+          .from("strategist_user_preferences")
+          .select("user_id, notification_preferences")
+          .eq("onboarding_completed", true)
+
+        if (!users) return
+
+        for (const user of users) {
+          const prefs = user.notification_preferences || {}
+          if (!prefs.new_opportunities) continue
+
+          // Get high-match opportunities created in this batch
+          const { data: opportunities } = await supabase
+            .from("strategist_opportunities")
+            .select("id, match_score, scraped_tender_id")
+            .eq("user_id", user.user_id)
+            .gte("match_score", 0.6)
+            .in(
+              "scraped_tender_id",
+              tenders.map((t) => t.id),
+            )
+
+          if (opportunities && opportunities.length > 0) {
+            await supabase.from("strategist_alerts").insert({
+              user_id: user.user_id,
+              alert_type: "new_opportunity",
+              title: `${opportunities.length} New Matching Tenders`,
+              message: `We found ${opportunities.length} new tender${opportunities.length > 1 ? "s" : ""} that match your profile. Check them out!`,
+              priority: opportunities.some((o) => o.match_score >= 0.8) ? "high" : "medium",
+              action_url: "/dashboard/strategist?tab=opportunities",
+              action_label: "View Opportunities",
+            })
+          }
+        }
+      },
+    })
+
+    // Hook 3: Log scraping stats for analytics
+    this.postScrapeHooks.push({
+      name: "stats_logger",
+      execute: async (tenders, supabase) => {
+        await supabase.from("scraping_usage_logs").insert({
+          tenders_found: tenders.length,
+          success: true,
+          scrape_type: "batch",
+          api_credits_used: 1,
+        })
+      },
+    })
+  }
+
+  private calculateMatchScore(tender: any, userPrefs: any): number {
+    let score = 0
+
+    // Province match (25%)
+    if (userPrefs.provinces?.length && tender.source_province) {
+      const provinceMatch = userPrefs.provinces.some((p: string) =>
+        tender.source_province?.toLowerCase().includes(p.toLowerCase()),
+      )
+      if (provinceMatch) score += 0.25
+    }
+
+    // Industry match (30%)
+    if (userPrefs.industries?.length && tender.category) {
+      const categoryLower = tender.category.toLowerCase()
+      const industryMatch = userPrefs.industries.some(
+        (ind: string) => categoryLower.includes(ind.toLowerCase()) || ind.toLowerCase().includes(categoryLower),
+      )
+      if (industryMatch) score += 0.3
+    }
+
+    // Value match (20%)
+    if (userPrefs.annual_turnover && tender.estimated_value) {
+      score += 0.2
+    }
+
+    // Deadline proximity (25%)
+    if (tender.close_date) {
+      const daysUntilClose = Math.ceil((new Date(tender.close_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      if (daysUntilClose > 14) score += 0.25
+      else if (daysUntilClose > 7) score += 0.15
+      else score += 0.05
+    }
+
+    return Math.min(score, 1)
+  }
+
+  private getMatchReasons(tender: any, userPrefs: any): string[] {
+    const reasons: string[] = []
+
+    if (userPrefs.provinces?.some((p: string) => tender.source_province?.toLowerCase().includes(p.toLowerCase()))) {
+      reasons.push("Matches your preferred province")
+    }
+
+    if (userPrefs.industries?.some((ind: string) => tender.category?.toLowerCase().includes(ind.toLowerCase()))) {
+      reasons.push("Matches your industry focus")
+    }
+
+    if (tender.close_date) {
+      const daysUntilClose = Math.ceil((new Date(tender.close_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      if (daysUntilClose > 14) reasons.push("Good preparation time available")
+      else if (daysUntilClose > 7) reasons.push("Adequate preparation time")
+    }
+
+    return reasons
   }
 
   async scrapeSource(sourceId: number) {
     try {
       console.log(`[ScrapingService] Starting scrape for source ${sourceId}`)
 
-      // Get source details
       const { data: source, error: sourceError } = await this.supabase
         .from("tender_sources")
         .select("*")
         .eq("id", sourceId)
         .single()
-
-      console.log(`[ScrapingService] Source query result:`, { source, error: sourceError })
 
       if (sourceError || !source) {
         throw new Error(`Source not found: ${sourceId}`)
@@ -38,47 +203,40 @@ export class ScrapingService {
         }
       }
 
-      console.log(`[ScrapingService] Creating scraper for ${source.name}`)
-
-      // Create scraper
       const scraper = ScraperFactory.createScraper(source)
-
-      console.log(`[ScrapingService] Starting scrape...`)
-
-      // Scrape tenders
       const result = await scraper.scrape()
 
-      console.log(`[ScrapingService] Scrape completed:`, result)
-
-      // Save tenders to database
+      let savedTenders: any[] = []
       if (result.success && result.tenders.length > 0) {
         console.log(`[ScrapingService] Saving ${result.tenders.length} tenders to database`)
-        const savedTenders = await this.saveTenders(sourceId, source, result.tenders) // Get saved tenders
-        console.log(`[ScrapingService] Tenders saved successfully`)
+        savedTenders = await this.saveTenders(sourceId, source, result.tenders)
 
         if (savedTenders && savedTenders.length > 0) {
           console.log(`[ScrapingService] Starting document download for ${savedTenders.length} tenders`)
           await this.downloadTenderDocuments(savedTenders)
         }
-      } else {
-        console.log(`[ScrapingService] No tenders to save`)
+
+        console.log(`[ScrapingService] Running ${this.postScrapeHooks.length} post-scrape hooks`)
+        for (const hook of this.postScrapeHooks) {
+          try {
+            await hook.execute(savedTenders, this.supabase)
+          } catch (hookError) {
+            console.error(`[ScrapingService] Hook ${hook.name} failed:`, hookError)
+          }
+        }
       }
 
-      // Update source statistics
-      console.log(`[ScrapingService] Updating source stats`)
       await this.updateSourceStats(sourceId, result)
-
-      console.log(`[ScrapingService] Completed scrape for source ${sourceId}: ${result.scrapedCount} tenders`)
 
       return {
         success: result.success,
         scrapedCount: result.scrapedCount,
+        savedCount: savedTenders.length,
         error: result.error,
       }
     } catch (error) {
       console.error(`[ScrapingService] Error scraping source ${sourceId}:`, error)
 
-      // Update source with error
       await this.supabase
         .from("tender_sources")
         .update({
@@ -86,6 +244,15 @@ export class ScrapingService {
           last_scrape_error: error instanceof Error ? error.message : "Unknown error",
         })
         .eq("id", sourceId)
+
+      // Log failed scrape
+      await this.supabase.from("scraping_usage_logs").insert({
+        source_id: sourceId,
+        tenders_found: 0,
+        success: false,
+        scrape_type: "single",
+        error_message: error instanceof Error ? error.message : "Unknown error",
+      })
 
       return {
         success: false,
@@ -120,9 +287,6 @@ export class ScrapingService {
       is_active: true,
     }))
 
-    console.log(`[ScrapingService] Sample tender data:`, tendersToInsert[0])
-
-    // Insert tenders (upsert based on source_id + tender_reference or title)
     const { data, error } = await this.supabase
       .from("scraped_tenders")
       .upsert(tendersToInsert, {
@@ -137,7 +301,7 @@ export class ScrapingService {
     }
 
     console.log(`[ScrapingService] Successfully saved ${tenders.length} tenders`)
-    return data // Return saved tenders with IDs
+    return data || []
   }
 
   private async downloadTenderDocuments(tenders: any[]) {
@@ -150,17 +314,20 @@ export class ScrapingService {
         )
 
         try {
-          await this.documentService.downloadTenderDocuments(tender.document_urls, tender.id, scraperApiKey)
+          // Handle both formats: string[] and {title: string, url: string}[]
+          const urls = tender.document_urls.map((doc: any) => (typeof doc === "string" ? doc : doc.url)).filter(Boolean)
+
+          if (urls.length > 0) {
+            await this.documentService.downloadTenderDocuments(urls, tender.id, scraperApiKey)
+          }
         } catch (error) {
           console.error(`[ScrapingService] Error downloading documents for tender ${tender.id}:`, error)
-          // Continue with other tenders even if one fails
         }
       }
     }
   }
 
   private async updateSourceStats(sourceId: number, result: any) {
-    // First get current count
     const { data: currentSource } = await this.supabase
       .from("tender_sources")
       .select("total_tenders_scraped")
@@ -169,7 +336,7 @@ export class ScrapingService {
 
     const newCount = (currentSource?.total_tenders_scraped || 0) + (result.scrapedCount || 0)
 
-    const { error } = await this.supabase
+    await this.supabase
       .from("tender_sources")
       .update({
         last_scraped_at: new Date().toISOString(),
@@ -178,10 +345,6 @@ export class ScrapingService {
         total_tenders_scraped: result.success ? newCount : currentSource?.total_tenders_scraped || 0,
       })
       .eq("id", sourceId)
-
-    if (error) {
-      console.error("[ScrapingService] Error updating source stats:", error)
-    }
   }
 
   async scrapeAllActiveSources() {
@@ -189,7 +352,7 @@ export class ScrapingService {
 
     const { data: sources, error } = await this.supabase
       .from("tender_sources")
-      .select("id")
+      .select("id, name")
       .eq("is_active", true)
       .eq("scraping_enabled", true)
 
@@ -198,19 +361,29 @@ export class ScrapingService {
       return { success: false, error: "Failed to fetch active sources" }
     }
 
+    console.log(`[ScrapingService] Found ${sources.length} active sources to scrape`)
+
     const results = []
     for (const source of sources) {
+      console.log(`[ScrapingService] Scraping source: ${source.name}`)
       const result = await this.scrapeSource(source.id)
-      results.push({ sourceId: source.id, ...result })
+      results.push({ sourceId: source.id, sourceName: source.name, ...result })
 
       // Add delay between scrapes to be respectful
       await new Promise((resolve) => setTimeout(resolve, 2000))
     }
 
+    const totalScraped = results.reduce((sum, r) => sum + (r.scrapedCount || 0), 0)
+    const successCount = results.filter((r) => r.success).length
+
+    console.log(`[ScrapingService] Completed scraping ${sources.length} sources, total tenders: ${totalScraped}`)
+
     return {
       success: true,
       results,
-      totalScraped: results.reduce((sum, r) => sum + (r.scrapedCount || 0), 0),
+      totalScraped,
+      sourcesScraped: sources.length,
+      successfulSources: successCount,
     }
   }
 }
