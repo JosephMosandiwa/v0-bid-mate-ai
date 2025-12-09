@@ -127,7 +127,6 @@ export class OpportunityService {
 
     // Value match based on company size (20 points)
     if (preferences.annual_turnover && tender.estimated_value) {
-      // Simple heuristic - could be more sophisticated
       score += 0.15
       reasons.push("Contract value within your range")
     }
@@ -149,7 +148,6 @@ export class OpportunityService {
 
     // Experience level consideration (20 points)
     if (preferences.experience_level === "beginner") {
-      // Favor simpler, smaller tenders
       if (!tender.estimated_value || tender.estimated_value.includes("R") === false) {
         score += 0.2
         reasons.push("Good entry-level opportunity")
@@ -189,18 +187,15 @@ export class OpportunityService {
 
   /**
    * Get user's saved opportunities
+   * Removed join with scraped_tenders - fetch tender data separately
    */
   static async getSavedOpportunities(userId: string): Promise<StrategistOpportunity[]> {
     const supabase = await createClient()
 
-    const { data, error } = await supabase
+    // First get opportunities without join
+    const { data: opportunities, error } = await supabase
       .from("strategist_opportunities")
-      .select(
-        `
-        *,
-        scraped_tender:scraped_tenders(id, title, source_name, close_date, category, estimated_value)
-      `,
-      )
+      .select("*")
       .eq("user_id", userId)
       .eq("is_saved", true)
       .eq("is_dismissed", false)
@@ -211,9 +206,36 @@ export class OpportunityService {
       return []
     }
 
-    return (data || []).map((opp) => ({
+    if (!opportunities || opportunities.length === 0) {
+      return []
+    }
+
+    // Get tender IDs and fetch tender data separately
+    const tenderIds = opportunities.map((opp) => opp.scraped_tender_id).filter((id): id is string => id !== null)
+
+    let tendersMap: Record<string, any> = {}
+
+    if (tenderIds.length > 0) {
+      const { data: tenders } = await supabase
+        .from("scraped_tenders")
+        .select("id, title, source_name, close_date, category, estimated_value")
+        .in("id", tenderIds)
+
+      if (tenders) {
+        tendersMap = tenders.reduce(
+          (acc, tender) => {
+            acc[tender.id] = tender
+            return acc
+          },
+          {} as Record<string, any>,
+        )
+      }
+    }
+
+    // Combine opportunities with tender data
+    return opportunities.map((opp) => ({
       ...opp,
-      tender: opp.scraped_tender,
+      tender: opp.scraped_tender_id ? tendersMap[opp.scraped_tender_id] || null : null,
     }))
   }
 

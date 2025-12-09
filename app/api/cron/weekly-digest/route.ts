@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     // Get users subscribed to weekly digest
     const { data: subscriptions, error: subError } = await supabase
       .from("strategist_digest_subscriptions")
-      .select("*, user:auth.users(email)")
+      .select("*")
       .eq("is_subscribed", true)
       .eq("frequency", "weekly")
 
@@ -37,14 +37,39 @@ export async function GET(request: NextRequest) {
           .eq("user_id", subscription.user_id)
           .single()
 
-        // Get recommended opportunities
         const { data: opportunities } = await supabase
           .from("strategist_opportunities")
-          .select("*, scraped_tender:scraped_tenders(title, organization, closing_date)")
+          .select("*")
           .eq("user_id", subscription.user_id)
           .eq("is_dismissed", false)
           .order("match_score", { ascending: false })
           .limit(5)
+
+        // Fetch tender data for opportunities
+        let opportunitiesWithTenders: any[] = []
+        if (opportunities && opportunities.length > 0) {
+          const tenderIds = opportunities.map((o) => o.scraped_tender_id).filter((id): id is string => id !== null)
+
+          if (tenderIds.length > 0) {
+            const { data: tenders } = await supabase
+              .from("scraped_tenders")
+              .select("id, title, source_name, close_date")
+              .in("id", tenderIds)
+
+            const tendersMap = (tenders || []).reduce(
+              (acc, t) => {
+                acc[t.id] = t
+                return acc
+              },
+              {} as Record<string, any>,
+            )
+
+            opportunitiesWithTenders = opportunities.map((opp) => ({
+              ...opp,
+              scraped_tender: opp.scraped_tender_id ? tendersMap[opp.scraped_tender_id] : null,
+            }))
+          }
+        }
 
         // Get unread alerts
         const { data: alerts } = await supabase
@@ -67,14 +92,12 @@ export async function GET(request: NextRequest) {
         // Build digest content
         const digestContent = {
           user_id: subscription.user_id,
-          opportunities: opportunities || [],
+          opportunities: opportunitiesWithTenders,
           alerts: alerts || [],
           learning: learningProgress || [],
           tips: generateWeeklyTips(preferences),
         }
 
-        // Store digest for sending (you would integrate with an email service here)
-        // For now, we'll just log it
         console.log(`Digest prepared for user ${subscription.user_id}:`, digestContent)
 
         // Update last_sent_at
