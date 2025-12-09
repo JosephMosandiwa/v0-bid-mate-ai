@@ -18,16 +18,9 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Build query
     let dbQuery = supabase
       .from("scraped_tenders")
-      .select(
-        `
-        *,
-        documents:tender_documents(count)
-      `,
-        { count: "exact" },
-      )
+      .select("*", { count: "exact" })
       .eq("is_active", isActive)
       .order("scraped_at", { ascending: false })
       .range(offset, offset + limit - 1)
@@ -79,11 +72,21 @@ export async function GET(request: NextRequest) {
     }
 
     const tendersWithDocCount =
-      tenders?.map((tender) => ({
-        ...tender,
-        document_count: tender.documents?.[0]?.count || 0,
-        documents: undefined, // Remove the nested documents object
-      })) || []
+      tenders?.map((tender) => {
+        const documentUrls = tender.document_urls
+        let documentCount = 0
+
+        if (Array.isArray(documentUrls)) {
+          documentCount = documentUrls.length
+        } else if (documentUrls && typeof documentUrls === "object") {
+          documentCount = Object.keys(documentUrls).length
+        }
+
+        return {
+          ...tender,
+          document_count: documentCount,
+        }
+      }) || []
 
     return Response.json({
       tenders: tendersWithDocCount,
