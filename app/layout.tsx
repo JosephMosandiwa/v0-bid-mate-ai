@@ -7,6 +7,8 @@ import { ErrorBoundary } from "@/components/error-boundary"
 import { Suspense } from "react"
 import { CookieBanner } from "@/components/cookie-banner"
 
+// Build: 2025-01-10T12:00:00Z
+
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
