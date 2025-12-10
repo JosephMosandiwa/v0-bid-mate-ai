@@ -3,6 +3,7 @@
 -- DocuMind Engine - Version 1.0.0
 -- ============================================
 
+-- Use ON CONFLICT to handle duplicate template codes
 -- SBD1 - Invitation to Bid
 INSERT INTO documind_templates (
   name, code, category, subcategory,
@@ -26,7 +27,11 @@ INSERT INTO documind_templates (
   ]'::jsonb,
   2, 'Standard Bidding Document 1 - Invitation to Bid form used in South African government tenders', '2023',
   true, true, 'system'
-);
+)
+ON CONFLICT (code) DO UPDATE SET
+  name = EXCLUDED.name,
+  field_mappings = EXCLUDED.field_mappings,
+  updated_at = NOW();
 
 -- SBD3.1 - Pricing Schedule (Firm Prices)
 INSERT INTO documind_templates (
@@ -46,7 +51,11 @@ INSERT INTO documind_templates (
   ]'::jsonb,
   1, 'Standard Bidding Document 3.1 - Pricing Schedule for firm/fixed prices', '2023',
   true, true, 'system'
-);
+)
+ON CONFLICT (code) DO UPDATE SET
+  name = EXCLUDED.name,
+  field_mappings = EXCLUDED.field_mappings,
+  updated_at = NOW();
 
 -- SBD4 - Declaration of Interest
 INSERT INTO documind_templates (
@@ -71,7 +80,11 @@ INSERT INTO documind_templates (
   ]'::jsonb,
   3, 'Standard Bidding Document 4 - Declaration of Interest form to disclose conflicts of interest', '2023',
   true, true, 'system'
-);
+)
+ON CONFLICT (code) DO UPDATE SET
+  name = EXCLUDED.name,
+  field_mappings = EXCLUDED.field_mappings,
+  updated_at = NOW();
 
 -- SBD6.1 - Preference Points Claim Form
 INSERT INTO documind_templates (
@@ -96,7 +109,11 @@ INSERT INTO documind_templates (
   ]'::jsonb,
   2, 'Standard Bidding Document 6.1 - Preference Points Claim Form for B-BBEE status', '2023',
   true, true, 'system'
-);
+)
+ON CONFLICT (code) DO UPDATE SET
+  name = EXCLUDED.name,
+  field_mappings = EXCLUDED.field_mappings,
+  updated_at = NOW();
 
 -- SBD8 - Declaration of Bidders Past SCM Practices
 INSERT INTO documind_templates (
@@ -117,7 +134,11 @@ INSERT INTO documind_templates (
   ]'::jsonb,
   1, 'Standard Bidding Document 8 - Declaration of Bidders Past Supply Chain Management Practices', '2023',
   true, true, 'system'
-);
+)
+ON CONFLICT (code) DO UPDATE SET
+  name = EXCLUDED.name,
+  field_mappings = EXCLUDED.field_mappings,
+  updated_at = NOW();
 
 -- SBD9 - Certificate of Independent Bid Determination
 INSERT INTO documind_templates (
@@ -138,7 +159,11 @@ INSERT INTO documind_templates (
   ]'::jsonb,
   2, 'Standard Bidding Document 9 - Certificate of Independent Bid Determination', '2023',
   true, true, 'system'
-);
+)
+ON CONFLICT (code) DO UPDATE SET
+  name = EXCLUDED.name,
+  field_mappings = EXCLUDED.field_mappings,
+  updated_at = NOW();
 
 -- MBD1 - Municipal Invitation to Bid
 INSERT INTO documind_templates (
@@ -163,7 +188,11 @@ INSERT INTO documind_templates (
   ]'::jsonb,
   2, 'Municipal Bidding Document 1 - Municipal Invitation to Bid form', '2023',
   true, true, 'system'
-);
+)
+ON CONFLICT (code) DO UPDATE SET
+  name = EXCLUDED.name,
+  field_mappings = EXCLUDED.field_mappings,
+  updated_at = NOW();
 
 -- MBD4 - Municipal Declaration of Interest
 INSERT INTO documind_templates (
@@ -176,98 +205,38 @@ INSERT INTO documind_templates (
   'mbd4_structure_v1', 'mbd4_layout_v1', 0.75,
   '[
     {"field_id": "bidder_name", "field_name": "Full Name of Bidder", "label_pattern": "FULL NAME.*BIDDER|NAME OF BIDDER", "page": 1, "position_normalized": {"x": 0.1, "y": 0.15, "width": 0.8, "height": 0.03}, "data_type": "company", "is_required": true, "profile_mapping": "company_name"},
-    {"field_id": "id_number", "field_name": "Identity Number", "label_pattern": "IDENTITY NUMBER|ID NUMBER|ID NO", "page": 1, "position_normalized": {"x": 0.1, "y": 0.2, "width": 0.4, "height": 0.03}, "data_type": "id_number", "is_required": true, "profile_mapping": "director_id"},
-    {"field_id": "position", "field_name": "Position", "label_pattern": "POSITION|DESIGNATION", "page": 1, "position_normalized": {"x": 0.5, "y": 0.2, "width": 0.4, "height": 0.03}, "data_type": "text", "is_required": true, "profile_mapping": "contact_position"},
-    {"field_id": "registration_number", "field_name": "Company Registration Number", "label_pattern": "REGISTRATION NUMBER|REG.*NO|COMPANY.*NUMBER", "page": 1, "position_normalized": {"x": 0.1, "y": 0.25, "width": 0.4, "height": 0.03}, "data_type": "text", "is_required": true, "profile_mapping": "registration_number"},
-    {"field_id": "tax_reference", "field_name": "Tax Reference Number", "label_pattern": "TAX REFERENCE|TAX.*NO|TAX NUMBER", "page": 1, "position_normalized": {"x": 0.5, "y": 0.25, "width": 0.4, "height": 0.03}, "data_type": "text", "is_required": true, "profile_mapping": "tax_number"},
-    {"field_id": "vat_number", "field_name": "VAT Registration Number", "label_pattern": "VAT.*NUMBER|VAT.*REG|VAT NO", "page": 1, "position_normalized": {"x": 0.1, "y": 0.3, "width": 0.4, "height": 0.03}, "data_type": "text", "is_required": false, "profile_mapping": "vat_number"},
+    {"field_id": "registration_number", "field_name": "Company Registration Number", "label_pattern": "REGISTRATION NUMBER|REG.*NO|COMPANY.*NUMBER", "page": 1, "position_normalized": {"x": 0.1, "y": 0.2, "width": 0.4, "height": 0.03}, "data_type": "text", "is_required": true, "profile_mapping": "registration_number"},
+    {"field_id": "vat_number", "field_name": "VAT Registration Number", "label_pattern": "VAT.*NUMBER|VAT.*REG", "page": 1, "position_normalized": {"x": 0.5, "y": 0.2, "width": 0.4, "height": 0.03}, "data_type": "text", "is_required": false, "profile_mapping": "vat_number"},
     {"field_id": "signature", "field_name": "Signature", "label_pattern": "SIGNATURE", "page": 2, "position_normalized": {"x": 0.1, "y": 0.8, "width": 0.3, "height": 0.05}, "data_type": "signature", "is_required": true, "profile_mapping": null},
     {"field_id": "date_signed", "field_name": "Date", "label_pattern": "DATE", "page": 2, "position_normalized": {"x": 0.6, "y": 0.8, "width": 0.2, "height": 0.03}, "data_type": "date", "is_required": true, "profile_mapping": null}
   ]'::jsonb,
-  3, 'Municipal Bidding Document 4 - Municipal Declaration of Interest form', '2023',
+  3, 'Municipal Bidding Document 4 - Declaration of Interest for municipal tenders', '2023',
   true, true, 'system'
-);
+)
+ON CONFLICT (code) DO UPDATE SET
+  name = EXCLUDED.name,
+  field_mappings = EXCLUDED.field_mappings,
+  updated_at = NOW();
 
--- MBD9 - Municipal Certificate of Independent Bid Determination
+-- MBD6.1 - Municipal Preference Points Claim
 INSERT INTO documind_templates (
   name, code, category, subcategory,
   fingerprint_structure, fingerprint_layout, match_threshold,
   field_mappings, page_count, description, version,
   is_system, is_public, created_by
 ) VALUES (
-  'Municipal Certificate of Independent Bid', 'MBD9', 'SA Municipal Tender', 'Municipal Bidding Document',
-  'mbd9_structure_v1', 'mbd9_layout_v1', 0.75,
+  'Municipal Preference Points Claim', 'MBD6.1', 'SA Municipal Tender', 'Municipal Bidding Document',
+  'mbd6_1_structure_v1', 'mbd6_1_layout_v1', 0.75,
   '[
-    {"field_id": "bid_number", "field_name": "Bid Number", "label_pattern": "BID NUMBER|TENDER NUMBER", "page": 1, "position_normalized": {"x": 0.1, "y": 0.15, "width": 0.4, "height": 0.03}, "data_type": "text", "is_required": true, "profile_mapping": null},
-    {"field_id": "bidder_name", "field_name": "Name of Bidder", "label_pattern": "NAME OF BIDDER|BIDDER NAME", "page": 1, "position_normalized": {"x": 0.1, "y": 0.2, "width": 0.8, "height": 0.03}, "data_type": "company", "is_required": true, "profile_mapping": "company_name"},
-    {"field_id": "authorized_signatory", "field_name": "Authorized Signatory", "label_pattern": "AUTHORIZED.*SIGNATORY|AUTHORISED.*SIGNATORY|DULY AUTHORISED", "page": 1, "position_normalized": {"x": 0.1, "y": 0.7, "width": 0.4, "height": 0.03}, "data_type": "name", "is_required": true, "profile_mapping": "authorized_signatory"},
-    {"field_id": "signatory_position", "field_name": "Position", "label_pattern": "POSITION|CAPACITY|DESIGNATION", "page": 1, "position_normalized": {"x": 0.5, "y": 0.7, "width": 0.4, "height": 0.03}, "data_type": "text", "is_required": true, "profile_mapping": "contact_position"},
-    {"field_id": "signature", "field_name": "Signature", "label_pattern": "SIGNATURE", "page": 1, "position_normalized": {"x": 0.1, "y": 0.8, "width": 0.3, "height": 0.05}, "data_type": "signature", "is_required": true, "profile_mapping": null},
-    {"field_id": "date_signed", "field_name": "Date", "label_pattern": "DATE", "page": 1, "position_normalized": {"x": 0.6, "y": 0.8, "width": 0.2, "height": 0.03}, "data_type": "date", "is_required": true, "profile_mapping": null}
+    {"field_id": "bidder_name", "field_name": "Name of Bidder", "label_pattern": "NAME OF BIDDER|BIDDER NAME", "page": 1, "position_normalized": {"x": 0.1, "y": 0.15, "width": 0.8, "height": 0.03}, "data_type": "company", "is_required": true, "profile_mapping": "company_name"},
+    {"field_id": "bbbee_level", "field_name": "B-BBEE Status Level", "label_pattern": "B-BBEE.*LEVEL|BBBEE.*STATUS", "page": 1, "position_normalized": {"x": 0.1, "y": 0.3, "width": 0.3, "height": 0.03}, "data_type": "text", "is_required": true, "profile_mapping": "bbbee_level"},
+    {"field_id": "signature", "field_name": "Signature", "label_pattern": "SIGNATURE", "page": 1, "position_normalized": {"x": 0.1, "y": 0.85, "width": 0.3, "height": 0.05}, "data_type": "signature", "is_required": true, "profile_mapping": null},
+    {"field_id": "date_signed", "field_name": "Date", "label_pattern": "DATE", "page": 1, "position_normalized": {"x": 0.6, "y": 0.85, "width": 0.2, "height": 0.03}, "data_type": "date", "is_required": true, "profile_mapping": null}
   ]'::jsonb,
-  2, 'Municipal Bidding Document 9 - Municipal Certificate of Independent Bid Determination', '2023',
+  2, 'Municipal Bidding Document 6.1 - Preference Points Claim for municipal tenders', '2023',
   true, true, 'system'
-);
-
--- CSD - Central Supplier Database Form
-INSERT INTO documind_templates (
-  name, code, category, subcategory,
-  fingerprint_structure, fingerprint_layout, match_threshold,
-  field_mappings, page_count, description, version,
-  is_system, is_public, created_by
-) VALUES (
-  'Central Supplier Database Form', 'CSD', 'SA Government Tender', 'Registration',
-  'csd_structure_v1', 'csd_layout_v1', 0.70,
-  '[
-    {"field_id": "csd_number", "field_name": "CSD Number", "label_pattern": "CSD.*NUMBER|MAAA|SUPPLIER.*NUMBER", "page": 1, "position_normalized": {"x": 0.1, "y": 0.15, "width": 0.4, "height": 0.03}, "data_type": "text", "is_required": true, "profile_mapping": "csd_number"},
-    {"field_id": "company_name", "field_name": "Company/Business Name", "label_pattern": "COMPANY.*NAME|BUSINESS.*NAME|SUPPLIER.*NAME", "page": 1, "position_normalized": {"x": 0.1, "y": 0.2, "width": 0.8, "height": 0.03}, "data_type": "company", "is_required": true, "profile_mapping": "company_name"},
-    {"field_id": "trading_name", "field_name": "Trading Name", "label_pattern": "TRADING.*NAME|TRADE.*AS", "page": 1, "position_normalized": {"x": 0.1, "y": 0.25, "width": 0.8, "height": 0.03}, "data_type": "text", "is_required": false, "profile_mapping": "trading_name"},
-    {"field_id": "registration_number", "field_name": "Registration Number", "label_pattern": "REGISTRATION.*NUMBER|CIPC.*NUMBER|REG.*NO", "page": 1, "position_normalized": {"x": 0.1, "y": 0.3, "width": 0.4, "height": 0.03}, "data_type": "text", "is_required": true, "profile_mapping": "registration_number"},
-    {"field_id": "tax_number", "field_name": "Tax Number", "label_pattern": "TAX.*NUMBER|INCOME.*TAX|TAX.*REFERENCE", "page": 1, "position_normalized": {"x": 0.5, "y": 0.3, "width": 0.4, "height": 0.03}, "data_type": "text", "is_required": true, "profile_mapping": "tax_number"},
-    {"field_id": "vat_number", "field_name": "VAT Number", "label_pattern": "VAT.*NUMBER|VAT.*REG", "page": 1, "position_normalized": {"x": 0.1, "y": 0.35, "width": 0.4, "height": 0.03}, "data_type": "text", "is_required": false, "profile_mapping": "vat_number"},
-    {"field_id": "bbbee_level", "field_name": "B-BBEE Level", "label_pattern": "B-BBEE.*LEVEL|BEE.*LEVEL|BBBEE.*STATUS", "page": 1, "position_normalized": {"x": 0.5, "y": 0.35, "width": 0.2, "height": 0.03}, "data_type": "text", "is_required": true, "profile_mapping": "bbbee_level"}
-  ]'::jsonb,
-  1, 'Central Supplier Database registration/verification form', '2023',
-  true, true, 'system'
-);
-
--- Generic Tender Cover Page
-INSERT INTO documind_templates (
-  name, code, category, subcategory,
-  fingerprint_structure, fingerprint_layout, match_threshold,
-  field_mappings, page_count, description, version,
-  is_system, is_public, created_by
-) VALUES (
-  'Generic Tender Cover Page', 'COVER', 'SA Government Tender', 'General',
-  'cover_structure_v1', 'cover_layout_v1', 0.65,
-  '[
-    {"field_id": "tender_number", "field_name": "Tender Number", "label_pattern": "TENDER.*NUMBER|BID.*NUMBER|CONTRACT.*NO|REFERENCE.*NO", "page": 1, "position_normalized": {"x": 0.1, "y": 0.2, "width": 0.4, "height": 0.03}, "data_type": "text", "is_required": true, "profile_mapping": null},
-    {"field_id": "tender_title", "field_name": "Tender Title/Description", "label_pattern": "TENDER.*TITLE|DESCRIPTION|SUBJECT", "page": 1, "position_normalized": {"x": 0.1, "y": 0.3, "width": 0.8, "height": 0.06}, "data_type": "text", "is_required": true, "profile_mapping": null},
-    {"field_id": "closing_date", "field_name": "Closing Date", "label_pattern": "CLOSING.*DATE|SUBMISSION.*DATE|DUE.*DATE", "page": 1, "position_normalized": {"x": 0.1, "y": 0.5, "width": 0.3, "height": 0.03}, "data_type": "date", "is_required": true, "profile_mapping": null},
-    {"field_id": "closing_time", "field_name": "Closing Time", "label_pattern": "CLOSING.*TIME|TIME", "page": 1, "position_normalized": {"x": 0.5, "y": 0.5, "width": 0.2, "height": 0.03}, "data_type": "text", "is_required": true, "profile_mapping": null},
-    {"field_id": "department", "field_name": "Department/Municipality", "label_pattern": "DEPARTMENT|MUNICIPALITY|ORGAN.*STATE|INSTITUTION", "page": 1, "position_normalized": {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.03}, "data_type": "text", "is_required": false, "profile_mapping": null}
-  ]'::jsonb,
-  1, 'Generic tender document cover page template', '2023',
-  true, true, 'system'
-);
-
--- Bill of Quantities Template
-INSERT INTO documind_templates (
-  name, code, category, subcategory,
-  fingerprint_structure, fingerprint_layout, match_threshold,
-  field_mappings, page_count, description, version,
-  is_system, is_public, created_by
-) VALUES (
-  'Bill of Quantities', 'BOQ', 'SA Government Tender', 'Pricing',
-  'boq_structure_v1', 'boq_layout_v1', 0.70,
-  '[
-    {"field_id": "project_name", "field_name": "Project Name", "label_pattern": "PROJECT.*NAME|PROJECT.*TITLE|CONTRACT.*NAME", "page": 1, "position_normalized": {"x": 0.1, "y": 0.1, "width": 0.8, "height": 0.03}, "data_type": "text", "is_required": false, "profile_mapping": null},
-    {"field_id": "tender_number", "field_name": "Tender Number", "label_pattern": "TENDER.*NO|BID.*NO|CONTRACT.*NO", "page": 1, "position_normalized": {"x": 0.1, "y": 0.15, "width": 0.4, "height": 0.03}, "data_type": "text", "is_required": true, "profile_mapping": null},
-    {"field_id": "bidder_name", "field_name": "Bidder Name", "label_pattern": "BIDDER.*NAME|CONTRACTOR.*NAME|COMPANY", "page": 1, "position_normalized": {"x": 0.1, "y": 0.2, "width": 0.8, "height": 0.03}, "data_type": "company", "is_required": true, "profile_mapping": "company_name"},
-    {"field_id": "subtotal", "field_name": "Subtotal", "label_pattern": "SUB.*TOTAL|SUBTOTAL|TOTAL.*EXCL", "page": 1, "position_normalized": {"x": 0.7, "y": 0.85, "width": 0.2, "height": 0.03}, "data_type": "currency", "is_required": true, "profile_mapping": null},
-    {"field_id": "vat", "field_name": "VAT", "label_pattern": "VAT|VALUE.*ADDED.*TAX", "page": 1, "position_normalized": {"x": 0.7, "y": 0.88, "width": 0.2, "height": 0.03}, "data_type": "currency", "is_required": true, "profile_mapping": null},
-    {"field_id": "total", "field_name": "Total", "label_pattern": "GRAND.*TOTAL|TOTAL.*INCL|TOTAL", "page": 1, "position_normalized": {"x": 0.7, "y": 0.91, "width": 0.2, "height": 0.03}, "data_type": "currency", "is_required": true, "profile_mapping": null}
-  ]'::jsonb,
-  null, 'Bill of Quantities pricing document template', '2023',
-  true, true, 'system'
-);
+)
+ON CONFLICT (code) DO UPDATE SET
+  name = EXCLUDED.name,
+  field_mappings = EXCLUDED.field_mappings,
+  updated_at = NOW();

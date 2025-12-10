@@ -67,6 +67,24 @@ ALTER TABLE public.user_custom_tender_documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_custom_tender_analysis ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_custom_tender_responses ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies before creating to avoid "already exists" error
+DROP POLICY IF EXISTS "Users can view their own custom tenders" ON public.user_custom_tenders;
+DROP POLICY IF EXISTS "Users can insert their own custom tenders" ON public.user_custom_tenders;
+DROP POLICY IF EXISTS "Users can update their own custom tenders" ON public.user_custom_tenders;
+DROP POLICY IF EXISTS "Users can delete their own custom tenders" ON public.user_custom_tenders;
+
+DROP POLICY IF EXISTS "Users can view documents of their custom tenders" ON public.user_custom_tender_documents;
+DROP POLICY IF EXISTS "Users can insert documents for their custom tenders" ON public.user_custom_tender_documents;
+DROP POLICY IF EXISTS "Users can delete documents of their custom tenders" ON public.user_custom_tender_documents;
+
+DROP POLICY IF EXISTS "Users can view analysis of their custom tenders" ON public.user_custom_tender_analysis;
+DROP POLICY IF EXISTS "Users can insert analysis for their custom tenders" ON public.user_custom_tender_analysis;
+
+DROP POLICY IF EXISTS "Users can view their own responses" ON public.user_custom_tender_responses;
+DROP POLICY IF EXISTS "Users can insert their own responses" ON public.user_custom_tender_responses;
+DROP POLICY IF EXISTS "Users can update their own responses" ON public.user_custom_tender_responses;
+DROP POLICY IF EXISTS "Users can delete their own responses" ON public.user_custom_tender_responses;
+
 -- RLS Policies for user_custom_tenders
 CREATE POLICY "Users can view their own custom tenders" ON public.user_custom_tenders
   FOR SELECT USING (auth.uid() = user_id);

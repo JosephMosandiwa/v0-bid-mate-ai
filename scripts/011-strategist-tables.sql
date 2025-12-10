@@ -283,47 +283,56 @@ ALTER TABLE strategist_alerts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE strategist_competitiveness_scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE strategist_digest_subscriptions ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
+-- RLS Policies - Drop existing first then recreate
+DROP POLICY IF EXISTS "Users can manage their own preferences" ON strategist_user_preferences;
 CREATE POLICY "Users can manage their own preferences"
     ON strategist_user_preferences FOR ALL
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can manage their own conversations" ON strategist_conversations;
 CREATE POLICY "Users can manage their own conversations"
     ON strategist_conversations FOR ALL
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can view messages in their conversations" ON strategist_messages;
 CREATE POLICY "Users can view messages in their conversations"
     ON strategist_messages FOR ALL
     USING (conversation_id IN (SELECT id FROM strategist_conversations WHERE user_id = auth.uid()));
 
+DROP POLICY IF EXISTS "Users can manage their own strategies" ON strategist_strategies;
 CREATE POLICY "Users can manage their own strategies"
     ON strategist_strategies FOR ALL
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can manage their opportunities" ON strategist_opportunities;
 CREATE POLICY "Users can manage their opportunities"
     ON strategist_opportunities FOR ALL
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can manage their learning progress" ON strategist_learning_progress;
 CREATE POLICY "Users can manage their learning progress"
     ON strategist_learning_progress FOR ALL
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can manage their alerts" ON strategist_alerts;
 CREATE POLICY "Users can manage their alerts"
     ON strategist_alerts FOR ALL
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can view their competitiveness scores" ON strategist_competitiveness_scores;
 CREATE POLICY "Users can view their competitiveness scores"
     ON strategist_competitiveness_scores FOR ALL
     USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can manage their digest subscriptions" ON strategist_digest_subscriptions;
 CREATE POLICY "Users can manage their digest subscriptions"
     ON strategist_digest_subscriptions FOR ALL
     USING (auth.uid() = user_id);
 
 -- Create indexes for performance
-CREATE INDEX idx_strategist_conversations_user ON strategist_conversations(user_id);
-CREATE INDEX idx_strategist_messages_conversation ON strategist_messages(conversation_id);
-CREATE INDEX idx_strategist_strategies_user ON strategist_strategies(user_id);
-CREATE INDEX idx_strategist_opportunities_user ON strategist_opportunities(user_id);
-CREATE INDEX idx_strategist_alerts_user ON strategist_alerts(user_id, is_read);
-CREATE INDEX idx_strategist_learning_user ON strategist_learning_progress(user_id);
+CREATE INDEX IF NOT EXISTS idx_strategist_conversations_user ON strategist_conversations(user_id);
+CREATE INDEX IF NOT EXISTS idx_strategist_messages_conversation ON strategist_messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_strategist_strategies_user ON strategist_strategies(user_id);
+CREATE INDEX IF NOT EXISTS idx_strategist_opportunities_user ON strategist_opportunities(user_id);
+CREATE INDEX IF NOT EXISTS idx_strategist_alerts_user ON strategist_alerts(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_strategist_learning_user ON strategist_learning_progress(user_id);

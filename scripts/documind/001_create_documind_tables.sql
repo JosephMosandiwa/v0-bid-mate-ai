@@ -192,6 +192,9 @@ CREATE INDEX IF NOT EXISTS idx_documind_templates_fingerprint ON documind_templa
 CREATE INDEX IF NOT EXISTS idx_documind_templates_category ON documind_templates(category);
 CREATE INDEX IF NOT EXISTS idx_documind_templates_code ON documind_templates(code);
 
+-- Add unique constraint on code if not exists
+CREATE UNIQUE INDEX IF NOT EXISTS documind_templates_code_unique ON documind_templates(code) WHERE code IS NOT NULL;
+
 
 -- Template matches - Track which templates matched which documents
 CREATE TABLE IF NOT EXISTS documind_template_matches (
@@ -346,6 +349,17 @@ ALTER TABLE documind_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documind_error_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documind_usage ENABLE ROW LEVEL SECURITY;
 ALTER TABLE documind_feedback ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies before creating to avoid "already exists" error
+DROP POLICY IF EXISTS "Service role full access on documind_documents" ON documind_documents;
+DROP POLICY IF EXISTS "Service role full access on documind_pages" ON documind_pages;
+DROP POLICY IF EXISTS "Service role full access on documind_fields" ON documind_fields;
+DROP POLICY IF EXISTS "Service role full access on documind_templates" ON documind_templates;
+DROP POLICY IF EXISTS "Service role full access on documind_template_matches" ON documind_template_matches;
+DROP POLICY IF EXISTS "Service role full access on documind_jobs" ON documind_jobs;
+DROP POLICY IF EXISTS "Service role full access on documind_error_logs" ON documind_error_logs;
+DROP POLICY IF EXISTS "Service role full access on documind_usage" ON documind_usage;
+DROP POLICY IF EXISTS "Service role full access on documind_feedback" ON documind_feedback;
 
 -- RLS Policies - Allow service role full access (for API routes)
 CREATE POLICY "Service role full access on documind_documents" ON documind_documents FOR ALL USING (true);
