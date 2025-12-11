@@ -1,3 +1,4 @@
+// Force deployment: 2025-01-12T00:00:00Z
 import { createClient } from "@/lib/supabase/server"
 import type { NextRequest } from "next/server"
 
