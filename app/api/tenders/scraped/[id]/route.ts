@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js"
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = params
+    const { id } = await params
 
     console.log("[v0] Fetching scraped tender:", id)
 
@@ -18,14 +18,18 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     if (tenderError) {
       console.error("[v0] Error fetching tender:", tenderError)
+      return NextResponse.json({ error: "Tender not found", details: tenderError.message }, { status: 404 })
+    }
+
+    if (!tender) {
+      console.error("[v0] No tender found for id:", id)
       return NextResponse.json({ error: "Tender not found" }, { status: 404 })
     }
 
-    // Fetch associated documents
     const { data: documents, error: docsError } = await supabase
       .from("tender_documents")
       .select("*")
-      .eq("tender_id", id)
+      .eq("tender_id", id.toString())
       .order("created_at", { ascending: false })
 
     if (docsError) {
