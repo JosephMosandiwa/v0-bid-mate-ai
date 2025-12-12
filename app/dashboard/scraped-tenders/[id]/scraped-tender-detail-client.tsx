@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { TenderContextStrategistPanel } from "@/components/strategist/tender-context-panel"
 import {
   AlertCircle,
   ClipboardList,
@@ -193,284 +194,306 @@ export function ScrapedTenderDetailClient({ googleMapsApiKey }: ScrapedTenderDet
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">{tender.title}</h1>
-        <div className="flex flex-wrap gap-2 mb-4">
-          {tender.category && <Badge className="bg-primary/10 text-primary">{tender.category}</Badge>}
-          {tender.source_level && <Badge variant="outline">{tender.source_level}</Badge>}
-          {tender.source_province && <Badge variant="secondary">{tender.source_province}</Badge>}
+    <div className="p-4 md:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">{tender.title}</h1>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {tender.category && <Badge className="bg-primary/10 text-primary">{tender.category}</Badge>}
+            {tender.source_level && <Badge variant="outline">{tender.source_level}</Badge>}
+            {tender.source_province && <Badge variant="secondary">{tender.source_province}</Badge>}
+          </div>
+          <p className="text-muted-foreground mb-4">{tender.description}</p>
+          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+            {tender.source_name && (
+              <span className="flex items-center gap-1">
+                <FileText className="h-4 w-4" />
+                {tender.source_name}
+              </span>
+            )}
+            {tender.close_date && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                Closes: {new Date(tender.close_date).toLocaleDateString()}
+              </span>
+            )}
+            {tender.estimated_value && (
+              <span className="flex items-center gap-1">
+                <span>Value: {tender.estimated_value}</span>
+              </span>
+            )}
+          </div>
         </div>
-        <p className="text-muted-foreground mb-4">{tender.description}</p>
-        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-          {tender.source_name && (
-            <span className="flex items-center gap-1">
-              <FileText className="h-4 w-4" />
-              {tender.source_name}
-            </span>
-          )}
-          {tender.close_date && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              Closes: {new Date(tender.close_date).toLocaleDateString()}
-            </span>
-          )}
-          {tender.estimated_value && (
-            <span className="flex items-center gap-1">
-              <span>Value: {tender.estimated_value}</span>
-            </span>
-          )}
+
+        <div className="grid lg:grid-cols-[1fr_360px] gap-6">
+          {/* Main Content */}
+          <div className="space-y-4">
+            {analyzing && (
+              <Alert>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <AlertDescription>Analyzing tender documents with AI... This may take a minute.</AlertDescription>
+              </Alert>
+            )}
+
+            {analysisError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{analysisError}</AlertDescription>
+              </Alert>
+            )}
+
+            <Tabs defaultValue="analysis" className="space-y-4 md:space-y-6">
+              <TabsList>
+                <TabsTrigger value="analysis">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  AI Insights
+                </TabsTrigger>
+                <TabsTrigger value="documents">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Documents ({documents.length})
+                </TabsTrigger>
+                <TabsTrigger value="form">
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  Response Form
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="analysis" className="space-y-4">
+                {analysis ? (
+                  <>
+                    {analysisCached && (
+                      <Alert>
+                        <CheckCircle2 className="h-4 w-4" />
+                        <AlertDescription>
+                          This analysis was previously generated and cached for faster loading.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Summary</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground leading-relaxed">{analysis.summary}</p>
+                      </CardContent>
+                    </Card>
+
+                    {analysis.keyRequirements && analysis.keyRequirements.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Key Requirements</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <ul className="space-y-2">
+                            {analysis.keyRequirements.map((req, idx) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                                <span className="text-muted-foreground">{req}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {analysis.deadlines && analysis.deadlines.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Important Deadlines</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <ul className="space-y-2">
+                            {analysis.deadlines.map((deadline, idx) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <Clock className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
+                                <span className="text-muted-foreground">{deadline}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {analysis.actionableTasks && analysis.actionableTasks.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Actionable Tasks</CardTitle>
+                          <CardDescription>Prioritized tasks to complete for this tender</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            {analysis.actionableTasks.map((task, idx) => (
+                              <div key={idx} className="flex items-start gap-3 p-3 rounded-lg border border-border">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Badge
+                                      variant={
+                                        task.priority === "high"
+                                          ? "destructive"
+                                          : task.priority === "medium"
+                                            ? "default"
+                                            : "secondary"
+                                      }
+                                      className="text-xs"
+                                    >
+                                      {task.priority}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                      {task.category}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm text-foreground">{task.task}</p>
+                                  {task.deadline && (
+                                    <p className="text-xs text-muted-foreground mt-1">Deadline: {task.deadline}</p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {analysis.recommendations && analysis.recommendations.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Strategic Recommendations</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <ul className="space-y-2">
+                            {analysis.recommendations.map((rec, idx) => (
+                              <li key={idx} className="flex items-start gap-2">
+                                <Sparkles className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                                <span className="text-muted-foreground">{rec}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                ) : analyzing ? (
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <Loader2 className="h-12 w-12 mx-auto mb-4 text-primary animate-spin" />
+                      <p className="text-muted-foreground">Analyzing tender documents...</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                      <p className="text-muted-foreground">No analysis available</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              <TabsContent value="documents" className="space-y-4">
+                {documents.length > 0 ? (
+                  <div className="grid gap-4">
+                    {documents.map((doc) => (
+                      <Card key={doc.id}>
+                        <CardHeader>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <CardTitle className="text-lg">{doc.document_name}</CardTitle>
+                              <CardDescription className="mt-1">
+                                {doc.document_type} • {(doc.file_size / 1024 / 1024).toFixed(2)} MB
+                              </CardDescription>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" asChild>
+                                <a href={doc.blob_url} download>
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Download
+                                </a>
+                              </Button>
+                              <Button size="sm" variant="outline" asChild>
+                                <a href={doc.original_url} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="h-4 w-4 mr-2" />
+                                  Original
+                                </a>
+                              </Button>
+                            </div>
+                          </div>
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                      <p className="text-muted-foreground">No documents available</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              <TabsContent value="form" className="space-y-4 md:space-y-6">
+                {analysis?.formFields && analysis.formFields.length > 0 ? (
+                  <>
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        This form was automatically generated from the tender documents. Fill in all required fields and
+                        save your progress as you go.
+                      </AlertDescription>
+                    </Alert>
+                    <DynamicTenderForm
+                      tenderId={id}
+                      formFields={analysis.formFields}
+                      googleMapsApiKey={googleMapsApiKey}
+                      documents={documents}
+                      tenderData={
+                        tender
+                          ? {
+                              id: tender.id,
+                              title: tender.title,
+                              source_name: tender.source_name,
+                              description: tender.description,
+                              publish_date: tender.publish_date,
+                              close_date: tender.close_date,
+                              estimated_value: tender.estimated_value,
+                              category: tender.category,
+                              tender_url: tender.tender_url,
+                            }
+                          : undefined
+                      }
+                    />
+                  </>
+                ) : (
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <ClipboardList className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                      <p className="text-muted-foreground">
+                        {analyzing ? "Generating form fields..." : "No form fields extracted from documents"}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          <div className="space-y-4">
+            <TenderContextStrategistPanel
+              tender={{
+                id: tender.id,
+                title: tender.title,
+                organization: tender.source_name,
+                description: tender.description,
+                deadline: tender.close_date,
+                value: tender.estimated_value,
+                requirements: analysis?.keyRequirements,
+                analysis: analysis,
+              }}
+            />
+          </div>
         </div>
       </div>
-
-      {analyzing && (
-        <Alert>
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <AlertDescription>Analyzing tender documents with AI... This may take a minute.</AlertDescription>
-        </Alert>
-      )}
-
-      {analysisError && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{analysisError}</AlertDescription>
-        </Alert>
-      )}
-
-      <Tabs defaultValue="analysis" className="space-y-4 md:space-y-6">
-        <TabsList>
-          <TabsTrigger value="analysis">
-            <Sparkles className="h-4 w-4 mr-2" />
-            AI Insights
-          </TabsTrigger>
-          <TabsTrigger value="documents">
-            <FileText className="h-4 w-4 mr-2" />
-            Documents ({documents.length})
-          </TabsTrigger>
-          <TabsTrigger value="form">
-            <ClipboardList className="h-4 w-4 mr-2" />
-            Response Form
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="analysis" className="space-y-4">
-          {analysis ? (
-            <>
-              {analysisCached && (
-                <Alert>
-                  <CheckCircle2 className="h-4 w-4" />
-                  <AlertDescription>
-                    This analysis was previously generated and cached for faster loading.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground leading-relaxed">{analysis.summary}</p>
-                </CardContent>
-              </Card>
-
-              {analysis.keyRequirements && analysis.keyRequirements.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Key Requirements</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {analysis.keyRequirements.map((req, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                          <span className="text-muted-foreground">{req}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              )}
-
-              {analysis.deadlines && analysis.deadlines.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Important Deadlines</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {analysis.deadlines.map((deadline, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <Clock className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
-                          <span className="text-muted-foreground">{deadline}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              )}
-
-              {analysis.actionableTasks && analysis.actionableTasks.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Actionable Tasks</CardTitle>
-                    <CardDescription>Prioritized tasks to complete for this tender</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {analysis.actionableTasks.map((task, idx) => (
-                        <div key={idx} className="flex items-start gap-3 p-3 rounded-lg border border-border">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge
-                                variant={
-                                  task.priority === "high"
-                                    ? "destructive"
-                                    : task.priority === "medium"
-                                      ? "default"
-                                      : "secondary"
-                                }
-                                className="text-xs"
-                              >
-                                {task.priority}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                {task.category}
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-foreground">{task.task}</p>
-                            {task.deadline && (
-                              <p className="text-xs text-muted-foreground mt-1">Deadline: {task.deadline}</p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {analysis.recommendations && analysis.recommendations.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Strategic Recommendations</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {analysis.recommendations.map((rec, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          <Sparkles className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                          <span className="text-muted-foreground">{rec}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              )}
-            </>
-          ) : analyzing ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <Loader2 className="h-12 w-12 mx-auto mb-4 text-primary animate-spin" />
-                <p className="text-muted-foreground">Analyzing tender documents...</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">No analysis available</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="documents" className="space-y-4">
-          {documents.length > 0 ? (
-            <div className="grid gap-4">
-              {documents.map((doc) => (
-                <Card key={doc.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">{doc.document_name}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {doc.document_type} • {(doc.file_size / 1024 / 1024).toFixed(2)} MB
-                        </CardDescription>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" asChild>
-                          <a href={doc.blob_url} download>
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </a>
-                        </Button>
-                        <Button size="sm" variant="outline" asChild>
-                          <a href={doc.original_url} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Original
-                          </a>
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">No documents available</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="form" className="space-y-4 md:space-y-6">
-          {analysis?.formFields && analysis.formFields.length > 0 ? (
-            <>
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  This form was automatically generated from the tender documents. Fill in all required fields and save
-                  your progress as you go.
-                </AlertDescription>
-              </Alert>
-              <DynamicTenderForm
-                tenderId={id}
-                formFields={analysis.formFields}
-                googleMapsApiKey={googleMapsApiKey}
-                documents={documents}
-                tenderData={
-                  tender
-                    ? {
-                        id: tender.id,
-                        title: tender.title,
-                        source_name: tender.source_name,
-                        description: tender.description,
-                        publish_date: tender.publish_date,
-                        close_date: tender.close_date,
-                        estimated_value: tender.estimated_value,
-                        category: tender.category,
-                        tender_url: tender.tender_url,
-                      }
-                    : undefined
-                }
-              />
-            </>
-          ) : (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <ClipboardList className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">
-                  {analyzing ? "Generating form fields..." : "No form fields extracted from documents"}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
     </div>
   )
 }
