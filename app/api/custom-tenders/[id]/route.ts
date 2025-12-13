@@ -27,9 +27,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const { data: tender, error: tenderError } = await supabase
-      .from("user_tenders")
+      .from("user_custom_tenders")
       .select("*")
-      .eq("tender_id", id)
+      .eq("id", id)
       .eq("user_id", user.id)
       .single()
 
@@ -39,13 +39,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const { data: documents } = await supabase
-      .from("tender_documents")
+      .from("user_custom_tender_documents")
       .select("*")
       .eq("tender_id", id)
       .order("created_at", { ascending: false })
 
     const { data: analysisData } = await supabase
-      .from("tender_analysis")
+      .from("user_custom_tender_analysis")
       .select("*")
       .eq("tender_id", id)
       .order("created_at", { ascending: false })
@@ -91,7 +91,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { title, organization, close_date, value, description } = body
 
     const { data: tender, error: updateError } = await supabase
-      .from("user_tenders")
+      .from("user_custom_tenders")
       .update({
         title,
         organization,
@@ -100,7 +100,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         description,
         updated_at: new Date().toISOString(),
       })
-      .eq("tender_id", id)
+      .eq("id", id)
       .eq("user_id", user.id)
       .select()
       .single()
