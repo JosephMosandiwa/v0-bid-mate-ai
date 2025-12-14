@@ -51,11 +51,11 @@ export function CustomTenderDetailClient({
   const analysisInitiated = useRef(false)
 
   const [formData, setFormData] = useState({
-    title: initialTender.title || "",
-    organization: initialTender.organization || "",
-    close_date: initialTender.close_date ? initialTender.close_date.split("T")[0] : "", // Format date YYYY-MM-DD
-    value: initialTender.value || "",
-    description: initialTender.description || "",
+    title: String(initialTender.title || ""),
+    organization: String(initialTender.organization || ""),
+    close_date: initialTender.close_date ? String(initialTender.close_date).split("T")[0] : "",
+    value: String(initialTender.value || ""),
+    description: String(initialTender.description || ""),
   })
 
   useEffect(() => {
@@ -196,7 +196,7 @@ export function CustomTenderDetailClient({
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Building2 className="h-4 w-4" />
-                {tender.organization || "N/A"}
+                {String(tender.organization || "N/A")}
               </span>
               <span className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
@@ -205,7 +205,7 @@ export function CustomTenderDetailClient({
               {tender.value && (
                 <span className="flex items-center gap-1">
                   <DollarSign className="h-4 w-4" />
-                  {tender.value}
+                  {String(tender.value)}
                 </span>
               )}
             </div>
@@ -439,9 +439,9 @@ export function CustomTenderDetailClient({
           {/* Replaced TenderContextStrategistPanel with TenderContextPanel */}
           <TenderContextPanel
             // Passed tender.id, tender.title, tender.description, documents, and analysis as props
-            tenderId={tender.id}
-            tenderTitle={tender.title}
-            tenderDescription={tender.description || ""}
+            tenderId={String(tender.id)}
+            tenderTitle={String(tender.title || "")}
+            tenderDescription={String(tender.description || "")}
             documents={documents}
             analysis={analysis}
           />
