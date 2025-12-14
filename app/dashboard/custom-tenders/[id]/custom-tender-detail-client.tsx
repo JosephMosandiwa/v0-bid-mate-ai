@@ -38,9 +38,16 @@ export function CustomTenderDetailClient({
   const router = useRouter()
   const { toast } = useToast()
 
-  // Removed the useState for tenderId, googleMapsApiKey
-  // Updated useState for tender, documents, and analysis to use initial props
-  const [tender, setTender] = useState(initialTender)
+  const safeTender = {
+    ...initialTender,
+    title: String(initialTender?.title || ""),
+    organization: String(initialTender?.organization || ""),
+    description: String(initialTender?.description || ""),
+    value: String(initialTender?.value || ""),
+    close_date: initialTender?.close_date || null,
+  }
+
+  const [tender, setTender] = useState(safeTender)
   const [documents, setDocuments] = useState(initialDocuments)
   const [analysis, setAnalysis] = useState(initialAnalysis)
   const [loading, setLoading] = useState(false) // Removed initial loading state, as data comes from props
@@ -51,11 +58,11 @@ export function CustomTenderDetailClient({
   const analysisInitiated = useRef(false)
 
   const [formData, setFormData] = useState({
-    title: String(initialTender.title || ""),
-    organization: String(initialTender.organization || ""),
-    close_date: initialTender.close_date ? String(initialTender.close_date).split("T")[0] : "",
-    value: String(initialTender.value || ""),
-    description: String(initialTender.description || ""),
+    title: String(safeTender.title || ""),
+    organization: String(safeTender.organization || ""),
+    close_date: safeTender.close_date ? String(safeTender.close_date).split("T")[0] : "",
+    value: String(safeTender.value || ""),
+    description: String(safeTender.description || ""),
   })
 
   useEffect(() => {

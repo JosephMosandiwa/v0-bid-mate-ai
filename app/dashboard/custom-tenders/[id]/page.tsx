@@ -37,16 +37,11 @@ export default async function CustomTenderDetailPage({ params }: { params: Promi
     redirect("/dashboard/tenders")
   }
 
-  console.log("[v0] Tender found:", tender)
-
   const { data: documents } = await supabase
     .from("user_custom_tender_documents")
     .select("*")
     .eq("tender_id", id)
     .order("created_at", { ascending: false })
-
-  console.log("[v0] Documents found:", documents?.length || 0)
-  console.log("[v0] Documents data:", JSON.stringify(documents, null, 2))
 
   const { data: analysisData } = await supabase
     .from("user_custom_tender_analysis")
@@ -55,24 +50,6 @@ export default async function CustomTenderDetailPage({ params }: { params: Promi
     .order("created_at", { ascending: false })
     .limit(1)
     .single()
-
-  console.log("[v0] ================================================")
-  console.log("[v0] CUSTOM TENDER ANALYSIS DEBUG")
-  console.log("[v0] ================================================")
-  console.log("[v0] Tender ID:", id)
-  console.log("[v0] Query result - analysisData exists:", !!analysisData)
-  if (analysisData) {
-    console.log("[v0] Analysis ID:", analysisData.id)
-    console.log("[v0] Analysis data keys:", Object.keys(analysisData.analysis_data || {}))
-    console.log("[v0] Has tender_summary:", !!analysisData.analysis_data?.tender_summary)
-    console.log("[v0] Has formFields:", analysisData.analysis_data?.formFields?.length || 0)
-    console.log("[v0] Has compliance_summary:", !!analysisData.analysis_data?.compliance_summary)
-    console.log("[v0] Full analysis structure:", JSON.stringify(analysisData.analysis_data, null, 2))
-  } else {
-    console.log("[v0] ❌ NO ANALYSIS DATA FOUND IN DATABASE")
-    console.log("[v0] This means the analysis was not saved during tender creation")
-  }
-  console.log("[v0] ================================================")
 
   return (
     <CustomTenderDetailClient

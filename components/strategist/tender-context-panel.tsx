@@ -386,10 +386,11 @@ export function TenderContextPanel({
   className,
 }: TenderContextPanelProps) {
   const tender: TenderContext = {
-    id: tenderId,
-    title: tenderTitle,
-    description: tenderDescription,
-    analysis: analysis,
+    id: String(tenderId || ""),
+    title: String(tenderTitle || ""),
+    description: String(tenderDescription || ""),
+    // Only pass analysis if it exists and is valid, don't pass it if it might cause rendering issues
+    analysis: analysis || undefined,
   }
 
   return <TenderContextStrategistPanel tender={tender} className={className} />
