@@ -258,14 +258,64 @@ export function CustomTenderDetailClient({
 
               {!analyzing && !analysisError && analysis && (
                 <>
-                  {/* Summary */}
-                  {analysis.tender_summary && (
+                  {analysis.tender_summary && typeof analysis.tender_summary === "object" && (
                     <Card>
                       <CardHeader>
                         <CardTitle>Tender Summary</CardTitle>
                       </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{analysis.tender_summary}</p>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Tender Number</p>
+                            <p className="text-sm">
+                              {String(analysis.tender_summary.tender_number || "Not specified")}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Entity</p>
+                            <p className="text-sm">{String(analysis.tender_summary.entity || "Not specified")}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Closing Date</p>
+                            <p className="text-sm">{String(analysis.tender_summary.closing_date || "Not specified")}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Contact Email</p>
+                            <p className="text-sm">
+                              {String(analysis.tender_summary.contact_email || "Not specified")}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Contract Duration</p>
+                            <p className="text-sm">
+                              {String(analysis.tender_summary.contract_duration || "Not specified")}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Validity Period</p>
+                            <p className="text-sm">
+                              {String(analysis.tender_summary.validity_period || "Not specified")}
+                            </p>
+                          </div>
+                          <div className="col-span-2">
+                            <p className="text-sm font-medium text-muted-foreground mb-2">Submission Method</p>
+                            <p className="text-sm">
+                              {String(analysis.tender_summary.submission_method || "Not specified")}
+                            </p>
+                          </div>
+                          <div className="col-span-2">
+                            <p className="text-sm font-medium text-muted-foreground mb-2">Compulsory Briefing</p>
+                            <p className="text-sm">
+                              {String(analysis.tender_summary.compulsory_briefing || "Not specified")}
+                            </p>
+                          </div>
+                        </div>
+                        {analysis.tender_summary.description && (
+                          <div className="mt-4">
+                            <p className="text-sm font-medium text-muted-foreground mb-2">Description</p>
+                            <p className="text-sm whitespace-pre-wrap">{String(analysis.tender_summary.description)}</p>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   )}

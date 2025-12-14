@@ -85,25 +85,30 @@ export async function POST(request: NextRequest) {
 
     const tenderSummary = analysis.tender_summary || {}
     const extractedTitle = tenderSummary.title || file.name.replace(".pdf", "")
-    const extractedDescription = tenderSummary.entity
-      ? `${tenderSummary.description || ""}\n\nIssued by: ${tenderSummary.entity}`
-      : tenderSummary.description || ""
+    const extractedDescription = [
+      tenderSummary.description || "",
+      tenderSummary.entity ? `Issued by: ${tenderSummary.entity}` : "",
+      tenderSummary.tender_number ? `Tender #: ${tenderSummary.tender_number}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n")
 
     console.log("[v0] Creating tender with title:", extractedTitle)
 
-    // Create custom tender record
     const { data: tender, error: tenderError } = await supabase
       .from("user_custom_tenders")
       .insert({
         user_id: user.id,
         title: extractedTitle,
         description: extractedDescription,
-        category: "Custom Upload",
+        category: tenderSummary.category || "Custom Upload",
         status: "draft",
         organization: tenderSummary.entity || null,
         deadline: tenderSummary.closing_date || null,
-        value: null,
-        location: null,
+        value: tenderSummary.estimated_value || null,
+        location: tenderSummary.location || null,
+        estimated_value: tenderSummary.estimated_value || null,
+        close_date: tenderSummary.closing_date ? new Date(tenderSummary.closing_date) : null,
       })
       .select()
       .single()
