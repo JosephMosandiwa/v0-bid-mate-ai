@@ -1,12 +1,9 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,91 +11,52 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
   AlertCircle,
-  ClipboardList,
   FileText,
-  Sparkles,
-  CheckCircle2,
-  Clock,
   Download,
-  Upload,
   Loader2,
   Save,
-  AlertTriangle,
+  ArrowLeft,
+  Calendar,
+  Building2,
+  DollarSign,
 } from "lucide-react"
-import { DynamicTenderForm } from "@/components/dynamic-tender-form"
-import { TenderContextStrategistPanel } from "@/components/strategist/tender-context-panel"
-import { useToast } from "@/hooks/use-toast"
+// Imported TenderContextPanel from the updates
+import { TenderContextPanel } from "@/components/strategist/tender-context-panel"
+import { useToast } from "@/components/ui/use-toast" // Declared useToast import
 
 interface CustomTenderDetailClientProps {
-  tenderId: string
-  googleMapsApiKey?: string
+  tender: any
+  documents: any[]
+  analysis: any
 }
 
-export function CustomTenderDetailClient({ tenderId, googleMapsApiKey }: CustomTenderDetailClientProps) {
+export function CustomTenderDetailClient({
+  tender: initialTender,
+  documents: initialDocuments,
+  analysis: initialAnalysis,
+}: CustomTenderDetailClientProps) {
   const router = useRouter()
   const { toast } = useToast()
 
-  const [loading, setLoading] = useState(true)
-  const [tender, setTender] = useState<any>(null) // Changed from 'tender: any' to be initialized as null
-  const [analysis, setAnalysis] = useState<any>(null)
-  const [documents, setDocuments] = useState<any[]>([])
+  // Removed the useState for tenderId, googleMapsApiKey
+  // Updated useState for tender, documents, and analysis to use initial props
+  const [tender, setTender] = useState(initialTender)
+  const [documents, setDocuments] = useState(initialDocuments)
+  const [analysis, setAnalysis] = useState(initialAnalysis)
+  const [loading, setLoading] = useState(false) // Removed initial loading state, as data comes from props
   const [analyzing, setAnalyzing] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-
-  const [generatingStrategy, setGeneratingStrategy] = useState(false)
-  const [strategyError, setStrategyError] = useState<string | null>(null)
-
-  const [formData, setFormData] = useState({
-    title: "",
-    organization: "",
-    close_date: "",
-    value: "",
-    description: "",
-  })
-  const [saving, setSaving] = useState(false)
-
+  // Renamed saving to isSaving for clarity
+  const [isSaving, setIsSaving] = useState(false)
   const analysisInitiated = useRef(false)
 
-  useEffect(() => {
-    const loadTenderData = async () => {
-      try {
-        setLoading(true)
-
-        const response = await fetch(`/api/custom-tenders/${tenderId}`)
-        if (!response.ok) {
-          throw new Error("Failed to load tender")
-        }
-
-        const data = await response.json()
-        setTender(data.tender)
-        setDocuments(data.documents || [])
-        setAnalysis(data.analysis)
-
-        // Initialize form data from loaded tender
-        if (data.tender) {
-          setFormData({
-            title: data.tender.title || "",
-            organization: data.tender.organization || "",
-            close_date: data.tender.close_date ? data.tender.close_date.split("T")[0] : "", // Format date YYYY-MM-DD
-            value: data.tender.value || "",
-            description: data.tender.description || "",
-          })
-        }
-      } catch (error) {
-        console.error("[v0] Error loading tender:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load tender data",
-          variant: "destructive",
-        })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadTenderData()
-  }, [tenderId, toast]) // Added toast to dependency array
+  const [formData, setFormData] = useState({
+    title: initialTender.title || "",
+    organization: initialTender.organization || "",
+    close_date: initialTender.close_date ? initialTender.close_date.split("T")[0] : "", // Format date YYYY-MM-DD
+    value: initialTender.value || "",
+    description: initialTender.description || "",
+  })
 
   useEffect(() => {
     if (!documents.length || analysisInitiated.current || analyzing || analysis) {
@@ -120,1313 +78,373 @@ export function CustomTenderDetailClient({ tenderId, googleMapsApiKey }: CustomT
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            tenderId,
             documentUrl,
-            tenderType: "custom",
+            // Added fileName to the analyze request
+            fileName: firstDoc.original_filename,
+            // Removed tenderId and tenderType as they are no longer needed in this context
           }),
         })
 
         if (!analyzeResponse.ok) {
-          const error = await analyzeResponse.json()
-          throw new Error(error.error || "Failed to analyze tender")
+          // Simplified error message
+          throw new Error("Analysis failed")
         }
 
-        const { analysis: newAnalysis } = await analyzeResponse.json()
-        console.log("[v0] Analysis completed successfully")
+        const analysisResult = await analyzeResponse.json()
+        setAnalysis(analysisResult)
 
-        setAnalysis(newAnalysis)
+        // Save analysis to database
+        const saveResponse = await fetch(`/api/custom-tenders/${tender.id}/analysis`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ analysis: analysisResult }),
+        })
+
+        if (!saveResponse.ok) {
+          // Handle error saving analysis if necessary
+          console.error("Failed to save analysis to database")
+        }
+
         toast({
           title: "Analysis Complete",
-          description: "AI analysis has been generated successfully",
+          description: "Tender document has been analyzed successfully",
         })
       } catch (error) {
-        console.error("[v0] Error during analysis:", error)
-        setAnalysisError(error instanceof Error ? error.message : "Failed to analyze tender")
+        console.error("[v0] Analysis error:", error)
+        // Simplified error message for toast
+        setAnalysisError("Failed to analyze document. Please try again.")
+        toast({
+          title: "Analysis Failed",
+          description: "Failed to analyze tender document",
+          variant: "destructive",
+        })
       } finally {
         setAnalyzing(false)
       }
     }
 
     checkAndTriggerAnalysis()
-  }, [documents, tenderId, analyzing, analysis, toast]) // Added toast to dependency array
+  }, [documents, analyzing, analysis, tender.id, toast]) // Added toast to dependency array
 
   const handleSave = async () => {
-    setSaving(true)
     try {
-      const response = await fetch(`/api/custom-tenders/${tenderId}`, {
+      setIsSaving(true)
+
+      const response = await fetch(`/api/custom-tenders/${tender.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       })
 
-      if (!response.ok) throw new Error("Failed to save")
+      if (!response.ok) {
+        throw new Error("Failed to save tender")
+      }
+
+      // Update the local tender state with the saved data
+      const data = await response.json()
+      setTender(data.tender)
 
       toast({
-        title: "Saved",
-        description: "Tender details updated successfully",
+        title: "Success",
+        description: "Tender details saved successfully",
       })
     } catch (error) {
-      console.error("[v0] Error saving tender details:", error)
+      console.error("[v0] Error saving tender:", error)
       toast({
         title: "Error",
         description: "Failed to save tender details",
         variant: "destructive",
       })
     } finally {
-      setSaving(false)
+      setIsSaving(false)
     }
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (file.type !== "application/pdf") {
-      setAnalysisError("Please upload a PDF file")
-      return
+  // Added handleDownload function
+  const handleDownload = (doc: any) => {
+    const url = doc.blob_url || doc.storage_path
+    if (url) {
+      window.open(url, "_blank")
     }
-
-    setUploadedFile(file)
-    setAnalyzing(true)
-    setAnalysisError(null)
-
-    try {
-      console.log("[v0] ========================================")
-      console.log("[v0] STARTING PDF UPLOAD AND ANALYSIS")
-      console.log("[v0] ========================================")
-      console.log("[v0] File name:", file.name)
-      console.log("[v0] File size:", (file.size / 1024 / 1024).toFixed(2), "MB")
-      console.log("[v0] File type:", file.type)
-
-      // Extract text from PDF
-      const formData = new FormData()
-      formData.append("file", file)
-
-      console.log("[v0] Step 1: Extracting text from PDF...")
-      const extractResponse = await fetch("/api/extract-pdf", {
-        method: "POST",
-        body: formData,
-      })
-
-      if (!extractResponse.ok) {
-        const extractError = await extractResponse.json().catch(() => ({}))
-        console.error("[v0] PDF extraction failed:", extractError)
-        throw new Error(extractError.error || "Failed to extract text from PDF")
-      }
-
-      const { text } = await extractResponse.json()
-      console.log("[v0] ✓ PDF text extracted successfully")
-      console.log("[v0] Extracted text length:", text?.length, "characters")
-
-      console.log("[v0] Step 2: Analyzing document with AI...")
-      const analyzeResponse = await fetch("/api/analyze-tender", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentText: text, tenderId: tenderId, tenderType: "custom" }),
-      })
-
-      console.log("[v0] Analyze response status:", analyzeResponse.status, analyzeResponse.statusText)
-
-      if (!analyzeResponse.ok) {
-        let errorData
-        try {
-          errorData = await analyzeResponse.json()
-          console.error("[v0] ========================================")
-          console.error("[v0] ANALYZE-TENDER API ERROR")
-          console.error("[v0] ========================================")
-          console.error("[v0] Status:", analyzeResponse.status)
-          console.error("[v0] Error type:", errorData.errorType)
-          console.error("[v0] Error message:", errorData.error)
-          console.error("[v0] Error details:", errorData.details)
-          console.error("[v0] ========================================")
-        } catch (parseError) {
-          console.error("[v0] Failed to parse error response:", parseError)
-          errorData = { error: "Failed to analyze document" }
-        }
-        throw new Error(errorData.error || "Failed to analyze document")
-      }
-
-      const analysisResult = await analyzeResponse.json()
-      console.log("[v0] ✓ Document analyzed successfully")
-      console.log("[v0] Analysis result keys:", Object.keys(analysisResult))
-      setAnalysis(analysisResult)
-
-      console.log("[v0] Step 3: Uploading file to blob storage...")
-      // Upload file to blob storage
-      const uploadFormData = new FormData()
-      uploadFormData.append("file", file)
-
-      const uploadResponse = await fetch("/api/upload", {
-        method: "POST",
-        body: uploadFormData,
-      })
-
-      if (!uploadResponse.ok) {
-        const uploadError = await uploadResponse.json().catch(() => ({}))
-        console.error("[v0] File upload failed:", uploadError)
-        throw new Error(uploadError.error || "Failed to upload file")
-      }
-
-      const { url: blobUrl } = await uploadResponse.json()
-      console.log("[v0] ✓ File uploaded successfully")
-      console.log("[v0] Blob URL:", blobUrl)
-
-      // Add document to list
-      const newDoc = {
-        id: `temp-${Date.now()}`,
-        tender_id: tenderId,
-        document_name: file.name,
-        document_type: file.type,
-        blob_url: blobUrl,
-        file_size: file.size,
-        created_at: new Date().toISOString(),
-      }
-
-      setDocuments([...documents, newDoc])
-
-      console.log("[v0] ========================================")
-      console.log("[v0] UPLOAD AND ANALYSIS COMPLETE")
-      console.log("[v0] ========================================")
-
-      toast({
-        title: "Success",
-        description: "Document uploaded and analyzed successfully",
-      })
-    } catch (error) {
-      console.error("[v0] ========================================")
-      console.error("[v0] UPLOAD AND ANALYSIS ERROR")
-      console.error("[v0] ========================================")
-      console.error("[v0] Error:", error)
-      console.error("[v0] Error message:", error instanceof Error ? error.message : "Unknown error")
-      console.error("[v0] ========================================")
-
-      setAnalysisError(error instanceof Error ? error.message : "Failed to process document")
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to upload and analyze document",
-        variant: "destructive",
-      })
-    } finally {
-      setAnalyzing(false)
-    }
-  }
-
-  const handleManualAnalysis = async (documentUrl: string) => {
-    setAnalyzing(true)
-    setAnalysisError(null)
-
-    try {
-      console.log("[v0] ========================================")
-      console.log("[v0] MANUAL ANALYSIS TRIGGERED")
-      console.log("[v0] Document URL:", documentUrl)
-      console.log("[v0] ========================================")
-
-      const response = await fetch("/api/analyze-tender", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          documentUrl,
-          documentText: "", // Let the API extract text from URL
-          tenderId,
-          tenderType: "custom",
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Failed to analyze" }))
-        console.error("[v0] Analysis failed:", errorData)
-        throw new Error(errorData.error || "Failed to analyze document")
-      }
-
-      const analysisResult = await response.json()
-      console.log("[v0] ✓ Analysis complete!")
-
-      // Save analysis to database
-      const saveResponse = await fetch(`/api/custom-tenders/${tenderId}/analysis`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ analysis: analysisResult }),
-      })
-
-      if (!saveResponse.ok) {
-        throw new Error("Failed to save analysis")
-      }
-
-      setAnalysis(analysisResult)
-
-      toast({
-        title: "Success",
-        description: "Document analyzed successfully",
-      })
-
-      // Refresh the page to show new analysis
-      router.refresh()
-    } catch (error) {
-      console.error("[v0] Manual analysis error:", error)
-      setAnalysisError(error instanceof Error ? error.message : "Failed to analyze document")
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to analyze document",
-        variant: "destructive",
-      })
-    } finally {
-      setAnalyzing(false)
-    }
-  }
-
-  const handleGenerateStrategy = async () => {
-    setGeneratingStrategy(true)
-    setStrategyError(null)
-
-    try {
-      const response = await fetch(`/api/custom-tenders/${tenderId}/negotiation-strategy`, {
-        method: "POST",
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate strategy")
-      }
-
-      // Refresh the page to show the new strategy
-      window.location.reload()
-    } catch (error: any) {
-      console.error("[v0] Strategy generation error:", error)
-      setStrategyError(error.message)
-    } finally {
-      setGeneratingStrategy(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-64" />
-          <div className="h-24 bg-muted rounded" />
-          <div className="h-96 bg-muted rounded" />
-        </div>
-      </div>
-    )
   }
 
   if (!tender) {
     return (
-      <div className="p-4 md:p-6 lg:p-8">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Tender not found</AlertDescription>
-        </Alert>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <h2 className="text-2xl font-semibold mb-2">Tender Not Found</h2>
+          <p className="text-muted-foreground mb-4">This tender could not be loaded.</p>
+          <Button onClick={() => router.push("/dashboard/tenders")}>Back to Tenders</Button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">{tender.title || "Custom Tender"}</h1>
-          <div className="flex flex-wrap gap-2 mb-4">
-            <Badge className="bg-primary/10 text-primary">Custom</Badge>
-            {tender.category && <Badge variant="outline">{tender.category}</Badge>}
-            {analysis && (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <Sparkles className="h-3 w-3" />
-                AI Analyzed
-              </Badge>
-            )}
+    <div className="container mx-auto p-6">
+      {/* Header */}
+      <div className="mb-6">
+        {/* Added Back to Tenders button */}
+        <Button variant="ghost" onClick={() => router.push("/dashboard/tenders")} className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Tenders
+        </Button>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">{tender.title}</h1>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Building2 className="h-4 w-4" />
+                {tender.organization || "N/A"}
+              </span>
+              <span className="flex items-center gap-1">
+                <Calendar className="h-4 w-4" />
+                {tender.close_date ? new Date(tender.close_date).toLocaleDateString() : "No deadline"}
+              </span>
+              {tender.value && (
+                <span className="flex items-center gap-1">
+                  <DollarSign className="h-4 w-4" />
+                  {tender.value}
+                </span>
+              )}
+            </div>
           </div>
-          {tender.description && <p className="text-muted-foreground mb-4">{tender.description}</p>}
-          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-            {tender.organization && (
-              <span className="flex items-center gap-1">
-                <FileText className="h-4 w-4" />
-                {tender.organization}
-              </span>
-            )}
-            {tender.close_date && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                Closes: {new Date(tender.close_date).toLocaleDateString()}
-              </span>
-            )}
-            {tender.value && (
-              <span className="flex items-center gap-1">
-                <span>Value: {tender.value}</span>
-              </span>
-            )}
-          </div>
+          {/* Changed Badge to reflect "Custom Tender" */}
+          <Badge variant="secondary">Custom Tender</Badge>
         </div>
+      </div>
 
-        <div className="grid lg:grid-cols-[1fr_360px] gap-6">
-          {/* Main Content */}
-          <div className="space-y-4">
-            {analyzing && (
-              <Alert>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <AlertDescription>Analyzing tender documents with AI... This may take a minute.</AlertDescription>
-              </Alert>
-            )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content - 2 columns */}
+        <div className="lg:col-span-2">
+          <Tabs defaultValue="analysis" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="analysis">Analysis</TabsTrigger>
+              <TabsTrigger value="documents">Documents</TabsTrigger>
+              <TabsTrigger value="details">Details</TabsTrigger>
+            </TabsList>
 
-            {analysisError && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{analysisError}</AlertDescription>
-              </Alert>
-            )}
-
-            <Tabs defaultValue="analysis" className="space-y-4 md:space-y-6">
-              <TabsList>
-                <TabsTrigger value="analysis">
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  AI Insights
-                </TabsTrigger>
-                <TabsTrigger value="details">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Details
-                </TabsTrigger>
-                <TabsTrigger value="documents">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Documents ({documents.length})
-                </TabsTrigger>
-                <TabsTrigger value="form">
-                  <ClipboardList className="h-4 w-4 mr-2" />
-                  Response Form
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="analysis" className="space-y-4">
-                {analysis ? (
-                  <>
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Summary</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-muted-foreground leading-relaxed">
-                          {analysis.tender_summary?.description || analysis.summary}
-                        </p>
-                      </CardContent>
-                    </Card>
-
-                    {/* Critical Dates Timeline */}
-                    {analysis.action_plan?.critical_dates &&
-                      Array.isArray(analysis.action_plan.critical_dates) &&
-                      analysis.action_plan.critical_dates.length > 0 && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                              <Clock className="h-5 w-5 text-orange-600" />
-                              Critical Dates & Events
-                            </CardTitle>
-                            <CardDescription>
-                              Mark these dates in your calendar - missing them may disqualify your bid
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-4">
-                              {analysis.action_plan.critical_dates.map((item: any, idx: number) => (
-                                <div
-                                  key={idx}
-                                  className="flex items-start gap-4 p-4 rounded-lg border-l-4 border-orange-500 bg-orange-50 dark:bg-orange-950/20"
-                                >
-                                  <div className="flex-shrink-0 w-20 text-center">
-                                    <div className="text-2xl font-bold text-orange-600">
-                                      {new Date(item.date).getDate()}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground uppercase">
-                                      {new Date(item.date).toLocaleDateString("en-US", { month: "short" })}
-                                    </div>
-                                  </div>
-                                  <div className="flex-1">
-                                    <h4 className="font-semibold text-foreground mb-1">{item.event}</h4>
-                                    <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                                      {item.time && (
-                                        <span className="flex items-center gap-1">
-                                          <Clock className="h-3 w-3" />
-                                          {item.time}
-                                        </span>
-                                      )}
-                                      {item.location && (
-                                        <span className="flex items-center gap-1">
-                                          <span>📍</span>
-                                          {item.location}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                    {/* Preparation Tasks Checklist */}
-                    {analysis.action_plan?.preparation_tasks &&
-                      Array.isArray(analysis.action_plan.preparation_tasks) &&
-                      analysis.action_plan.preparation_tasks.length > 0 && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                              <ClipboardList className="h-5 w-5 text-primary" />
-                              Preparation Checklist
-                            </CardTitle>
-                            <CardDescription>Complete these tasks before the tender closing date</CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-3">
-                              {analysis.action_plan.preparation_tasks
-                                .sort((a: any, b: any) => {
-                                  const priorityOrder = { High: 0, Medium: 1, Low: 2 }
-                                  return (
-                                    priorityOrder[a.priority as keyof typeof priorityOrder] -
-                                    priorityOrder[b.priority as keyof typeof priorityOrder]
-                                  )
-                                })
-                                .map((task: any, idx: number) => (
-                                  <div
-                                    key={idx}
-                                    className="flex items-start gap-3 p-4 rounded-lg border border-border hover:border-primary/50 transition-colors"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      className="mt-1 h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
-                                    />
-                                    <div className="flex-1">
-                                      <div className="flex items-start justify-between gap-2 mb-2">
-                                        <h4 className="font-medium text-foreground">{task.task}</h4>
-                                        <Badge
-                                          variant={
-                                            task.priority === "High"
-                                              ? "destructive"
-                                              : task.priority === "Medium"
-                                                ? "default"
-                                                : "secondary"
-                                          }
-                                          className="flex-shrink-0"
-                                        >
-                                          {task.priority}
-                                        </Badge>
-                                      </div>
-                                      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                                        <span className="flex items-center gap-1">
-                                          <Clock className="h-3 w-3" />
-                                          Due: {new Date(task.deadline).toLocaleDateString()}
-                                        </span>
-                                        <Badge variant="outline" className="text-xs">
-                                          {task.category}
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Tender Overview</CardTitle>
-                        <CardDescription>Key information about this tender opportunity</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        {analysis.tender_summary?.tender_number && (
-                          <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                            <span className="text-sm font-medium text-muted-foreground">Tender Number:</span>
-                            <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
-                              {analysis.tender_summary.tender_number}
-                            </span>
-                          </div>
-                        )}
-
-                        {analysis.tender_summary?.title && (
-                          <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                            <span className="text-sm font-medium text-muted-foreground">Title:</span>
-                            <span className="text-sm">{analysis.tender_summary.title}</span>
-                          </div>
-                        )}
-
-                        {analysis.tender_summary?.entity && (
-                          <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                            <span className="text-sm font-medium text-muted-foreground">Issuing Entity:</span>
-                            <span className="text-sm">{analysis.tender_summary.entity}</span>
-                          </div>
-                        )}
-
-                        {analysis.tender_summary?.description && (
-                          <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                            <span className="text-sm font-medium text-muted-foreground">Description:</span>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              {analysis.tender_summary.description}
-                            </p>
-                          </div>
-                        )}
-
-                        {analysis.tender_summary?.contract_duration && (
-                          <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                            <span className="text-sm font-medium text-muted-foreground">Contract Duration:</span>
-                            <span className="text-sm">{analysis.tender_summary.contract_duration}</span>
-                          </div>
-                        )}
-
-                        {analysis.tender_summary?.closing_date && (
-                          <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                            <span className="text-sm font-medium text-muted-foreground">Closing Date:</span>
-                            <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">
-                              {analysis.tender_summary.closing_date}
-                            </span>
-                          </div>
-                        )}
-
-                        {analysis.tender_summary?.submission_method && (
-                          <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                            <span className="text-sm font-medium text-muted-foreground">Submission Method:</span>
-                            <span className="text-sm">{analysis.tender_summary.submission_method}</span>
-                          </div>
-                        )}
-
-                        {analysis.tender_summary?.compulsory_briefing && (
-                          <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                            <span className="text-sm font-medium text-muted-foreground">Compulsory Briefing:</span>
-                            <span className="text-sm font-semibold text-red-600 dark:text-red-400">
-                              {analysis.tender_summary.compulsory_briefing}
-                            </span>
-                          </div>
-                        )}
-
-                        {analysis.tender_summary?.validity_period && (
-                          <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                            <span className="text-sm font-medium text-muted-foreground">Validity Period:</span>
-                            <span className="text-sm">{analysis.tender_summary.validity_period}</span>
-                          </div>
-                        )}
-
-                        {analysis.tender_summary?.contact_email && (
-                          <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                            <span className="text-sm font-medium text-muted-foreground">Contact Email:</span>
-                            <a
-                              href={`mailto:${analysis.tender_summary.contact_email}`}
-                              className="text-sm text-primary hover:underline"
-                            >
-                              {analysis.tender_summary.contact_email}
-                            </a>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-
-                    {analysis.compliance_summary && (
-                      <>
-                        {analysis.compliance_summary?.requirements &&
-                          Array.isArray(analysis.compliance_summary.requirements) &&
-                          analysis.compliance_summary.requirements.length > 0 && (
-                            <Card>
-                              <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                                  Compliance Requirements
-                                </CardTitle>
-                                <CardDescription>Mandatory requirements you must fulfill</CardDescription>
-                              </CardHeader>
-                              <CardContent>
-                                <ul className="space-y-3">
-                                  {analysis.compliance_summary.requirements.map((req: string, idx: number) => (
-                                    <li
-                                      key={idx}
-                                      className="flex items-start gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900"
-                                    >
-                                      <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                                      <span className="text-sm text-foreground">{req}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </CardContent>
-                            </Card>
-                          )}
-
-                        {analysis.compliance_summary?.disqualifiers &&
-                          Array.isArray(analysis.compliance_summary.disqualifiers) &&
-                          analysis.compliance_summary.disqualifiers.length > 0 && (
-                            <Card>
-                              <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                  <AlertCircle className="h-5 w-5 text-red-600" />
-                                  Disqualifiers
-                                </CardTitle>
-                                <CardDescription>Actions or omissions that will eliminate your bid</CardDescription>
-                              </CardHeader>
-                              <CardContent>
-                                <ul className="space-y-3">
-                                  {analysis.compliance_summary.disqualifiers.map((disq: string, idx: number) => (
-                                    <li
-                                      key={idx}
-                                      className="flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900"
-                                    >
-                                      <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-                                      <span className="text-sm text-foreground font-medium">{disq}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </CardContent>
-                            </Card>
-                          )}
-
-                        {analysis.compliance_summary?.strengtheners &&
-                          Array.isArray(analysis.compliance_summary.strengtheners) &&
-                          analysis.compliance_summary.strengtheners.length > 0 && (
-                            <Card>
-                              <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                  <Sparkles className="h-5 w-5 text-blue-600" />
-                                  Bid Strengtheners
-                                </CardTitle>
-                                <CardDescription>
-                                  Factors that will improve your bid quality and competitiveness
-                                </CardDescription>
-                              </CardHeader>
-                              <CardContent>
-                                <ul className="space-y-3">
-                                  {analysis.compliance_summary.strengtheners.map((str: string, idx: number) => (
-                                    <li
-                                      key={idx}
-                                      className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900"
-                                    >
-                                      <Sparkles className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                                      <span className="text-sm text-foreground">{str}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </CardContent>
-                            </Card>
-                          )}
-                      </>
-                    )}
-
-                    {analysis.evaluation && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Evaluation Criteria</CardTitle>
-                          <CardDescription>
-                            How your tender submission will be scored
-                            {analysis.evaluation.threshold && ` • Minimum threshold: ${analysis.evaluation.threshold}`}
-                            {analysis.evaluation.pricing_system &&
-                              ` • Pricing system: ${analysis.evaluation.pricing_system}`}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          {analysis.evaluation?.criteria &&
-                            Array.isArray(analysis.evaluation.criteria) &&
-                            analysis.evaluation.criteria.length > 0 && (
-                              <div className="space-y-3">
-                                {analysis.evaluation.criteria.map((item: any, idx: number) => (
-                                  <div
-                                    key={idx}
-                                    className="flex items-center gap-4 p-3 rounded-lg border border-border"
-                                  >
-                                    <div className="flex-1">
-                                      <p className="text-sm font-medium text-foreground">{item.criterion}</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="secondary" className="text-base font-semibold">
-                                        {item.weight}%
-                                      </Badge>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                          <div className="pt-4 border-t border-border space-y-2">
-                            {analysis.evaluation.threshold && (
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">Minimum Qualifying Score:</span>
-                                <span className="font-semibold text-orange-600 dark:text-orange-400">
-                                  {analysis.evaluation.threshold}
-                                </span>
-                              </div>
-                            )}
-                            {analysis.evaluation.pricing_system && (
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">Pricing System:</span>
-                                <span className="font-semibold">{analysis.evaluation.pricing_system}</span>
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {analysis.financial_requirements && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Financial Requirements</CardTitle>
-                          <CardDescription>Financial obligations and proof required for this tender</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          {analysis.financial_requirements.bank_guarantee &&
-                            analysis.financial_requirements.bank_guarantee !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Bank Guarantee:</div>
-                                <div className="text-sm flex-1">{analysis.financial_requirements.bank_guarantee}</div>
-                              </div>
-                            )}
-                          {analysis.financial_requirements.performance_bond &&
-                            analysis.financial_requirements.performance_bond !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Performance Bond:</div>
-                                <div className="text-sm flex-1">{analysis.financial_requirements.performance_bond}</div>
-                              </div>
-                            )}
-                          {analysis.financial_requirements.insurance_requirements?.length > 0 && (
-                            <div className="flex items-start gap-3 p-3 rounded-lg border">
-                              <div className="font-medium text-sm w-40 text-muted-foreground">Insurance:</div>
-                              <ul className="text-sm flex-1 space-y-1">
-                                {analysis.financial_requirements.insurance_requirements.map(
-                                  (ins: string, idx: number) => (
-                                    <li key={idx}>• {ins}</li>
-                                  ),
-                                )}
-                              </ul>
-                            </div>
-                          )}
-                          {analysis.financial_requirements.financial_turnover &&
-                            analysis.financial_requirements.financial_turnover !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Min. Turnover:</div>
-                                <div className="text-sm flex-1">
-                                  {analysis.financial_requirements.financial_turnover}
-                                </div>
-                              </div>
-                            )}
-                          {analysis.financial_requirements.audited_financials &&
-                            analysis.financial_requirements.audited_financials !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">
-                                  Financial Statements:
-                                </div>
-                                <div className="text-sm flex-1">
-                                  {analysis.financial_requirements.audited_financials}
-                                </div>
-                              </div>
-                            )}
-                          {analysis.financial_requirements.payment_terms &&
-                            analysis.financial_requirements.payment_terms !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Payment Terms:</div>
-                                <div className="text-sm flex-1">{analysis.financial_requirements.payment_terms}</div>
-                              </div>
-                            )}
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {analysis.legal_registration && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Legal & Registration Requirements</CardTitle>
-                          <CardDescription>Mandatory registrations and legal compliance</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          {analysis.legal_registration.cidb_grading &&
-                            analysis.legal_registration.cidb_grading !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border bg-orange-50 dark:bg-orange-950/20">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">CIDB Grading:</div>
-                                <div className="text-sm flex-1 font-semibold text-orange-600">
-                                  {analysis.legal_registration.cidb_grading}
-                                </div>
-                              </div>
-                            )}
-                          {analysis.legal_registration.cipc_registration &&
-                            analysis.legal_registration.cipc_registration !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">CIPC Registration:</div>
-                                <div className="text-sm flex-1">{analysis.legal_registration.cipc_registration}</div>
-                              </div>
-                            )}
-                          {analysis.legal_registration.professional_registration?.length > 0 && (
-                            <div className="flex items-start gap-3 p-3 rounded-lg border">
-                              <div className="font-medium text-sm w-40 text-muted-foreground">Professional Bodies:</div>
-                              <ul className="text-sm flex-1 space-y-1">
-                                {analysis.legal_registration.professional_registration.map(
-                                  (reg: string, idx: number) => (
-                                    <li key={idx}>• {reg}</li>
-                                  ),
-                                )}
-                              </ul>
-                            </div>
-                          )}
-                          {analysis.legal_registration.joint_venture_requirements &&
-                            analysis.legal_registration.joint_venture_requirements !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">JV Requirements:</div>
-                                <div className="text-sm flex-1">
-                                  {analysis.legal_registration.joint_venture_requirements}
-                                </div>
-                              </div>
-                            )}
-                          {analysis.legal_registration.subcontracting_limitations &&
-                            analysis.legal_registration.subcontracting_limitations !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">
-                                  Subcontracting Limit:
-                                </div>
-                                <div className="text-sm flex-1">
-                                  {analysis.legal_registration.subcontracting_limitations}
-                                </div>
-                              </div>
-                            )}
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {analysis.labour_employment && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Labour & Local Content</CardTitle>
-                          <CardDescription>Workforce and transformation requirements</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          {analysis.labour_employment.local_content &&
-                            analysis.labour_employment.local_content !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border bg-green-50 dark:bg-green-950/20">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Local Content:</div>
-                                <div className="text-sm flex-1 font-semibold text-green-600">
-                                  {analysis.labour_employment.local_content}
-                                </div>
-                              </div>
-                            )}
-                          {analysis.labour_employment.subcontracting_limit &&
-                            analysis.labour_employment.subcontracting_limit !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">
-                                  Subcontracting Limit:
-                                </div>
-                                <div className="text-sm flex-1">{analysis.labour_employment.subcontracting_limit}</div>
-                              </div>
-                            )}
-                          {analysis.labour_employment.labour_composition &&
-                            analysis.labour_employment.labour_composition !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">
-                                  Labour Composition:
-                                </div>
-                                <div className="text-sm flex-1">{analysis.labour_employment.labour_composition}</div>
-                              </div>
-                            )}
-                          {analysis.labour_employment.skills_development &&
-                            analysis.labour_employment.skills_development !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">
-                                  Skills Development:
-                                </div>
-                                <div className="text-sm flex-1">{analysis.labour_employment.skills_development}</div>
-                              </div>
-                            )}
-                          {analysis.labour_employment.employment_equity &&
-                            analysis.labour_employment.employment_equity !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Employment Equity:</div>
-                                <div className="text-sm flex-1">{analysis.labour_employment.employment_equity}</div>
-                              </div>
-                            )}
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {analysis.technical_specs && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Technical Requirements</CardTitle>
-                          <CardDescription>Experience, resources, and capabilities required</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          {analysis.technical_specs.minimum_experience &&
-                            analysis.technical_specs.minimum_experience !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Min. Experience:</div>
-                                <div className="text-sm flex-1">{analysis.technical_specs.minimum_experience}</div>
-                              </div>
-                            )}
-                          {analysis.technical_specs.project_references &&
-                            analysis.technical_specs.project_references !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">
-                                  Project References:
-                                </div>
-                                <div className="text-sm flex-1">{analysis.technical_specs.project_references}</div>
-                              </div>
-                            )}
-                          {analysis.technical_specs.key_personnel?.length > 0 && (
-                            <div className="flex items-start gap-3 p-3 rounded-lg border">
-                              <div className="font-medium text-sm w-40 text-muted-foreground">Key Personnel:</div>
-                              <ul className="text-sm flex-1 space-y-1">
-                                {analysis.technical_specs.key_personnel.map((person: string, idx: number) => (
-                                  <li key={idx}>• {person}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          {analysis.technical_specs.equipment_resources?.length > 0 && (
-                            <div className="flex items-start gap-3 p-3 rounded-lg border">
-                              <div className="font-medium text-sm w-40 text-muted-foreground">Equipment/Resources:</div>
-                              <ul className="text-sm flex-1 space-y-1">
-                                {analysis.technical_specs.equipment_resources.map((equip: string, idx: number) => (
-                                  <li key={idx}>• {equip}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          {analysis.technical_specs.methodology_requirements &&
-                            analysis.technical_specs.methodology_requirements !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Methodology:</div>
-                                <div className="text-sm flex-1">
-                                  {analysis.technical_specs.methodology_requirements}
-                                </div>
-                              </div>
-                            )}
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {analysis.submission_requirements && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Submission Requirements</CardTitle>
-                          <CardDescription>How to submit your tender proposal</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          {analysis.submission_requirements.number_of_copies &&
-                            analysis.submission_requirements.number_of_copies !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Copies Required:</div>
-                                <div className="text-sm flex-1">
-                                  {analysis.submission_requirements.number_of_copies}
-                                </div>
-                              </div>
-                            )}
-                          {analysis.submission_requirements.formatting_requirements &&
-                            analysis.submission_requirements.formatting_requirements !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Formatting:</div>
-                                <div className="text-sm flex-1">
-                                  {analysis.submission_requirements.formatting_requirements}
-                                </div>
-                              </div>
-                            )}
-                          {analysis.submission_requirements.submission_address &&
-                            analysis.submission_requirements.submission_address !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Submit To:</div>
-                                <div className="text-sm flex-1">
-                                  {analysis.submission_requirements.submission_address}
-                                </div>
-                              </div>
-                            )}
-                          {analysis.submission_requirements.query_deadline &&
-                            analysis.submission_requirements.query_deadline !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Query Deadline:</div>
-                                <div className="text-sm flex-1">{analysis.submission_requirements.query_deadline}</div>
-                              </div>
-                            )}
-                          {analysis.submission_requirements.late_submission_policy &&
-                            analysis.submission_requirements.late_submission_policy !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Late Submissions:</div>
-                                <div className="text-sm flex-1">
-                                  {analysis.submission_requirements.late_submission_policy}
-                                </div>
-                              </div>
-                            )}
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {analysis.penalties_payment && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Penalties & Payment Terms</CardTitle>
-                          <CardDescription>Contract penalties and payment structure</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          {analysis.penalties_payment.late_completion_penalty &&
-                            analysis.penalties_payment.late_completion_penalty !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border bg-red-50 dark:bg-red-950/20">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Late Completion:</div>
-                                <div className="text-sm flex-1 font-semibold text-red-600">
-                                  {analysis.penalties_payment.late_completion_penalty}
-                                </div>
-                              </div>
-                            )}
-                          {analysis.penalties_payment.non_performance_penalty &&
-                            analysis.penalties_payment.non_performance_penalty !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border bg-red-50 dark:bg-red-950/20">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Non-Performance:</div>
-                                <div className="text-sm flex-1 font-semibold text-red-600">
-                                  {analysis.penalties_payment.non_performance_penalty}
-                                </div>
-                              </div>
-                            )}
-                          {analysis.penalties_payment.warranty_period &&
-                            analysis.penalties_payment.warranty_period !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Warranty Period:</div>
-                                <div className="text-sm flex-1">{analysis.penalties_payment.warranty_period}</div>
-                              </div>
-                            )}
-                          {analysis.penalties_payment.payment_schedule &&
-                            analysis.penalties_payment.payment_schedule !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border bg-green-50 dark:bg-green-950/20">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Payment Schedule:</div>
-                                <div className="text-sm flex-1">{analysis.penalties_payment.payment_schedule}</div>
-                              </div>
-                            )}
-                          {analysis.penalties_payment.retention_amount &&
-                            analysis.penalties_payment.retention_amount !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Retention:</div>
-                                <div className="text-sm flex-1">{analysis.penalties_payment.retention_amount}</div>
-                              </div>
-                            )}
-                          {analysis.penalties_payment.payment_timeframe &&
-                            analysis.penalties_payment.payment_timeframe !== "Not specified" && (
-                              <div className="flex items-start gap-3 p-3 rounded-lg border">
-                                <div className="font-medium text-sm w-40 text-muted-foreground">Payment Timeframe:</div>
-                                <div className="text-sm flex-1">{analysis.penalties_payment.payment_timeframe}</div>
-                              </div>
-                            )}
-                        </CardContent>
-                      </Card>
-                    )}
-                  </>
-                ) : analyzing ? (
-                  <Card>
-                    <CardContent className="p-12 text-center">
-                      <Loader2 className="h-12 w-12 mx-auto mb-4 text-primary animate-spin" />
-                      <p className="text-muted-foreground">Analyzing tender documents...</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <Card>
-                    <CardContent className="p-12 text-center">
-                      <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                      <p className="text-muted-foreground mb-4">No analysis available yet</p>
-                      {documents.length > 0 && (
-                        <p className="text-sm text-muted-foreground">
-                          Upload a document to generate AI insights automatically
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-
-              <TabsContent value="details" className="space-y-4">
+            {/* Analysis Tab */}
+            <TabsContent value="analysis" className="space-y-4">
+              {analyzing && (
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Tender Information</CardTitle>
-                    <CardDescription>Edit tender details and save changes</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="title">Tender Title</Label>
-                      <Input
-                        id="title"
-                        value={formData.title}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      />
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+                      <span className="text-lg">Analyzing tender document...</span>
                     </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="organization">Organization</Label>
-                      <Input
-                        id="organization"
-                        placeholder="e.g., Department of Health"
-                        value={formData.organization}
-                        onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="close_date">Deadline</Label>
-                        <Input
-                          id="close_date"
-                          type="date"
-                          value={formData.close_date}
-                          onChange={(e) => setFormData({ ...formData, close_date: e.target.value })}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="value">Tender Value</Label>
-                        <Input
-                          id="value"
-                          placeholder="e.g., R 2,500,000"
-                          value={formData.value}
-                          onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        rows={4}
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      />
-                    </div>
-
-                    <Button onClick={handleSave} disabled={saving}>
-                      <Save className="h-4 w-4 mr-2" />
-                      {saving ? "Saving..." : "Save Details"}
-                    </Button>
                   </CardContent>
                 </Card>
+              )}
 
-                {documents.length === 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Upload Tender Document</CardTitle>
-                      <CardDescription>Upload a PDF document to generate AI analysis automatically</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex items-center gap-4">
-                        <Label
-                          htmlFor="pdf-upload"
-                          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md cursor-pointer hover:bg-primary/90 transition-colors"
-                        >
-                          <Upload className="h-4 w-4" />
-                          {uploadedFile ? "Change Document" : "Upload PDF"}
-                        </Label>
-                        <Input
-                          id="pdf-upload"
-                          type="file"
-                          accept="application/pdf"
-                          onChange={handleFileUpload}
-                          className="hidden"
-                        />
-                        {uploadedFile && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <FileText className="h-4 w-4" />
-                            {uploadedFile.name}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
+              {analysisError && (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-2 text-destructive">
+                      <AlertCircle className="h-5 w-5" />
+                      <span>{analysisError}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
-              <TabsContent value="documents" className="space-y-4">
-                {documents.length > 0 ? (
-                  <div className="grid gap-4">
-                    {documents.map((doc: any) => (
-                      <Card key={doc.id}>
-                        <CardHeader>
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <CardTitle className="text-lg">{doc.document_name || doc.file_name}</CardTitle>
-                              <CardDescription className="mt-1">
-                                {doc.document_type || doc.file_type} • {((doc.file_size || 0) / 1024 / 1024).toFixed(2)}{" "}
-                                MB
-                              </CardDescription>
+              {!analyzing && !analysisError && analysis && (
+                <>
+                  {/* Summary */}
+                  {analysis.tender_summary && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Tender Summary</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{analysis.tender_summary}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Form Fields */}
+                  {analysis.formFields && analysis.formFields.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Form Fields Detected</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {analysis.formFields.map((field: any, index: number) => (
+                            <div key={index} className="border-b pb-3 last:border-0">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-medium text-sm">{field.fieldName}</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {field.fieldType}
+                                </Badge>
+                              </div>
+                              {field.currentValue && (
+                                <p className="text-sm text-muted-foreground">Current: {field.currentValue}</p>
+                              )}
+                              {field.suggestedValue && (
+                                <p className="text-sm text-primary">Suggested: {field.suggestedValue}</p>
+                              )}
                             </div>
-                            <Button size="sm" variant="outline" asChild>
-                              <a href={doc.blob_url || doc.storage_path} download>
-                                <Download className="h-4 w-4 mr-2" />
-                                Download
-                              </a>
-                            </Button>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Compliance Summary */}
+                  {analysis.compliance_summary && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Compliance Requirements</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                          {analysis.compliance_summary}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
+              )}
+
+              {!analyzing && !analysisError && !analysis && (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center py-8">
+                      <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No analysis available yet</p>
+                      <p className="text-sm text-muted-foreground mt-2">Upload a document to start analysis</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            {/* Documents Tab */}
+            <TabsContent value="documents" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Documents</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {documents.length > 0 ? (
+                    <div className="space-y-2">
+                      {documents.map((doc: any) => (
+                        <div
+                          key={doc.id}
+                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent"
+                        >
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-5 w-5 text-primary" />
+                            <div>
+                              <p className="font-medium text-sm">{doc.original_filename}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(doc.created_at).toLocaleDateString()}
+                              </p>
+                            </div>
                           </div>
-                        </CardHeader>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <Card>
-                    <CardContent className="p-12 text-center">
-                      <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                      <p className="text-muted-foreground mb-4">No documents uploaded yet</p>
-                      <Label
-                        htmlFor="pdf-upload-docs"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md cursor-pointer hover:bg-primary/90 transition-colors"
-                      >
-                        <Upload className="h-4 w-4" />
-                        Upload PDF
-                      </Label>
-                      <Input
-                        id="pdf-upload-docs"
-                        type="file"
-                        accept="application/pdf"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                      />
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
+                          <Button variant="ghost" size="sm" onClick={() => handleDownload(doc)}>
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No documents uploaded</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-              <TabsContent value="form" className="space-y-4 md:space-y-6">
-                {analysis?.formFields && analysis.formFields.length > 0 ? (
-                  <>
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        This form was automatically generated from the tender documents. Fill in all required fields and
-                        save your progress as you go.
-                      </AlertDescription>
-                    </Alert>
-                    <DynamicTenderForm
-                      tenderId={tenderId}
-                      formFields={analysis.formFields}
-                      documents={documents}
-                      googleMapsApiKey={googleMapsApiKey}
-                      tenderData={{
-                        id: tenderId,
-                        title: tender.title,
-                        source_name: tender.organization,
-                        description: tender.description,
-                        close_date: tender.close_date,
-                        estimated_value: tender.value,
-                        category: tender.category,
-                      }}
+            {/* Details Tab */}
+            <TabsContent value="details" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tender Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Title</Label>
+                    <Input
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     />
-                  </>
-                ) : (
-                  <Card>
-                    <CardContent className="p-12 text-center">
-                      <ClipboardList className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                      <p className="text-muted-foreground">
-                        {analyzing ? "Generating form fields..." : "No form fields extracted from documents"}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
+                  </div>
 
-          <div className="space-y-4">
-            <TenderContextStrategistPanel
-              tender={{
-                id: tenderId,
-                title: tender.title || "Custom Tender",
-                organization: tender.organization,
-                description: tender.description,
-                deadline: tender.close_date,
-                value: tender.value,
-                requirements: analysis?.keyRequirements,
-                analysis: analysis,
-              }}
-            />
-          </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="organization">Organization</Label>
+                    <Input
+                      id="organization"
+                      value={formData.organization}
+                      onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="close_date">Close Date</Label>
+                    <Input
+                      id="close_date"
+                      type="date"
+                      value={formData.close_date}
+                      onChange={(e) => setFormData({ ...formData, close_date: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="value">Estimated Value</Label>
+                    <Input
+                      id="value"
+                      value={formData.value}
+                      onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+                      placeholder="e.g., R 1,000,000"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      rows={5}
+                    />
+                  </div>
+
+                  <Button onClick={handleSave} disabled={isSaving} className="w-full">
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Changes
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* AI Strategist Panel - 1 column */}
+        <div className="lg:col-span-1">
+          {/* Replaced TenderContextStrategistPanel with TenderContextPanel */}
+          <TenderContextPanel
+            // Passed tender.id, tender.title, tender.description, documents, and analysis as props
+            tenderId={tender.id}
+            tenderTitle={tender.title}
+            tenderDescription={tender.description || ""}
+            documents={documents}
+            analysis={analysis}
+          />
         </div>
       </div>
     </div>

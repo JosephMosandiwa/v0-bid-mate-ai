@@ -47,6 +47,15 @@ interface Props {
   className?: string
 }
 
+interface TenderContextPanelProps {
+  tenderId: string
+  tenderTitle: string
+  tenderDescription?: string
+  documents?: any[]
+  analysis?: any
+  className?: string
+}
+
 export function TenderContextStrategistPanel({ tender, className }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
@@ -366,4 +375,22 @@ export function TenderContextStrategistPanel({ tender, className }: Props) {
       </Collapsible>
     </Card>
   )
+}
+
+export function TenderContextPanel({
+  tenderId,
+  tenderTitle,
+  tenderDescription,
+  documents,
+  analysis,
+  className,
+}: TenderContextPanelProps) {
+  const tender: TenderContext = {
+    id: tenderId,
+    title: tenderTitle,
+    description: tenderDescription,
+    analysis: analysis,
+  }
+
+  return <TenderContextStrategistPanel tender={tender} className={className} />
 }
