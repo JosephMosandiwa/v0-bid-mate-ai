@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       userMessage = body.message || ""
     }
 
-    const { conversation_id, context_type = "general", tender_id, include_context = true } = body
+    const { conversation_id, context_type = "general", tender_id, include_context = true, tenderContext } = body
 
     if (!userMessage || typeof userMessage !== "string") {
       return Response.json({ error: "Message is required" }, { status: 400 })
@@ -66,7 +66,44 @@ export async function POST(request: Request) {
     let systemPrompt = ""
     if (include_context) {
       const context = await StrategistService.buildContext(user.id, tender_id, context_type as ConversationContextType)
+
+      if (tenderContext) {
+        context.tender_context = tenderContext
+      }
+
       systemPrompt = buildStrategistPrompt(context)
+
+      // Add tender planning expertise
+      systemPrompt += `\n\nYou are an expert South African tender strategist and project planner. When discussing this tender, you can help with:
+
+**Strategic Planning:**
+- Win strategy and competitive positioning
+- Risk assessment and mitigation plans
+- Resource allocation and capacity planning
+- Timeline and milestone planning
+
+**Project Planning:**
+- Budget estimation and cost breakdown
+- Work breakdown structure (WBS)
+- Resource requirements (personnel, equipment, materials)
+- Project timeline with phases and tasks
+- Risk management strategies
+- Quality assurance plans
+- Success criteria and KPIs
+
+**Compliance & Delivery:**
+- B-BBEE, CIDB, and regulatory compliance
+- Mandatory requirements checklist
+- Document preparation guidance
+- Submission best practices
+
+**Contextual Expertise:**
+- South African procurement regulations (PFMA, MFMA, PPPFA)
+- Local market conditions and pricing
+- Subcontracting and JV strategies
+- Local content and preferential procurement
+
+When asked about planning, budgets, timelines, or resources, provide detailed, actionable guidance based on the tender requirements and South African context.`
     } else {
       systemPrompt = buildStrategistPrompt({
         user_preferences: null,
@@ -86,7 +123,7 @@ export async function POST(request: Request) {
 
     // Stream response
     const result = streamText({
-      model: "openai/gpt-4-turbo",
+      model: "openai/gpt-4o-mini",
       messages: aiMessages,
       temperature: 0.7,
       maxTokens: 2000,
@@ -94,7 +131,7 @@ export async function POST(request: Request) {
       onFinish: async ({ text }) => {
         // Save assistant response
         await StrategistService.addMessage(conversationId, "assistant", text, {
-          model_used: "gpt-4-turbo",
+          model_used: "gpt-4o-mini",
         })
       },
     })
