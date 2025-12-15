@@ -385,12 +385,22 @@ export function TenderContextPanel({
   analysis,
   className,
 }: TenderContextPanelProps) {
+  // Sanitize analysis to ensure no nested objects are passed
+  const sanitizedAnalysis = analysis
+    ? {
+        ...analysis,
+        tender_summary:
+          typeof analysis.tender_summary === "object"
+            ? JSON.stringify(analysis.tender_summary)
+            : String(analysis.tender_summary || ""),
+      }
+    : undefined
+
   const tender: TenderContext = {
     id: String(tenderId || ""),
     title: String(tenderTitle || ""),
     description: String(tenderDescription || ""),
-    // Only pass analysis if it exists and is valid, don't pass it if it might cause rendering issues
-    analysis: analysis || undefined,
+    analysis: sanitizedAnalysis,
   }
 
   return <TenderContextStrategistPanel tender={tender} className={className} />
