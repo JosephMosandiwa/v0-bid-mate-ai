@@ -350,15 +350,63 @@ export function CustomTenderDetailClient({
                   )}
 
                   {/* Compliance Summary */}
-                  {analysis.compliance_summary && (
+                  {analysis.compliance_summary && typeof analysis.compliance_summary === "object" && (
                     <Card>
                       <CardHeader>
                         <CardTitle>Compliance Requirements</CardTitle>
                       </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                          {analysis.compliance_summary}
-                        </p>
+                      <CardContent className="space-y-4">
+                        {analysis.compliance_summary.requirements &&
+                          analysis.compliance_summary.requirements.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold text-sm mb-2">Requirements</h4>
+                              <ul className="list-disc list-inside space-y-1">
+                                {analysis.compliance_summary.requirements.map((req: string, idx: number) => (
+                                  <li key={idx} className="text-sm text-muted-foreground">
+                                    {req}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        {analysis.compliance_summary.disqualifiers &&
+                          analysis.compliance_summary.disqualifiers.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold text-sm mb-2 text-destructive">Disqualifiers</h4>
+                              <ul className="list-disc list-inside space-y-1">
+                                {analysis.compliance_summary.disqualifiers.map((dis: string, idx: number) => (
+                                  <li key={idx} className="text-sm text-destructive">
+                                    {dis}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        {analysis.compliance_summary.strengtheners &&
+                          analysis.compliance_summary.strengtheners.length > 0 && (
+                            <div>
+                              <h4 className="font-semibold text-sm mb-2 text-green-600">Strengtheners</h4>
+                              <ul className="list-disc list-inside space-y-1">
+                                {analysis.compliance_summary.strengtheners.map((str: string, idx: number) => (
+                                  <li key={idx} className="text-sm text-green-600">
+                                    {str}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {!analysis.compliance_summary && (
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="text-center py-8">
+                          <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <p className="text-muted-foreground">No analysis available yet</p>
+                          <p className="text-sm text-muted-foreground mt-2">Upload a document to start analysis</p>
+                        </div>
                       </CardContent>
                     </Card>
                   )}
