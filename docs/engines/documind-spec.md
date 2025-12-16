@@ -16,11 +16,11 @@
 
 DocuMind is the foundation engine. All document-based operations start here.
 
-\`\`\`
+```
 Documents ──▶ DocuMind ──▶ FormFlow (fields)
                       ──▶ TableSense (tables)
                       ──▶ ThinkEngine (analysis)
-\`\`\`
+```
 
 ---
 
@@ -71,7 +71,7 @@ Documents ──▶ DocuMind ──▶ FormFlow (fields)
 
 ## 6. Processing Pipeline
 
-\`\`\`
+```
 INPUT
   │
   ▼
@@ -101,7 +101,7 @@ Format Detection ──▶ Is PDF? ──▶ Is Scanned? ──▶ YES ──▶
   │                           │
   │                           ▼
   └──────────────────▶ OUTPUT (JSON)
-\`\`\`
+```
 
 ---
 
@@ -109,7 +109,7 @@ Format Detection ──▶ Is PDF? ──▶ Is Scanned? ──▶ YES ──▶
 
 ### 7.1 Input Types
 
-\`\`\`typescript
+```typescript
 // Main parse request
 interface ParseRequest {
   // One of these is required
@@ -146,11 +146,11 @@ interface FileMetadata {
   storage_url: string
   uploaded_at: string
 }
-\`\`\`
+```
 
 ### 7.2 Output Types
 
-\`\`\`typescript
+```typescript
 // Main parsed document response
 interface ParsedDocument {
   document_id: string
@@ -239,11 +239,11 @@ interface ProcessingInfo {
   pages_processed: number
   pages_skipped: number
 }
-\`\`\`
+```
 
 ### 7.3 Page Types
 
-\`\`\`typescript
+```typescript
 interface ParsedPage {
   page_number: number
   
@@ -375,11 +375,11 @@ interface ImageElement {
   format: string
   storage_url: string | null  // If extracted
 }
-\`\`\`
+```
 
 ### 7.4 Layout Types
 
-\`\`\`typescript
+```typescript
 interface DocumentLayout {
   document_type: DocumentType
   confidence: number
@@ -492,11 +492,11 @@ type FieldDataType =
   | 'company'
   | 'id_number'    // SA ID, registration, etc.
   | 'unknown'
-\`\`\`
+```
 
 ### 7.5 Form Field Types (Native PDF)
 
-\`\`\`typescript
+```typescript
 interface FormField {
   id: string
   name: string
@@ -542,11 +542,11 @@ interface FormFieldOption {
   label: string
   is_default: boolean
 }
-\`\`\`
+```
 
 ### 7.6 Template Types
 
-\`\`\`typescript
+```typescript
 interface DocumentTemplate {
   id: string
   
@@ -611,7 +611,7 @@ interface TemplateMatch {
   matched_fields: number
   total_fields: number
 }
-\`\`\`
+```
 
 ---
 
@@ -619,7 +619,7 @@ interface TemplateMatch {
 
 ### 8.1 Error Response Format
 
-\`\`\`typescript
+```typescript
 interface ErrorResponse {
   error: {
     code: ErrorCode
@@ -655,7 +655,7 @@ type ErrorCode =
   | 'INTERNAL_ERROR'
   | 'SERVICE_UNAVAILABLE'
   | 'DEPENDENCY_ERROR'
-\`\`\`
+```
 
 ### 8.2 Error Handling Strategy
 
@@ -672,7 +672,7 @@ type ErrorCode =
 
 ### 8.3 Error Logging
 
-\`\`\`typescript
+```typescript
 interface ErrorLog {
   error_id: string
   request_id: string
@@ -695,7 +695,7 @@ interface ErrorLog {
   // Timestamp
   occurred_at: string
 }
-\`\`\`
+```
 
 ---
 
@@ -725,7 +725,7 @@ interface ErrorLog {
 ### 9.2 Special Document Handling
 
 **Multi-language Documents:**
-\`\`\`typescript
+```typescript
 interface MultiLanguageResult {
   primary_language: string
   secondary_languages: string[]
@@ -735,10 +735,10 @@ interface MultiLanguageResult {
     confidence: number
   }[]
 }
-\`\`\`
+```
 
 **Document Packages (ZIP with multiple files):**
-\`\`\`typescript
+```typescript
 interface DocumentPackage {
   package_id: string
   files: {
@@ -748,7 +748,7 @@ interface DocumentPackage {
   }[]
   combined_result: ParsedDocument | null
 }
-\`\`\`
+```
 
 ---
 
@@ -759,7 +759,7 @@ interface DocumentPackage {
 **Purpose:** FormFlow consumes DocuMind output to generate fillable forms and fill documents.
 
 **Data Flow:**
-\`\`\`
+```
 DocuMind ──▶ FormFlow
 
 Provides:
@@ -767,10 +767,10 @@ Provides:
 ├── form_fields (native PDF fields)
 ├── positions (for placing filled values)
 └── font_info (for matching typography)
-\`\`\`
+```
 
 **Integration Contract:**
-\`\`\`typescript
+```typescript
 // What FormFlow expects from DocuMind
 interface FormFlowInput {
   document_id: string
@@ -797,24 +797,24 @@ interface FormFlowInput {
     height: number
   }>
 }
-\`\`\`
+```
 
 ### 10.2 TableSense Integration
 
 **Purpose:** TableSense extracts and structures data from tables detected by DocuMind.
 
 **Data Flow:**
-\`\`\`
+```
 DocuMind ──▶ TableSense
 
 Provides:
 ├── table_regions (locations of tables)
 ├── page_images (for visual table extraction)
 └── surrounding_text (context for headers)
-\`\`\`
+```
 
 **Integration Contract:**
-\`\`\`typescript
+```typescript
 // What TableSense expects from DocuMind
 interface TableSenseInput {
   document_id: string
@@ -835,14 +835,14 @@ interface TableSenseInput {
     lines: LineElement[]
   }>
 }
-\`\`\`
+```
 
 ### 10.3 ThinkEngine Integration
 
 **Purpose:** ThinkEngine performs AI analysis on document content.
 
 **Data Flow:**
-\`\`\`
+```
 DocuMind ──▶ ThinkEngine
 
 Provides:
@@ -850,10 +850,10 @@ Provides:
 ├── sections (structured content)
 ├── metadata (context)
 └── document_type (processing hints)
-\`\`\`
+```
 
 **Integration Contract:**
-\`\`\`typescript
+```typescript
 // What ThinkEngine expects from DocuMind
 interface ThinkEngineInput {
   document_id: string
@@ -875,14 +875,14 @@ interface ThinkEngineInput {
   // Metadata
   metadata: DocumentMetadata
 }
-\`\`\`
+```
 
 ### 10.4 DataHarvest Integration
 
 **Purpose:** DataHarvest stores tender documents; DocuMind parses them.
 
 **Data Flow:**
-\`\`\`
+```
 DataHarvest ──▶ DocuMind ──▶ DataHarvest
 
 DataHarvest provides:
@@ -893,10 +893,10 @@ DocuMind returns:
 ├── parsed content
 ├── document type
 └── fingerprints
-\`\`\`
+```
 
 **Integration Contract:**
-\`\`\`typescript
+```typescript
 // Webhook callback to DataHarvest
 interface DataHarvestCallback {
   tender_id: string
@@ -918,7 +918,7 @@ interface DataHarvestCallback {
   status: DocumentStatus
   error_message?: string
 }
-\`\`\`
+```
 
 ---
 
@@ -935,7 +935,7 @@ interface DataHarvestCallback {
 
 ### 11.2 Cache Keys
 
-\`\`\`typescript
+```typescript
 // Result cache key
 const resultCacheKey = (contentHash: string, options: ParseOptions) => 
   `documind:result:${contentHash}:${hashOptions(options)}`
@@ -947,7 +947,7 @@ const templateCacheKey = (fingerprint: string) =>
 // In-flight request key
 const requestCacheKey = (contentHash: string) =>
   `documind:processing:${contentHash}`
-\`\`\`
+```
 
 ### 11.3 Cache Invalidation Rules
 
@@ -961,7 +961,7 @@ const requestCacheKey = (contentHash: string) =>
 
 ### 11.4 Cache Hit Scenarios
 
-\`\`\`typescript
+```typescript
 interface CacheResult {
   hit: boolean
   source: 'memory' | 'redis' | 'none'
@@ -986,7 +986,7 @@ async function checkCache(contentHash: string, options: ParseOptions): Promise<C
   // 3. No cache hit
   return { hit: false, source: 'none', age_seconds: null, document_id: null }
 }
-\`\`\`
+```
 
 ---
 
@@ -994,7 +994,7 @@ async function checkCache(contentHash: string, options: ParseOptions): Promise<C
 
 ### 12.1 Queue Architecture
 
-\`\`\`
+```
                      ┌─────────────────┐
                      │   API Gateway   │
                      └────────┬────────┘
@@ -1020,7 +1020,7 @@ async function checkCache(contentHash: string, options: ParseOptions): Promise<C
                      │    Workers      │
                      │  (Auto-scaled)  │
                      └─────────────────┘
-\`\`\`
+```
 
 ### 12.2 Queue Priority Rules
 
@@ -1032,7 +1032,7 @@ async function checkCache(contentHash: string, options: ParseOptions): Promise<C
 
 ### 12.3 Job Schema
 
-\`\`\`typescript
+```typescript
 interface ProcessingJob {
   job_id: string
   document_id: string
@@ -1078,11 +1078,11 @@ type ProcessingStage =
   | 'storing'
   | 'complete'
   | 'failed'
-\`\`\`
+```
 
 ### 12.4 Progress Updates (WebSocket/SSE)
 
-\`\`\`typescript
+```typescript
 interface ProgressUpdate {
   document_id: string
   job_id: string
@@ -1095,7 +1095,7 @@ interface ProgressUpdate {
 // Client subscription
 // GET /api/documind/progress/{document_id}
 // Returns: Server-Sent Events stream
-\`\`\`
+```
 
 ---
 
@@ -1112,18 +1112,18 @@ interface ProgressUpdate {
 
 ### 13.2 Rate Limit Headers
 
-\`\`\`typescript
+```typescript
 interface RateLimitHeaders {
   'X-RateLimit-Limit': number        // Max requests per window
   'X-RateLimit-Remaining': number    // Remaining requests
   'X-RateLimit-Reset': number        // Unix timestamp when window resets
   'X-RateLimit-RetryAfter'?: number  // Seconds to wait (if limited)
 }
-\`\`\`
+```
 
 ### 13.3 Rate Limit Response
 
-\`\`\`typescript
+```typescript
 // HTTP 429 Too Many Requests
 interface RateLimitError {
   error: {
@@ -1137,11 +1137,11 @@ interface RateLimitError {
     }
   }
 }
-\`\`\`
+```
 
 ### 13.4 Rate Limiting Implementation
 
-\`\`\`typescript
+```typescript
 interface RateLimiter {
   // Check if request is allowed
   checkLimit(appId: string, tier: RateTier): Promise<RateLimitResult>
@@ -1167,7 +1167,7 @@ interface RateUsage {
   concurrent_active: number
   storage_used_bytes: number
 }
-\`\`\`
+```
 
 ---
 
@@ -1202,13 +1202,13 @@ interface RateUsage {
 
 ### 14.4 Deprecation Headers
 
-\`\`\`typescript
+```typescript
 interface DeprecationHeaders {
   'Deprecation': string           // 'true' or date
   'Sunset': string                // Date when version will be removed
   'Link': string                  // Link to migration docs
 }
-\`\`\`
+```
 
 ---
 
@@ -1237,7 +1237,7 @@ interface DeprecationHeaders {
 
 ### 15.3 Accuracy Metrics
 
-\`\`\`typescript
+```typescript
 interface AccuracyReport {
   // Text extraction
   text_accuracy: {
@@ -1275,11 +1275,11 @@ interface AccuracyReport {
     confidence_correlation: number
   }
 }
-\`\`\`
+```
 
 ### 15.4 Continuous Accuracy Monitoring
 
-\`\`\`typescript
+```typescript
 // Run nightly against test document library
 interface AccuracyTestRun {
   run_id: string
@@ -1299,7 +1299,7 @@ interface AccuracyTestRun {
     regression_detected: boolean
   }
 }
-\`\`\`
+```
 
 ---
 
@@ -1319,7 +1319,7 @@ interface AccuracyTestRun {
 
 ### 16.2 Input Sanitization
 
-\`\`\`typescript
+```typescript
 interface SanitizationRules {
   // File names
   filename: {
@@ -1343,7 +1343,7 @@ interface SanitizationRules {
     max_length_per_block: 10000
   }
 }
-\`\`\`
+```
 
 ### 16.3 Authentication & Authorization
 
@@ -1353,7 +1353,7 @@ interface SanitizationRules {
 | JWT | User context | `Authorization: Bearer` |
 | OAuth2 | Third-party apps | Authorization code flow |
 
-\`\`\`typescript
+```typescript
 interface AuthContext {
   app_id: string
   app_name: string
@@ -1371,7 +1371,7 @@ type Permission =
   | 'template_read'
   | 'template_write'
   | 'admin'
-\`\`\`
+```
 
 ### 16.4 Data Privacy
 
@@ -1385,7 +1385,7 @@ type Permission =
 
 ### 16.5 Security Headers
 
-\`\`\`typescript
+```typescript
 interface SecurityHeaders {
   'Content-Security-Policy': "default-src 'self'"
   'X-Content-Type-Options': 'nosniff'
@@ -1393,7 +1393,7 @@ interface SecurityHeaders {
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains'
   'X-Request-Id': string  // For tracing
 }
-\`\`\`
+```
 
 ---
 
@@ -1406,7 +1406,7 @@ interface SecurityHeaders {
 Parse a document.
 
 Request:
-\`\`\`typescript
+```typescript
 {
   // One of these required
   file?: File,              // Multipart upload
@@ -1429,20 +1429,20 @@ Request:
   webhook_url?: string,     // Callback when complete
   async?: boolean           // Return immediately with job_id
 }
-\`\`\`
+```
 
 Response (sync):
-\`\`\`typescript
+```typescript
 {
   document_id: string,
   status: 'complete' | 'partial',
   result: ParsedDocument,
   processing: ProcessingInfo
 }
-\`\`\`
+```
 
 Response (async):
-\`\`\`typescript
+```typescript
 {
   document_id: string,
   job_id: string,
@@ -1450,7 +1450,7 @@ Response (async):
   status_url: string,       // Poll this for status
   webhook_url: string       // Will POST result here
 }
-\`\`\`
+```
 
 ---
 
@@ -1459,13 +1459,13 @@ Response (async):
 Get parsed document.
 
 Response:
-\`\`\`typescript
+```typescript
 {
   document: ParsedDocument,
   cached: boolean,
   cached_at?: string
 }
-\`\`\`
+```
 
 ---
 
@@ -1474,12 +1474,12 @@ Response:
 Get specific page.
 
 Response:
-\`\`\`typescript
+```typescript
 {
   page: ParsedPage,
   document_id: string
 }
-\`\`\`
+```
 
 ---
 
@@ -1488,12 +1488,12 @@ Response:
 Delete document and all cached data.
 
 Response:
-\`\`\`typescript
+```typescript
 {
   deleted: true,
   document_id: string
 }
-\`\`\`
+```
 
 ---
 
@@ -1504,7 +1504,7 @@ Response:
 OCR only (no full parsing).
 
 Request:
-\`\`\`typescript
+```typescript
 {
   file?: File,
   url?: string,
@@ -1514,10 +1514,10 @@ Request:
     engine?: 'google_vision' | 'tesseract'
   }
 }
-\`\`\`
+```
 
 Response:
-\`\`\`typescript
+```typescript
 {
   ocr_id: string,
   confidence: number,
@@ -1529,7 +1529,7 @@ Response:
   engine_used: string,
   processing_time_ms: number
 }
-\`\`\`
+```
 
 ---
 
@@ -1546,14 +1546,14 @@ Query params:
 - `offset`: Pagination offset
 
 Response:
-\`\`\`typescript
+```typescript
 {
   templates: DocumentTemplate[],
   total: number,
   limit: number,
   offset: number
 }
-\`\`\`
+```
 
 ---
 
@@ -1562,11 +1562,11 @@ Response:
 Get template details.
 
 Response:
-\`\`\`typescript
+```typescript
 {
   template: DocumentTemplate
 }
-\`\`\`
+```
 
 ---
 
@@ -1575,7 +1575,7 @@ Response:
 Create new template.
 
 Request:
-\`\`\`typescript
+```typescript
 {
   name: string,
   code?: string,
@@ -1596,14 +1596,14 @@ Request:
     profile_mapping?: string
   }>
 }
-\`\`\`
+```
 
 Response:
-\`\`\`typescript
+```typescript
 {
   template: DocumentTemplate
 }
-\`\`\`
+```
 
 ---
 
@@ -1612,20 +1612,20 @@ Response:
 Match document to templates.
 
 Request:
-\`\`\`typescript
+```typescript
 {
   document_id?: string,
   fingerprint?: string
 }
-\`\`\`
+```
 
 Response:
-\`\`\`typescript
+```typescript
 {
   matches: TemplateMatch[],
   best_match: TemplateMatch | null
 }
-\`\`\`
+```
 
 ---
 
@@ -1636,11 +1636,11 @@ Response:
 Get job status.
 
 Response:
-\`\`\`typescript
+```typescript
 {
   job: ProcessingJob
 }
-\`\`\`
+```
 
 ---
 
@@ -1649,7 +1649,7 @@ Response:
 Stream progress updates (SSE).
 
 Response: Server-Sent Events
-\`\`\`
+```
 event: progress
 data: {"stage": "parsing", "percent": 45, "message": "Extracting text..."}
 
@@ -1658,7 +1658,7 @@ data: {"stage": "analyzing_layout", "percent": 70, "message": "Analyzing structu
 
 event: complete
 data: {"document_id": "...", "status": "complete"}
-\`\`\`
+```
 
 ---
 
@@ -1669,7 +1669,7 @@ data: {"document_id": "...", "status": "complete"}
 Health check.
 
 Response:
-\`\`\`typescript
+```typescript
 {
   status: 'healthy' | 'degraded' | 'unhealthy',
   version: string,
@@ -1680,7 +1680,7 @@ Response:
     message?: string
   }>
 }
-\`\`\`
+```
 
 ---
 
@@ -1689,7 +1689,7 @@ Response:
 Usage statistics.
 
 Response:
-\`\`\`typescript
+```typescript
 {
   period: '24h' | '7d' | '30d',
   documents_processed: number,
@@ -1700,13 +1700,13 @@ Response:
   error_rate: number,
   cache_hit_rate: number
 }
-\`\`\`
+```
 
 ---
 
 ## 18. Database Schema (Complete)
 
-\`\`\`sql
+```sql
 -- ============================================
 -- DOCUMIND ENGINE DATABASE SCHEMA
 -- ============================================
@@ -2045,7 +2045,7 @@ CREATE TABLE documind_feedback (
 
 CREATE INDEX idx_documind_feedback_type ON documind_feedback(feedback_type);
 CREATE INDEX idx_documind_feedback_template ON documind_feedback(template_id);
-\`\`\`
+```
 
 ---
 
@@ -2053,7 +2053,7 @@ CREATE INDEX idx_documind_feedback_template ON documind_feedback(template_id);
 
 ### 19.1 Event Schema
 
-\`\`\`typescript
+```typescript
 interface WebhookEvent {
   event_id: string
   event_type: string
@@ -2067,12 +2067,12 @@ interface WebhookEvent {
   // Payload
   data: Record<string, any>
 }
-\`\`\`
+```
 
 ### 19.2 Event Types
 
 **document.parsing.started**
-\`\`\`typescript
+```typescript
 {
   event_type: 'document.parsing.started',
   data: {
@@ -2082,10 +2082,10 @@ interface WebhookEvent {
     options: ParseOptions
   }
 }
-\`\`\`
+```
 
 **document.parsing.progress**
-\`\`\`typescript
+```typescript
 {
   event_type: 'document.parsing.progress',
   data: {
@@ -2095,10 +2095,10 @@ interface WebhookEvent {
     message: string
   }
 }
-\`\`\`
+```
 
 **document.parsing.completed**
-\`\`\`typescript
+```typescript
 {
   event_type: 'document.parsing.completed',
   data: {
@@ -2106,10 +2106,10 @@ interface WebhookEvent {
     processing_time_ms: number
   }
 }
-\`\`\`
+```
 
 **document.parsing.failed**
-\`\`\`typescript
+```typescript
 {
   event_type: 'document.parsing.failed',
   data: {
@@ -2118,10 +2118,10 @@ interface WebhookEvent {
     partial_result?: Partial<ParsedDocument>
   }
 }
-\`\`\`
+```
 
 **template.matched**
-\`\`\`typescript
+```typescript
 {
   event_type: 'template.matched',
   data: {
@@ -2130,11 +2130,11 @@ interface WebhookEvent {
     match_score: number
   }
 }
-\`\`\`
+```
 
 ### 19.3 Webhook Security
 
-\`\`\`typescript
+```typescript
 interface WebhookSecurity {
   // Request headers
   'X-DocuMind-Signature': string     // HMAC-SHA256 signature
@@ -2144,7 +2144,7 @@ interface WebhookSecurity {
   // Signature verification
   // signature = HMAC-SHA256(timestamp + '.' + body, webhook_secret)
 }
-\`\`\`
+```
 
 ---
 
@@ -2160,7 +2160,7 @@ interface WebhookSecurity {
 - Basic metadata extraction
 
 **Files to create:**
-\`\`\`
+```
 lib/engines/documind/
 ├── index.ts                 # Main exports
 ├── parser/
@@ -2173,7 +2173,7 @@ lib/engines/documind/
 └── utils/
     ├── position-mapper.ts   # Coordinate conversion
     └── file-utils.ts        # File handling
-\`\`\`
+```
 
 **Success criteria:**
 - Extract text with >95% accuracy
@@ -2193,7 +2193,7 @@ lib/engines/documind/
 - Reading order determination
 
 **Files to create:**
-\`\`\`
+```
 lib/engines/documind/
 ├── analyzer/
 │   ├── layout-analyzer.ts   # Main layout analysis
@@ -2201,7 +2201,7 @@ lib/engines/documind/
 │   ├── field-detector.ts    # Form field detection
 │   ├── table-detector.ts    # Table region detection
 │   └── reading-order.ts     # Reading sequence
-\`\`\`
+```
 
 **Success criteria:**
 - Detect >80% of form fields
@@ -2220,14 +2220,14 @@ lib/engines/documind/
 - Result merging
 
 **Files to create:**
-\`\`\`
+```
 lib/engines/documind/
 ├── ocr/
 │   ├── ocr-router.ts        # OCR engine selection
 │   ├── google-vision.ts     # Google Vision integration
 │   ├── tesseract.ts         # Tesseract fallback
 │   └── result-merger.ts     # Merge OCR with parsed content
-\`\`\`
+```
 
 **Success criteria:**
 - OCR accuracy >90%
@@ -2246,7 +2246,7 @@ lib/engines/documind/
 - Pre-built SA tender templates (SBD/MBD)
 
 **Files to create:**
-\`\`\`
+```
 lib/engines/documind/
 ├── templates/
 │   ├── fingerprinter.ts     # Fingerprint generation
@@ -2255,7 +2255,7 @@ lib/engines/documind/
 │       ├── sbd1.ts
 │       ├── sbd2.ts
 │       └── ...
-\`\`\`
+```
 
 **Success criteria:**
 - Match known templates >80%
@@ -2275,7 +2275,7 @@ lib/engines/documind/
 - API versioning
 
 **Files to create:**
-\`\`\`
+```
 app/api/v1/documind/
 ├── parse/route.ts
 ├── document/[id]/route.ts
@@ -2294,7 +2294,7 @@ lib/engines/documind/
 │   ├── middleware.ts        # Auth, rate limiting
 │   ├── validation.ts        # Request validation
 │   └── responses.ts         # Response formatting
-\`\`\`
+```
 
 **Success criteria:**
 - All endpoints functional
@@ -2313,7 +2313,7 @@ lib/engines/documind/
 - Webhook delivery
 
 **Files to create:**
-\`\`\`
+```
 scripts/
 ├── documind-schema.sql      # Database schema
 
@@ -2324,7 +2324,7 @@ lib/engines/documind/
 │   ├── storage.ts           # Blob storage
 │   ├── queue.ts             # Job queue
 │   └── webhooks.ts          # Webhook delivery
-\`\`\`
+```
 
 **Success criteria:**
 - All tables created

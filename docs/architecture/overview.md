@@ -8,7 +8,7 @@ A suite of decoupled, generic engines that power document processing, form intel
 
 ## Architecture Layers
 
-\`\`\`
+```
 LAYER 4: PLATFORM SERVICES
 ├── EngineHub (API Gateway)
 ├── Developer Portal
@@ -27,7 +27,7 @@ LAYER 1: CORE PROCESSING ENGINES
 ├── DocuMind (Document processing)
 ├── FormFlow (Form intelligence)
 └── TableSense (Table extraction)
-\`\`\`
+```
 
 ---
 
@@ -68,7 +68,7 @@ LAYER 1: CORE PROCESSING ENGINES
 
 ## Engine Dependencies
 
-\`\`\`
+```
 LearnLoop ←── Receives feedback from ALL engines
     │
     │ improves
@@ -86,13 +86,13 @@ LearnLoop ←── Receives feedback from ALL engines
 │ KnowledgeVault PriceGraph DataHarvest          │
 │                                                 │
 └─────────────────────────────────────────────────┘
-\`\`\`
+```
 
 ---
 
 ## Data Flow: Document to Filled Form
 
-\`\`\`
+```
 1. Document Upload
    └── DocuMind receives document
 
@@ -133,13 +133,13 @@ LearnLoop ←── Receives feedback from ALL engines
    ├── Track auto-fill accuracy
    ├── Track position corrections
    └── Improve models
-\`\`\`
+```
 
 ---
 
 ## Data Flow: BOQ Processing
 
-\`\`\`
+```
 1. Document with BOQ
    └── DocuMind receives document
 
@@ -172,7 +172,7 @@ LearnLoop ←── Receives feedback from ALL engines
    ├── Track accepted prices
    ├── Track modifications
    └── Improve pricing model
-\`\`\`
+```
 
 ---
 
@@ -180,7 +180,7 @@ LearnLoop ←── Receives feedback from ALL engines
 
 All engines are accessed via EngineHub API Gateway.
 
-\`\`\`
+```
 ┌─────────────────────────────────────────────────────────────┐
 │                    THIRD-PARTY APPS                          │
 ├──────────────┬──────────────┬──────────────┬───────────────┤
@@ -207,7 +207,7 @@ All engines are accessed via EngineHub API Gateway.
    ┌─────────┐         ┌─────────┐         ┌─────────┐
    │DocuMind │         │FormFlow │         │TableSense│
    └─────────┘         └─────────┘         └─────────┘
-\`\`\`
+```
 
 ---
 
@@ -217,59 +217,59 @@ Base URL: `https://api.engines.bidmate.ai`
 
 ### Authentication
 All requests require API key in header:
-\`\`\`
+```
 Authorization: Bearer {api_key}
 X-App-ID: {app_id}
-\`\`\`
+```
 
 ### Endpoints by Engine
 
 #### DocuMind
-\`\`\`
+```
 POST   /documind/parse
 GET    /documind/document/{id}
 POST   /documind/ocr
 POST   /documind/match
 GET    /documind/health
-\`\`\`
+```
 
 #### FormFlow
-\`\`\`
+```
 POST   /formflow/detect
 POST   /formflow/fill
 GET    /formflow/template/{id}
 POST   /formflow/template
 GET    /formflow/health
-\`\`\`
+```
 
 #### TableSense
-\`\`\`
+```
 POST   /tablesense/extract
 GET    /tablesense/table/{id}
 GET    /tablesense/health
-\`\`\`
+```
 
 #### ThinkEngine
-\`\`\`
+```
 POST   /think/analyze
 POST   /think/chat
 GET    /think/health
-\`\`\`
+```
 
 #### DataHarvest
-\`\`\`
+```
 GET    /harvest/tenders
 GET    /harvest/tender/{id}
 POST   /harvest/search
 GET    /harvest/health
-\`\`\`
+```
 
 #### LearnLoop
-\`\`\`
+```
 POST   /learn/feedback
 GET    /learn/metrics
 GET    /learn/health
-\`\`\`
+```
 
 ---
 

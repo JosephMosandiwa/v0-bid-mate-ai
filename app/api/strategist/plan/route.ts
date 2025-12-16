@@ -13,6 +13,9 @@ const PROJECT_PLAN_SCHEMA = z.object({
       materials: z.number(),
       equipment: z.number(),
       overhead: z.number(),
+      insurance: z.number(),
+      certifications: z.number(),
+      compliance: z.number(),
     }),
   }),
   estimated_timeline: z.object({
@@ -40,6 +43,55 @@ const PROJECT_PLAN_SCHEMA = z.object({
       }),
     ),
   }),
+  certifications_required: z.array(
+    z.object({
+      name: z.string(),
+      issuer: z.string(),
+      validity_period: z.string(),
+      cost: z.number(),
+      processing_time: z.string(),
+      priority: z.enum(["critical", "high", "medium", "low"]),
+    }),
+  ),
+  insurance_requirements: z.array(
+    z.object({
+      type: z.string(),
+      coverage_amount: z.number(),
+      provider_suggestions: z.array(z.string()),
+      annual_cost: z.number(),
+      priority: z.enum(["critical", "high", "medium", "low"]),
+    }),
+  ),
+  compliance_checklist: z.array(
+    z.object({
+      requirement: z.string(),
+      status: z.enum(["pending", "in_progress", "completed", "not_required"]),
+      deadline: z.string(),
+      evidence_needed: z.string(),
+      notes: z.string(),
+    }),
+  ),
+  regulatory_requirements: z.array(
+    z.object({
+      regulation: z.string(),
+      description: z.string(),
+      authority: z.string(),
+      deadline: z.string(),
+      penalties: z.string(),
+    }),
+  ),
+  financial_requirements: z.object({
+    bank_guarantee: z.number().optional(),
+    cash_flow_requirements: z.string(),
+    working_capital: z.number(),
+    credit_facilities: z.string(),
+  }),
+  capacity_requirements: z.object({
+    past_projects: z.string(),
+    references: z.number(),
+    equipment_owned: z.array(z.string()),
+    personnel_qualifications: z.array(z.string()),
+  }),
   success_criteria: z.array(z.string()),
   key_deliverables: z.array(z.string()),
 })
@@ -62,27 +114,85 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Tender ID and title required" }, { status: 400 })
     }
 
-    // Generate project plan using AI
     const { object: plan } = await generateObject({
       model: "openai/gpt-4o-mini",
       schema: PROJECT_PLAN_SCHEMA,
-      prompt: `Generate a detailed project plan for this South African tender:
+      prompt: `Generate a comprehensive project plan for this South African tender bid:
 
 Title: ${tenderTitle}
 Description: ${tenderDescription || "No description provided"}
 ${analysisData ? `Analysis: ${JSON.stringify(analysisData)}` : ""}
 
-Create a realistic, implementable project plan including:
-1. Budget breakdown (labor, materials, equipment, overhead)
-2. Phased timeline with specific tasks
-3. Resource requirements (personnel with skills, equipment, materials)
-4. Risk assessment with mitigation strategies
-5. Success criteria and key deliverables
+Create a detailed, implementable project plan including:
 
-Consider South African context (B-BBEE, CIDB requirements, local regulations).`,
+1. **Budget Breakdown** - Include all costs:
+   - Labor (personnel costs)
+   - Materials and supplies
+   - Equipment (purchase or rental)
+   - Overhead and admin
+   - Insurance premiums
+   - Certification and licensing costs
+   - Compliance and legal costs
+
+2. **Timeline** - Realistic phases with tasks
+
+3. **Resource Requirements** - Personnel, equipment, materials
+
+4. **Certifications Required** - List ALL certifications needed such as:
+   - CIDB grading (if construction)
+   - Professional registrations (engineers, architects, etc.)
+   - ISO certifications (9001, 14001, 45001)
+   - Industry-specific licenses
+   - B-BBEE certificate
+   - Tax clearance certificate
+   - Company registration documents
+   Include: name, issuing authority, validity period, cost, processing time, and priority
+
+5. **Insurance Requirements** - Specify ALL insurance policies needed:
+   - Professional indemnity insurance
+   - Public liability insurance
+   - Employer's liability (COIDA)
+   - All-risk insurance
+   - Performance bonds
+   - Plant and equipment insurance
+   Include: type, coverage amount, provider suggestions, annual cost, priority
+
+6. **Compliance Checklist** - South African regulatory requirements:
+   - B-BBEE compliance
+   - PFMA/MFMA compliance (if government)
+   - Tax compliance (SARS)
+   - Labour law compliance (BCEA, LRA)
+   - Health & Safety (OHS Act)
+   - Environmental regulations
+   - Municipal by-laws
+   - Industry-specific regulations
+   For each: requirement, current status, deadline, evidence needed, notes
+
+7. **Regulatory Requirements** - Specific regulations to comply with:
+   - Relevant Acts and regulations
+   - Reporting obligations
+   - Inspection requirements
+   - Penalties for non-compliance
+
+8. **Financial Requirements** - Financial readiness:
+   - Bank guarantee amount (if required)
+   - Cash flow requirements (monthly breakdown)
+   - Working capital needed
+   - Credit facilities recommendations
+
+9. **Capacity Requirements** - Demonstrate capacity:
+   - Past similar projects (description)
+   - Number of references needed
+   - Equipment that must be owned
+   - Personnel qualifications required
+
+10. **Risk Assessment** - Identify and mitigate risks
+
+11. **Success Criteria & Deliverables**
+
+Be specific, practical, and aligned with South African procurement practices.`,
     })
 
-    // Save to database
     const { data: savedPlan, error } = await supabase
       .from("tender_project_plans")
       .upsert(
@@ -96,6 +206,12 @@ Consider South African context (B-BBEE, CIDB requirements, local regulations).`,
           estimated_timeline: plan.estimated_timeline,
           resource_requirements: plan.resource_requirements,
           risk_assessment: plan.risk_assessment,
+          certifications_required: plan.certifications_required,
+          insurance_requirements: plan.insurance_requirements,
+          compliance_checklist: plan.compliance_checklist,
+          regulatory_requirements: plan.regulatory_requirements,
+          financial_requirements: plan.financial_requirements,
+          capacity_requirements: plan.capacity_requirements,
           success_criteria: plan.success_criteria,
           key_deliverables: plan.key_deliverables,
           updated_at: new Date().toISOString(),

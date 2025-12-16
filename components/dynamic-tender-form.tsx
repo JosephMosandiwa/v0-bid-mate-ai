@@ -1,7 +1,6 @@
 "use client"
 
 import { AlertTitle } from "@/components/ui/alert"
-
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -12,12 +11,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Save, CheckCircle2, Download } from "lucide-react"
-import { GoogleAddressAutocomplete } from "@/components/google-address-autocomplete"
+import {
+  Loader2,
+  Save,
+  CheckCircle2,
+  Download,
+  FileText,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Percent,
+} from "lucide-react"
 import { formatZAR } from "@/lib/utils/currency"
 import { saveScrapedTenderToUser } from "@/app/actions/tender-actions"
 import { useToast } from "@/hooks/use-toast"
-import { FileText, AlertCircle } from "lucide-react"
+import { Progress } from "@/components/ui/progress"
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 
 interface FormField {
   id: string
@@ -52,6 +63,7 @@ interface DynamicTenderFormProps {
     category?: string
     tender_url?: string
   }
+  onProgressChange?: (progressPercent: number, status: string) => void
 }
 
 export function DynamicTenderForm({
@@ -60,6 +72,7 @@ export function DynamicTenderForm({
   googleMapsApiKey,
   documents = [],
   tenderData,
+  onProgressChange,
 }: DynamicTenderFormProps) {
   console.log("[v0] 🔵 DynamicTenderForm COMPONENT RENDERING")
   console.log("[v0] Tender ID:", tenderId)
@@ -74,6 +87,9 @@ export function DynamicTenderForm({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [fillingPdf, setFillingPdf] = useState(false)
   const [hasAutoSaved, setHasAutoSaved] = useState(false)
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
+  const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null)
+  const [formCompletionPercent, setFormCompletionPercent] = useState(0)
   const { toast } = useToast()
 
   const isCustomTender = tenderId.length === 36 && tenderId.includes("-")
@@ -87,6 +103,43 @@ export function DynamicTenderForm({
     loadSavedResponses()
   }, [tenderId])
 
+  useEffect(() => {
+    calculateFormCompletion()
+  }, [formData, formFields])
+
+  const calculateFormCompletion = () => {
+    if (formFields.length === 0) {
+      setFormCompletionPercent(0)
+      return
+    }
+
+    const requiredFields = formFields.filter((f) => f.required)
+    const totalFields = requiredFields.length > 0 ? requiredFields.length : formFields.length
+    const filledFields =
+      requiredFields.length > 0
+        ? requiredFields.filter((f) => formData[f.id] && formData[f.id] !== "").length
+        : Object.keys(formData).filter((key) => formData[key] && formData[key] !== "").length
+
+    const percent = Math.round((filledFields / totalFields) * 100)
+    setFormCompletionPercent(percent)
+
+    // Update tender progress status based on form completion
+    let status = "reviewing"
+    if (percent >= 100) {
+      status = "ready"
+    } else if (percent >= 75) {
+      status = "preparing"
+    } else if (percent >= 50) {
+      status = "planning"
+    } else if (percent >= 25) {
+      status = "analyzing"
+    }
+
+    if (onProgressChange && percent > 0) {
+      onProgressChange(Math.min(percent, 95), status) // Cap at 95% until submitted
+    }
+  }
+
   const loadSavedResponses = async () => {
     try {
       const response = await fetch(`${apiBasePath}/responses`)
@@ -94,6 +147,7 @@ export function DynamicTenderForm({
         const { responses } = await response.json()
         if (responses) {
           setFormData(responses)
+          setLastSaveTime(new Date())
         }
       }
     } catch (error) {
@@ -133,6 +187,10 @@ export function DynamicTenderForm({
   }
 
   const validateField = (field: FormField, value: any): string | null => {
+    if (field.required && (!value || value === "")) {
+      return "This field is required"
+    }
+
     if (field.validation && value) {
       if (field.type === "number") {
         const num = Number(value)
@@ -160,6 +218,7 @@ export function DynamicTenderForm({
   const handleSave = async () => {
     const newErrors: Record<string, string> = {}
 
+    // Validate all required fields
     formFields.forEach((field) => {
       const error = validateField(field, formData[field.id])
       if (error) {
@@ -169,6 +228,11 @@ export function DynamicTenderForm({
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
+      toast({
+        title: "Validation Error",
+        description: `Please fix ${Object.keys(newErrors).length} error(s) before saving`,
+        variant: "destructive",
+      })
       return
     }
 
@@ -182,11 +246,28 @@ export function DynamicTenderForm({
 
       if (response.ok) {
         setSaved(true)
+        setLastSaveTime(new Date())
         setTimeout(() => setSaved(false), 3000)
         toast({
           title: "Saved",
           description: "Your responses have been saved successfully",
         })
+
+        // Update progress log
+        if (isCustomTender) {
+          await fetch(`/api/strategist/progress`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              tenderId,
+              tenderType: "custom",
+              status: formCompletionPercent >= 100 ? "ready" : "preparing",
+              progressPercent: Math.min(formCompletionPercent, 95),
+              milestone: `Form ${formCompletionPercent}% complete`,
+              notes: `User saved form responses - ${Object.keys(formData).length} fields filled`,
+            }),
+          })
+        }
       }
     } catch (error) {
       console.error("[v0] Error saving responses:", error)
@@ -726,13 +807,17 @@ export function DynamicTenderForm({
     const value = formData[field.id] || ""
     const error = errors[field.id]
 
-    if (isAddressField(field) && field.type === "text" && googleMapsApiKey) {
+    // Address fields now use regular text input
+    if (isAddressField(field) && field.type === "text") {
       return (
-        <GoogleAddressAutocomplete
+        <Input
+          type="text"
+          id={field.id}
           value={value}
-          onChange={(address) => handleChange(field.id, address)}
-          placeholder={field.placeholder || "Start typing an address..."}
-          apiKey={googleMapsApiKey}
+          onChange={(e) => handleChange(field.id, e.target.value)}
+          placeholder={field.placeholder || "Enter address..."}
+          required={field.required}
+          className={error ? "border-destructive" : ""}
         />
       )
     }
@@ -746,7 +831,7 @@ export function DynamicTenderForm({
             value={value}
             onChange={(e) => handleChange(field.id, e.target.value)}
             placeholder={field.placeholder || "e.g., R 1,000,000 or 1000000"}
-            className={error ? "border-red-500" : ""}
+            className={error ? "border-destructive" : ""}
           />
           {value && !isNaN(Number(value.toString().replace(/[^0-9.-]/g, ""))) && (
             <p className="text-xs text-muted-foreground mt-1">
@@ -765,7 +850,7 @@ export function DynamicTenderForm({
             value={value}
             onChange={(e) => handleChange(field.id, e.target.value)}
             placeholder={field.placeholder}
-            className={error ? "border-red-500" : ""}
+            className={error ? "border-destructive" : ""}
             rows={4}
           />
         )
@@ -773,7 +858,7 @@ export function DynamicTenderForm({
       case "select":
         return (
           <Select value={value} onValueChange={(val) => handleChange(field.id, val)}>
-            <SelectTrigger className={error ? "border-red-500" : ""}>
+            <SelectTrigger className={error ? "border-destructive" : ""}>
               <SelectValue placeholder={field.placeholder || "Select an option"} />
             </SelectTrigger>
             <SelectContent>
@@ -828,7 +913,7 @@ export function DynamicTenderForm({
             id={field.id}
             type="file"
             onChange={(e) => handleChange(field.id, e.target.files?.[0]?.name || "")}
-            className={error ? "border-red-500" : ""}
+            className={error ? "border-destructive" : ""}
           />
         )
 
@@ -840,7 +925,7 @@ export function DynamicTenderForm({
             value={value}
             onChange={(e) => handleChange(field.id, e.target.value)}
             placeholder={field.placeholder}
-            className={error ? "border-red-500" : ""}
+            className={error ? "border-destructive" : ""}
             min={field.validation?.min}
             max={field.validation?.max}
             maxLength={field.validation?.maxLength}
@@ -865,9 +950,66 @@ export function DynamicTenderForm({
   console.log("[v0] 🟢 Form LOADED - Rendering sections:", sections)
   console.log("[v0] Total sections:", sections.length)
 
+  const toggleSection = (section: string) => {
+    const newCollapsed = new Set(collapsedSections)
+    if (newCollapsed.has(section)) {
+      newCollapsed.delete(section)
+    } else {
+      newCollapsed.add(section)
+    }
+    setCollapsedSections(newCollapsed)
+  }
+
+  const getSectionCompletion = (section: string): { filled: number; total: number; percent: number } => {
+    const sectionFields = formFields.filter((f) => (f.section || "General Information") === section)
+    const requiredFields = sectionFields.filter((f) => f.required)
+    const fieldsToCheck = requiredFields.length > 0 ? requiredFields : sectionFields
+
+    const filled = fieldsToCheck.filter((f) => formData[f.id] && formData[f.id] !== "").length
+    const total = fieldsToCheck.length
+    const percent = total > 0 ? Math.round((filled / total) * 100) : 0
+
+    return { filled, total, percent }
+  }
+
+  const requiredFieldsCount = formFields.filter((f) => f.required).length
+  const totalFilledCount = Object.keys(formData).filter((key) => formData[key] && formData[key] !== "").length
+
   return (
     <div className="space-y-6">
       {console.log("[v0] 🟢 DynamicTenderForm JSX RENDERING")}
+
+      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Response Form Progress</CardTitle>
+              <CardDescription className="mt-1">
+                {requiredFieldsCount > 0
+                  ? `${requiredFieldsCount} required fields • ${totalFilledCount} of ${formFields.length} total fields filled`
+                  : `${totalFilledCount} of ${formFields.length} fields filled`}
+              </CardDescription>
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold text-primary">{formCompletionPercent}%</div>
+              <p className="text-xs text-muted-foreground">Complete</p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Progress value={formCompletionPercent} className="h-3" />
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Clock className="h-3 w-3" />
+              {lastSaveTime ? `Last saved ${lastSaveTime.toLocaleTimeString()}` : "Not saved yet"}
+            </div>
+            <Badge variant={formCompletionPercent >= 100 ? "default" : "secondary"} className="gap-1">
+              <Percent className="h-3 w-3" />
+              {formCompletionPercent >= 100 ? "Ready to Submit" : "In Progress"}
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* PDF Actions Section */}
       {availableDocuments.length > 0 && (
@@ -932,49 +1074,116 @@ export function DynamicTenderForm({
 
       {sections.map((section) => {
         const sectionFields = formFields.filter((f) => (f.section || "General Information") === section)
+        const completion = getSectionCompletion(section)
+        const isCollapsed = collapsedSections.has(section)
+        const requiredFieldsInSection = sectionFields.filter((f) => f.required).length
 
         return (
-          <Card key={section}>
-            <CardHeader>
-              <CardTitle>{section}</CardTitle>
-              <CardDescription>Fill in the required information for this section</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {sectionFields.map((field) => (
-                <div key={field.id} className="space-y-2">
-                  <Label htmlFor={field.id}>{field.label}</Label>
-                  {field.description && <p className="text-sm text-muted-foreground">{field.description}</p>}
-                  {renderField(field)}
-                  {errors[field.id] && <p className="text-sm text-red-500">{errors[field.id]}</p>}
+          <Card
+            key={section}
+            className={cn("transition-all", completion.percent === 100 && "border-green-500/50 bg-green-50/50")}
+          >
+            <CardHeader
+              className="cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => toggleSection(section)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    <CardTitle className="text-base">{section}</CardTitle>
+                    {requiredFieldsInSection > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {requiredFieldsInSection} Required
+                      </Badge>
+                    )}
+                  </div>
+                  <CardDescription className="mt-1">
+                    {completion.filled} of {completion.total} fields completed
+                  </CardDescription>
                 </div>
-              ))}
-            </CardContent>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Progress value={completion.percent} className="h-2 w-20" />
+                    <span
+                      className={cn(
+                        "text-sm font-medium w-12 text-right",
+                        completion.percent === 100 ? "text-green-600" : "text-muted-foreground",
+                      )}
+                    >
+                      {completion.percent}%
+                    </span>
+                  </div>
+                  {isCollapsed ? (
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            {!isCollapsed && (
+              <CardContent className="space-y-4 pt-0">
+                {sectionFields.map((field) => (
+                  <div key={field.id} className="space-y-2">
+                    <Label htmlFor={field.id} className="flex items-center gap-2">
+                      {field.label}
+                      {field.required && (
+                        <Badge variant="destructive" className="text-xs px-1.5 py-0">
+                          Required
+                        </Badge>
+                      )}
+                    </Label>
+                    {field.description && <p className="text-sm text-muted-foreground">{field.description}</p>}
+                    {renderField(field)}
+                    {errors[field.id] && (
+                      <p className="text-sm text-destructive flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        {errors[field.id]}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            )}
           </Card>
         )
       })}
 
-      <div className="flex items-center gap-4 flex-wrap">
-        <Button onClick={handleSave} disabled={saving} size="lg">
-          {saving ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Save Progress
-            </>
-          )}
-        </Button>
+      <Card className="sticky bottom-4 shadow-lg border-primary/20">
+        <CardContent className="py-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <Button onClick={handleSave} disabled={saving} size="lg" className="flex-1 min-w-[200px]">
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Progress ({formCompletionPercent}% Complete)
+                </>
+              )}
+            </Button>
 
-        {saved && (
-          <Alert className="flex-1 bg-green-500/10 border-green-500/20">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <AlertDescription className="text-green-500">Form saved successfully!</AlertDescription>
-          </Alert>
-        )}
-      </div>
+            {saved && (
+              <Alert className="flex-1 bg-green-500/10 border-green-500/20 py-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <AlertDescription className="text-green-500">Saved successfully!</AlertDescription>
+              </Alert>
+            )}
+
+            {Object.keys(errors).length > 0 && (
+              <Alert variant="destructive" className="flex-1 py-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {Object.keys(errors).length} validation error(s) - check required fields
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertCircle,
   FileText,
@@ -29,7 +29,9 @@ import {
   MapPin,
 } from "lucide-react"
 import { TenderContextPanel } from "@/components/strategist/tender-context-panel"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
+import { TenderProgressTracker } from "@/components/tender/progress-tracker"
+import { DynamicTenderForm } from "@/components/dynamic-tender-form"
 
 interface CustomTenderDetailClientProps {
   tender: any
@@ -37,7 +39,7 @@ interface CustomTenderDetailClientProps {
   analysis: any
 }
 
-export function CustomTenderDetailClient({
+export default function CustomTenderDetailClient({
   tender: initialTender,
   documents: initialDocuments,
   analysis: initialAnalysis,
@@ -45,33 +47,24 @@ export function CustomTenderDetailClient({
   const router = useRouter()
   const { toast } = useToast()
 
-  const safeTender = {
-    ...initialTender,
-    title: String(initialTender?.title || ""),
-    organization: String(initialTender?.organization || ""),
-    description: String(initialTender?.description || ""),
-    value: String(initialTender?.value || ""),
-    close_date: initialTender?.close_date || null,
-    location: String(initialTender?.location || ""),
-    category: String(initialTender?.category || ""),
-  }
-
-  const [tender, setTender] = useState(safeTender)
+  const [tender, setTender] = useState(initialTender)
   const [documents, setDocuments] = useState(initialDocuments)
   const [analysis, setAnalysis] = useState(initialAnalysis)
-  const [loading, setLoading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const analysisInitiated = useRef(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [progressPercent, setProgressPercent] = useState(tender.progress_percent || 0)
+  const [progressStatus, setProgressStatus] = useState(tender.progress_status || "reviewing")
 
-  const [formData, setFormData] = useState({
-    title: String(safeTender.title || ""),
-    organization: String(safeTender.organization || ""),
-    close_date: safeTender.close_date ? String(safeTender.close_date).split("T")[0] : "",
-    value: String(safeTender.value || ""),
-    description: String(safeTender.description || ""),
-  })
+  const formData = {
+    title: String(tender.title || ""),
+    organization: String(tender.organization || ""),
+    close_date: tender.close_date ? String(tender.close_date).split("T")[0] : "",
+    value: String(tender.value || ""),
+    description: String(tender.description || ""),
+  }
 
   useEffect(() => {
     if (!documents.length || analysisInitiated.current || analyzing || analysis) {
@@ -175,6 +168,29 @@ export function CustomTenderDetailClient({
     }
   }
 
+  const handleProgressChange = async (percent: number, status: string) => {
+    setProgressPercent(percent)
+    setProgressStatus(status)
+
+    // Update database
+    try {
+      await fetch(`/api/strategist/progress`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenderId: tender.id,
+          tenderType: "custom",
+          status,
+          progressPercent: percent,
+          milestone: `Response form ${percent}% complete`,
+          notes: `User is filling out response form`,
+        }),
+      })
+    } catch (error) {
+      console.error("[v0] Error updating progress:", error)
+    }
+  }
+
   if (!tender) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -189,37 +205,47 @@ export function CustomTenderDetailClient({
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <Button variant="ghost" onClick={() => router.push("/dashboard/tenders")} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Tenders
-        </Button>
-
-        <div className="flex items-start justify-between gap-4 mb-4">
+    <div className="flex gap-6 h-[calc(100vh-120px)]">
+      <div className="flex-1 overflow-y-auto pr-4 space-y-6">
+        {/* Header with progress tracker */}
+        <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <h1 className="text-3xl font-bold mb-2">{tender.title}</h1>
-            <div className="flex flex-wrap gap-2 mb-4">
-              <Badge variant="secondary">Custom Tender</Badge>
-              {tender.category && <Badge>{tender.category}</Badge>}
+            <h1 className="text-3xl font-bold text-balance">{String(tender.title || "Untitled Tender")}</h1>
+            <div className="flex items-center gap-4 mt-3 flex-wrap">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Building2 className="h-4 w-4" />
+                <span>{String(tender.organization || "N/A")}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4" />
+                <span>
+                  Closes: {tender.close_date ? new Date(String(tender.close_date)).toLocaleDateString() : "N/A"}
+                </span>
+              </div>
+              {tender.value && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <DollarSign className="h-4 w-4" />
+                  <span>{String(tender.value)}</span>
+                </div>
+              )}
             </div>
           </div>
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
-              </>
-            )}
+          <Button variant="ghost" onClick={() => router.push("/dashboard/tenders")} className="mb-4">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Tenders
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <TenderProgressTracker
+          status={progressStatus}
+          progressPercent={progressPercent}
+          lastUpdate={tender.last_progress_update ? String(tender.last_progress_update) : undefined}
+          submissionDate={tender.submission_date ? String(tender.submission_date) : undefined}
+          outcome={tender.outcome ? String(tender.outcome) : undefined}
+        />
+
+        {/* Info Cards */}
+        <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -239,7 +265,7 @@ export function CustomTenderDetailClient({
                 <div>
                   <p className="text-xs text-muted-foreground">Closing Date</p>
                   <p className="text-sm font-medium">
-                    {tender.close_date ? new Date(tender.close_date).toLocaleDateString() : "Not specified"}
+                    {tender.close_date ? new Date(String(tender.close_date)).toLocaleDateString() : "Not specified"}
                   </p>
                 </div>
               </div>
@@ -271,34 +297,7 @@ export function CustomTenderDetailClient({
           </Card>
         </div>
 
-        {tender.description && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Description</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground leading-relaxed">{String(tender.description)}</p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {analyzing && (
-        <Alert className="mb-6">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <AlertDescription>Analyzing tender document...</AlertDescription>
-        </Alert>
-      )}
-
-      {analysisError && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{analysisError}</AlertDescription>
-        </Alert>
-      )}
-
-      <div className="grid lg:grid-cols-[1fr_400px] gap-6">
-        <Tabs defaultValue="overview" className="space-y-4">
+        <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">
               <Sparkles className="h-4 w-4 mr-2" />
@@ -315,6 +314,10 @@ export function CustomTenderDetailClient({
             <TabsTrigger value="edit">
               <ClipboardList className="h-4 w-4 mr-2" />
               Edit Details
+            </TabsTrigger>
+            <TabsTrigger value="respond">
+              <ClipboardList className="h-4 w-4 mr-2" />
+              Respond
             </TabsTrigger>
           </TabsList>
 
@@ -536,7 +539,7 @@ export function CustomTenderDetailClient({
                   <Input
                     id="title"
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) => setTender({ ...tender, title: e.target.value })}
                   />
                 </div>
 
@@ -545,7 +548,7 @@ export function CustomTenderDetailClient({
                   <Input
                     id="organization"
                     value={formData.organization}
-                    onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+                    onChange={(e) => setTender({ ...tender, organization: e.target.value })}
                   />
                 </div>
 
@@ -556,7 +559,7 @@ export function CustomTenderDetailClient({
                       id="close_date"
                       type="date"
                       value={formData.close_date}
-                      onChange={(e) => setFormData({ ...formData, close_date: e.target.value })}
+                      onChange={(e) => setTender({ ...tender, close_date: e.target.value })}
                     />
                   </div>
 
@@ -565,7 +568,7 @@ export function CustomTenderDetailClient({
                     <Input
                       id="value"
                       value={formData.value}
-                      onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+                      onChange={(e) => setTender({ ...tender, value: e.target.value })}
                     />
                   </div>
                 </div>
@@ -576,7 +579,7 @@ export function CustomTenderDetailClient({
                     id="description"
                     rows={6}
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) => setTender({ ...tender, description: e.target.value })}
                   />
                 </div>
 
@@ -596,18 +599,51 @@ export function CustomTenderDetailClient({
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
 
-        <div className="space-y-4">
-          <TenderContextPanel
-            tenderId={tender.id}
-            tenderTitle={String(tender.title)}
-            tenderDescription={String(tender.description || "")}
-            documents={documents}
-            analysis={analysis}
-          />
-        </div>
+          <TabsContent value="respond" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Response Form</CardTitle>
+                <CardDescription>
+                  Fill in your tender response. Your progress is automatically saved and tracked.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {analysis?.form_fields && analysis.form_fields.length > 0 ? (
+                  <DynamicTenderForm
+                    tenderId={tender.id}
+                    formFields={analysis.form_fields}
+                    documents={documents}
+                    onProgressChange={handleProgressChange}
+                  />
+                ) : (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>No Form Fields Detected</AlertTitle>
+                    <AlertDescription>
+                      Upload tender documents to automatically detect and generate form fields, or manually add response
+                      information.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* AI Strategist Sidebar */}
+      <div className="w-[400px] flex-shrink-0">
+        <TenderContextPanel
+          tenderId={tender.id}
+          tenderTitle={String(tender.title || "")}
+          tenderDescription={String(tender.description || "")}
+          documents={documents}
+          analysis={analysis}
+        />
       </div>
     </div>
   )
 }
+
+export { CustomTenderDetailClient }
