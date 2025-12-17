@@ -98,30 +98,41 @@ const PROJECT_PLAN_SCHEMA = z.object({
 
 export async function POST(request: Request) {
   try {
+    console.log("[v0] Plan generation started")
     const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
     if (!user) {
+      console.log("[v0] Unauthorized - no user")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+
+    console.log("[v0] User authenticated:", user.id)
 
     const body = await request.json()
     const { tenderId, tenderType = "custom", tenderTitle, tenderDescription, analysisData } = body
 
+    console.log("[v0] Request body:", { tenderId, tenderType, tenderTitle })
+
     if (!tenderId || !tenderTitle) {
+      console.log("[v0] Missing required fields")
       return NextResponse.json({ error: "Tender ID and title required" }, { status: 400 })
     }
 
-    const { object: plan } = await generateObject({
-      model: "openai/gpt-4o-mini",
-      schema: PROJECT_PLAN_SCHEMA,
-      prompt: `Generate a comprehensive project plan for this South African tender bid:
+    console.log("[v0] Generating project plan with AI...")
+
+    let plan
+    try {
+      const result = await generateObject({
+        model: "openai/gpt-4o-mini",
+        schema: PROJECT_PLAN_SCHEMA,
+        prompt: `Generate a comprehensive project plan for this South African tender bid:
 
 Title: ${tenderTitle}
 Description: ${tenderDescription || "No description provided"}
-${analysisData ? `Analysis: ${JSON.stringify(analysisData)}` : ""}
+${analysisData ? `Analysis: ${JSON.stringify(analysisData).slice(0, 500)}...` : ""}
 
 Create a detailed, implementable project plan including:
 
@@ -134,64 +145,48 @@ Create a detailed, implementable project plan including:
    - Certification and licensing costs
    - Compliance and legal costs
 
-2. **Timeline** - Realistic phases with tasks
+2. **Timeline** - Realistic phases with tasks (minimum 3 phases)
 
-3. **Resource Requirements** - Personnel, equipment, materials
+3. **Resource Requirements** - Personnel (minimum 3 roles), equipment, materials
 
-4. **Certifications Required** - List ALL certifications needed such as:
-   - CIDB grading (if construction)
-   - Professional registrations (engineers, architects, etc.)
-   - ISO certifications (9001, 14001, 45001)
-   - Industry-specific licenses
-   - B-BBEE certificate
-   - Tax clearance certificate
-   - Company registration documents
-   Include: name, issuing authority, validity period, cost, processing time, and priority
+4. **Certifications Required** - List certifications needed (minimum 3):
+   - CIDB grading, ISO certifications, professional registrations, B-BBEE, tax clearance, etc.
+   - Include: name, issuer, validity period, cost (in ZAR), processing time, and priority
 
-5. **Insurance Requirements** - Specify ALL insurance policies needed:
-   - Professional indemnity insurance
-   - Public liability insurance
-   - Employer's liability (COIDA)
-   - All-risk insurance
-   - Performance bonds
-   - Plant and equipment insurance
-   Include: type, coverage amount, provider suggestions, annual cost, priority
+5. **Insurance Requirements** - Specify insurance policies (minimum 3):
+   - Professional indemnity, public liability, COIDA, all-risk, performance bonds
+   - Include: type, coverage amount (in ZAR), provider suggestions, annual cost, priority
 
-6. **Compliance Checklist** - South African regulatory requirements:
-   - B-BBEE compliance
-   - PFMA/MFMA compliance (if government)
-   - Tax compliance (SARS)
-   - Labour law compliance (BCEA, LRA)
-   - Health & Safety (OHS Act)
-   - Environmental regulations
-   - Municipal by-laws
-   - Industry-specific regulations
-   For each: requirement, current status, deadline, evidence needed, notes
+6. **Compliance Checklist** - South African regulatory requirements (minimum 5):
+   - B-BBEE, PFMA/MFMA, tax compliance, labour law, health & safety, environmental
+   - For each: requirement, status ("pending"), deadline, evidence needed, notes
 
-7. **Regulatory Requirements** - Specific regulations to comply with:
-   - Relevant Acts and regulations
-   - Reporting obligations
-   - Inspection requirements
-   - Penalties for non-compliance
+7. **Regulatory Requirements** - Specific regulations (minimum 3)
 
-8. **Financial Requirements** - Financial readiness:
-   - Bank guarantee amount (if required)
-   - Cash flow requirements (monthly breakdown)
-   - Working capital needed
-   - Credit facilities recommendations
+8. **Financial Requirements** - bank guarantee, cash flow, working capital, credit facilities
 
-9. **Capacity Requirements** - Demonstrate capacity:
-   - Past similar projects (description)
-   - Number of references needed
-   - Equipment that must be owned
-   - Personnel qualifications required
+9. **Capacity Requirements** - past projects, references, equipment, personnel qualifications
 
-10. **Risk Assessment** - Identify and mitigate risks
+10. **Risk Assessment** - Identify risks (minimum 5 risks)
 
-11. **Success Criteria & Deliverables**
+11. **Success Criteria & Deliverables** (minimum 3 each)
 
-Be specific, practical, and aligned with South African procurement practices.`,
-    })
+Be specific with South African context (ZAR currency, local regulations, B-BBEE requirements).`,
+      })
+      plan = result.object
+      console.log("[v0] AI plan generated successfully")
+    } catch (aiError: any) {
+      console.error("[v0] AI generation error:", aiError)
+      return NextResponse.json(
+        {
+          error: "Failed to generate plan with AI",
+          details: aiError.message,
+        },
+        { status: 500 },
+      )
+    }
+
+    console.log("[v0] Saving plan to database...")
 
     const { data: savedPlan, error } = await supabase
       .from("tender_project_plans")
@@ -221,12 +216,23 @@ Be specific, practical, and aligned with South African procurement practices.`,
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error("[v0] Database error:", error)
+      throw error
+    }
 
+    console.log("[v0] Plan saved successfully")
     return NextResponse.json({ plan: savedPlan })
-  } catch (error) {
-    console.error("[Strategist] Plan generation error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  } catch (error: any) {
+    console.error("[v0] Plan generation error:", error)
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error.message,
+        stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+      },
+      { status: 500 },
+    )
   }
 }
 
