@@ -22,9 +22,12 @@ import {
   DollarSign,
   Shield,
   ArrowRight,
+  ClipboardList,
+  CheckCircle2,
 } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface TenderContext {
   id: string
@@ -63,12 +66,14 @@ export function TenderContextStrategistPanel({ tender, className }: Props) {
   const [readiness, setReadiness] = useState<any>(null)
   const [loadingReadiness, setLoadingReadiness] = useState(false)
   const [isExpanded, setIsExpanded] = useState(true)
-  const [quickAnalysis, setQuickAnalysis] = useState<any>(null)
+  const [generatingPlan, setGeneratingPlan] = useState(false)
+  const [projectPlan, setProjectPlan] = useState<any>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (tender.id) {
       loadReadiness()
+      loadProjectPlan()
     }
   }, [tender.id])
 
@@ -189,6 +194,70 @@ export function TenderContextStrategistPanel({ tender, className }: Props) {
     setInput(question)
   }
 
+  const loadProjectPlan = async () => {
+    try {
+      const response = await fetch(`/api/strategist/plan?tenderId=${tender.id}&tenderType=custom`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.plan) {
+          setProjectPlan(data.plan)
+        }
+      }
+    } catch (error) {
+      console.error("[v0] Error loading project plan:", error)
+    }
+  }
+
+  const handleGeneratePlan = async () => {
+    setGeneratingPlan(true)
+    toast.info("Generating comprehensive project plan...")
+
+    try {
+      const response = await fetch("/api/strategist/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenderId: tender.id,
+          tenderType: "custom",
+          tenderTitle: tender.title,
+          tenderDescription: tender.description,
+          analysisData: tender.analysis,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setProjectPlan(data.plan)
+        toast.success("Project plan generated successfully!")
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `I've generated a comprehensive project plan for "${tender.title}". The plan includes:
+
+✅ Budget breakdown with all costs
+✅ Timeline with phases and tasks
+✅ Required certifications and licenses
+✅ Insurance requirements
+✅ Compliance checklist
+✅ Risk assessment
+✅ Resource requirements
+
+You can view the full plan in the "Comprehensive Planning" section. Would you like me to help you with any specific aspect of the plan?`,
+          },
+        ])
+      } else {
+        toast.error("Failed to generate project plan")
+      }
+    } catch (error) {
+      console.error("[v0] Error generating plan:", error)
+      toast.error("An error occurred while generating the plan")
+    } finally {
+      setGeneratingPlan(false)
+    }
+  }
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-500"
     if (score >= 60) return "text-yellow-500"
@@ -281,6 +350,62 @@ export function TenderContextStrategistPanel({ tender, className }: Props) {
               </div>
             ) : null}
 
+            {!projectPlan ? (
+              <div className="p-4 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <ClipboardList className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold mb-1">Start Your Bid Strategy</h4>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Generate a comprehensive project plan with budget breakdowns, certifications, insurance,
+                      compliance requirements, and risk assessment.
+                    </p>
+                    <Button size="sm" className="w-full" onClick={handleGeneratePlan} disabled={generatingPlan}>
+                      {generatingPlan ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                          Generating Plan...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-3 w-3 mr-2" />
+                          Generate Project Plan
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 rounded-lg border border-green-500/30 bg-green-500/5 space-y-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  <span className="text-sm font-medium text-green-700 dark:text-green-400">Project Plan Generated</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  View your comprehensive plan in the "Comprehensive Planning" section
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full mt-2 bg-transparent"
+                  onClick={handleGeneratePlan}
+                  disabled={generatingPlan}
+                >
+                  {generatingPlan ? (
+                    <>
+                      <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    <>Regenerate Plan</>
+                  )}
+                </Button>
+              </div>
+            )}
+
             {/* Quick Actions */}
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground">Quick Actions</p>
@@ -332,7 +457,7 @@ export function TenderContextStrategistPanel({ tender, className }: Props) {
                     <div
                       key={i}
                       className={cn(
-                        "p-3 rounded-lg text-sm",
+                        "p-3 rounded-lg text-sm whitespace-pre-wrap",
                         message.role === "user" ? "bg-primary text-primary-foreground ml-8" : "bg-muted mr-8",
                       )}
                     >
@@ -385,7 +510,6 @@ export function TenderContextPanel({
   analysis,
   className,
 }: TenderContextPanelProps) {
-  // Sanitize analysis to ensure no nested objects are passed
   const sanitizedAnalysis = analysis
     ? {
         ...analysis,
