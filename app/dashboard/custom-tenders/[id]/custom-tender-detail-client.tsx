@@ -3,35 +3,42 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Separator } from "@/components/ui/separator"
 import {
   AlertCircle,
   FileText,
   Download,
   Loader2,
   Save,
-  ArrowLeft,
   Calendar,
   Building2,
   DollarSign,
   Sparkles,
-  Target,
-  ClipboardList,
   CheckCircle2,
   XCircle,
-  TrendingUp,
   MapPin,
+  LayoutDashboard,
+  ClipboardCheck,
+  FolderOpen,
+  Edit3,
+  Calculator,
+  Award,
+  MessageSquare,
+  ChevronRight,
+  PanelRightClose,
+  PanelRightOpen,
 } from "lucide-react"
 import { TenderContextPanel } from "@/components/strategist/tender-context-panel"
 import { useToast } from "@/hooks/use-toast"
 import { TenderProgressTracker } from "@/components/tender/progress-tracker"
 import { DynamicTenderForm } from "@/components/dynamic-tender-form"
+import { BOQManager } from "@/components/tender/boq-manager"
+import { ComprehensivePlanView } from "@/components/tender/comprehensive-plan-view"
+import { cn } from "@/lib/utils"
 
 interface CustomTenderDetailClientProps {
   tender: any
@@ -57,6 +64,9 @@ export default function CustomTenderDetailClient({
   const [isUploading, setIsUploading] = useState(false)
   const [progressPercent, setProgressPercent] = useState(tender.progress_percent || 0)
   const [progressStatus, setProgressStatus] = useState(tender.progress_status || "reviewing")
+  const [formProgress, setFormProgress] = useState(0)
+  const [activeSection, setActiveSection] = useState<string>("overview")
+  const [strategistOpen, setStrategistOpen] = useState(true)
 
   const formData = {
     title: String(tender.title || ""),
@@ -191,6 +201,15 @@ export default function CustomTenderDetailClient({
     }
   }
 
+  const sections = [
+    { id: "overview", label: "Overview", icon: LayoutDashboard },
+    { id: "requirements", label: "Requirements", icon: ClipboardCheck },
+    { id: "documents", label: "Documents", icon: FolderOpen },
+    { id: "financial", label: "Financial & BOQ", icon: Calculator },
+    { id: "planning", label: "Planning", icon: Award },
+    { id: "respond", label: "Response Form", icon: Edit3 },
+  ]
+
   if (!tender) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -205,52 +224,28 @@ export default function CustomTenderDetailClient({
   }
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-120px)]">
-      <div className="flex-1 overflow-y-auto pr-4 space-y-6">
-        {/* Header with progress tracker */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold text-balance">{String(tender.title || "Untitled Tender")}</h1>
-            <div className="flex items-center gap-4 mt-3 flex-wrap">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Building2 className="h-4 w-4" />
-                <span>{String(tender.organization || "N/A")}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                <span>
-                  Closes: {tender.close_date ? new Date(String(tender.close_date)).toLocaleDateString() : "N/A"}
-                </span>
-              </div>
-              {tender.value && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <DollarSign className="h-4 w-4" />
-                  <span>{String(tender.value)}</span>
-                </div>
-              )}
-            </div>
+    <div className="flex flex-col h-full">
+      <div className="border-b bg-background p-6 space-y-4">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight">{String(tender.title || "Untitled Tender")}</h1>
+            <p className="text-muted-foreground">{String(tender.organization || "No organization")}</p>
           </div>
-          <Button variant="ghost" onClick={() => router.push("/dashboard/tenders")} className="mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Tenders
+          <Button variant="outline" size="sm" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Save
           </Button>
         </div>
 
-        <TenderProgressTracker
-          status={progressStatus}
-          progressPercent={progressPercent}
-          lastUpdate={tender.last_progress_update ? String(tender.last_progress_update) : undefined}
-          submissionDate={tender.submission_date ? String(tender.submission_date) : undefined}
-          outcome={tender.outcome ? String(tender.outcome) : undefined}
-        />
+        <TenderProgressTracker tenderId={tender.id} tenderType="custom" progress={formProgress} />
 
-        {/* Info Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
+        {/* Key info cards */}
+        <div className="grid gap-3 md:grid-cols-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <Building2 className="h-5 w-5 text-muted-foreground" />
-                <div>
+                <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Organization</p>
                   <p className="text-sm font-medium">{String(tender.organization || "N/A")}</p>
                 </div>
@@ -259,13 +254,13 @@ export default function CustomTenderDetailClient({
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <Calendar className="h-5 w-5 text-muted-foreground" />
-                <div>
+                <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Closing Date</p>
                   <p className="text-sm font-medium">
-                    {tender.close_date ? new Date(String(tender.close_date)).toLocaleDateString() : "Not specified"}
+                    {tender.close_date ? new Date(tender.close_date).toLocaleDateString() : "N/A"}
                   </p>
                 </div>
               </div>
@@ -273,342 +268,398 @@ export default function CustomTenderDetailClient({
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <DollarSign className="h-5 w-5 text-muted-foreground" />
-                <div>
+                <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Value</p>
-                  <p className="text-sm font-medium">{String(tender.value || "Not specified")}</p>
+                  <p className="text-sm font-medium">{String(tender.value || "N/A")}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <MapPin className="h-5 w-5 text-muted-foreground" />
-                <div>
+                <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Location</p>
-                  <p className="text-sm font-medium">{String(tender.location || "Not specified")}</p>
+                  <p className="text-sm font-medium">{String(tender.location || "N/A")}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
+      </div>
 
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">
-              <Sparkles className="h-4 w-4 mr-2" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="requirements">
-              <Target className="h-4 w-4 mr-2" />
-              Requirements
-            </TabsTrigger>
-            <TabsTrigger value="documents">
-              <FileText className="h-4 w-4 mr-2" />
-              Documents
-            </TabsTrigger>
-            <TabsTrigger value="edit">
-              <ClipboardList className="h-4 w-4 mr-2" />
-              Edit Details
-            </TabsTrigger>
-            <TabsTrigger value="respond">
-              <ClipboardList className="h-4 w-4 mr-2" />
-              Respond
-            </TabsTrigger>
-          </TabsList>
+      <div className="flex flex-1 overflow-hidden">
+        <div className="w-56 border-r bg-muted/20 p-4">
+          <nav className="space-y-1">
+            {sections.map((section) => {
+              const Icon = section.icon
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+                    activeSection === section.id
+                      ? "bg-primary text-primary-foreground font-medium"
+                      : "hover:bg-muted text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {section.label}
+                </button>
+              )
+            })}
+          </nav>
+        </div>
 
-          <TabsContent value="overview" className="space-y-4">
-            {!analyzing && !analysisError && analysis ? (
-              <>
-                {analysis.tender_summary && typeof analysis.tender_summary === "object" && (
+        <div className={cn("flex-1 overflow-auto", strategistOpen ? "" : "")}>
+          <div className="p-6 space-y-6 max-w-7xl mx-auto">
+            {/* Overview Section */}
+            {activeSection === "overview" && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Tender Overview</h2>
+                  <p className="text-muted-foreground">AI-powered analysis and insights for this tender</p>
+                </div>
+
+                {/* AI Summary */}
+                {analysis?.tender_summary && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Tender Summary</CardTitle>
+                      <CardTitle className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        Tender Summary
+                      </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="grid grid-cols-2 gap-4">
+                    <CardContent>
+                      <div className="grid gap-4 md:grid-cols-2">
                         <div>
-                          <p className="text-sm font-medium text-muted-foreground">Tender Number</p>
-                          <p className="text-sm">{String(analysis.tender_summary.tender_number || "Not specified")}</p>
+                          <Label className="text-muted-foreground">Tender Number</Label>
+                          <p className="text-lg font-semibold mt-1">
+                            {String(analysis.tender_summary.tender_number || "N/A")}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-muted-foreground">Entity</p>
-                          <p className="text-sm">{String(analysis.tender_summary.entity || "Not specified")}</p>
+                          <Label className="text-muted-foreground">Entity</Label>
+                          <p className="text-lg font-semibold mt-1">
+                            {String(analysis.tender_summary.entity || "N/A")}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-muted-foreground">Closing Date</p>
-                          <p className="text-sm">{String(analysis.tender_summary.closing_date || "Not specified")}</p>
+                          <Label className="text-muted-foreground">Contact Email</Label>
+                          <p className="text-lg font-semibold mt-1">
+                            {String(analysis.tender_summary.contact_email || "N/A")}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-muted-foreground">Contact Email</p>
-                          <p className="text-sm">{String(analysis.tender_summary.contact_email || "Not specified")}</p>
+                          <Label className="text-muted-foreground">Contract Duration</Label>
+                          <p className="text-lg font-semibold mt-1">
+                            {String(analysis.tender_summary.contract_duration || "N/A")}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Validity Period</Label>
+                          <p className="text-lg font-semibold mt-1">
+                            {String(analysis.tender_summary.validity_period || "N/A")}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Submission Method</Label>
+                          <p className="text-lg font-semibold mt-1">
+                            {String(analysis.tender_summary.submission_method || "N/A")}
+                          </p>
                         </div>
                       </div>
                       {analysis.tender_summary.description && (
-                        <div className="mt-4">
-                          <p className="text-sm font-medium text-muted-foreground mb-2">Description</p>
-                          <p className="text-sm whitespace-pre-wrap">{String(analysis.tender_summary.description)}</p>
-                        </div>
+                        <>
+                          <Separator className="my-4" />
+                          <div>
+                            <Label className="text-muted-foreground">Description</Label>
+                            <p className="text-sm leading-relaxed mt-2">
+                              {String(analysis.tender_summary.description)}
+                            </p>
+                          </div>
+                        </>
+                      )}
+                      {analysis.tender_summary.compulsory_briefing && (
+                        <>
+                          <Separator className="my-4" />
+                          <Alert>
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Compulsory Briefing</AlertTitle>
+                            <AlertDescription>{String(analysis.tender_summary.compulsory_briefing)}</AlertDescription>
+                          </Alert>
+                        </>
                       )}
                     </CardContent>
                   </Card>
                 )}
 
-                {analysis.formFields && analysis.formFields.length > 0 && (
+                {/* Action Plan */}
+                {analysis?.actionable_tasks && analysis.actionable_tasks.length > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Form Fields Detected</CardTitle>
-                      <CardDescription>Fields identified in the tender documents</CardDescription>
+                      <CardTitle>Action Plan</CardTitle>
+                      <CardDescription>Prioritized tasks to win this tender</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        {analysis.formFields.slice(0, 5).map((field: any, index: number) => (
-                          <div key={index} className="border-b pb-3 last:border-0">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="font-medium text-sm">{field.fieldName}</span>
-                              <Badge variant="outline" className="text-xs">
-                                {field.fieldType}
+                        {analysis.actionable_tasks.map((task: any, index: number) => (
+                          <div
+                            key={index}
+                            className="flex items-start gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="flex-shrink-0 mt-1">
+                              <Badge
+                                variant={
+                                  task.priority === "high"
+                                    ? "destructive"
+                                    : task.priority === "medium"
+                                      ? "default"
+                                      : "secondary"
+                                }
+                              >
+                                {task.priority}
                               </Badge>
                             </div>
-                            {field.suggestedValue && (
-                              <p className="text-sm text-muted-foreground">Suggested: {field.suggestedValue}</p>
-                            )}
+                            <div className="flex-1 space-y-1">
+                              <p className="font-medium">{task.task}</p>
+                              <p className="text-sm text-muted-foreground">{task.rationale}</p>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />
                           </div>
                         ))}
-                        {analysis.formFields.length > 5 && (
-                          <p className="text-xs text-muted-foreground text-center pt-2">
-                            + {analysis.formFields.length - 5} more fields
-                          </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Strategic Recommendations */}
+                {analysis?.strategic_recommendations && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Strategic Recommendations</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                        {String(analysis.strategic_recommendations)}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {/* Requirements Section */}
+            {activeSection === "requirements" && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Requirements & Compliance</h2>
+                  <p className="text-muted-foreground">
+                    Mandatory requirements, disqualifiers, and strengthening factors
+                  </p>
+                </div>
+
+                {analysis?.compliance_summary && (
+                  <div className="space-y-4">
+                    {/* Requirements */}
+                    {analysis.compliance_summary.requirements &&
+                      analysis.compliance_summary.requirements.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <CheckCircle2 className="h-5 w-5 text-green-600" />
+                              Mandatory Requirements
+                            </CardTitle>
+                            <CardDescription>You must meet all of these to qualify</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <ul className="space-y-2">
+                              {analysis.compliance_summary.requirements.map((req: string, index: number) => (
+                                <li key={index} className="flex items-start gap-2 text-sm">
+                                  <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                  <span>{req}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                    {/* Disqualifiers */}
+                    {analysis.compliance_summary.disqualifiers &&
+                      analysis.compliance_summary.disqualifiers.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <XCircle className="h-5 w-5 text-red-600" />
+                              Disqualifying Factors
+                            </CardTitle>
+                            <CardDescription>Avoid these or risk being disqualified</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <ul className="space-y-2">
+                              {analysis.compliance_summary.disqualifiers.map((dis: string, index: number) => (
+                                <li key={index} className="flex items-start gap-2 text-sm text-red-600">
+                                  <XCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                  <span>{dis}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                    {/* Strengtheners */}
+                    {analysis.compliance_summary.strengtheners &&
+                      analysis.compliance_summary.strengtheners.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                              <Sparkles className="h-5 w-5 text-blue-600" />
+                              Competitive Advantages
+                            </CardTitle>
+                            <CardDescription>These factors will strengthen your bid</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <ul className="space-y-2">
+                              {analysis.compliance_summary.strengtheners.map((str: string, index: number) => (
+                                <li key={index} className="flex items-start gap-2 text-sm text-blue-600">
+                                  <Sparkles className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                  <span>{str}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </CardContent>
+                        </Card>
+                      )}
+                  </div>
+                )}
+
+                {/* Form Fields Detection */}
+                {analysis?.form_fields && analysis.form_fields.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Detected Form Fields</CardTitle>
+                      <CardDescription>{analysis.form_fields.length} fields identified from documents</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                        {analysis.form_fields.slice(0, 12).map((field: any, index: number) => (
+                          <div key={index} className="flex items-center gap-2 p-2 border rounded">
+                            <Badge variant="outline" className="text-xs">
+                              {field.type}
+                            </Badge>
+                            <span className="text-sm truncate">{field.label}</span>
+                          </div>
+                        ))}
+                        {analysis.form_fields.length > 12 && (
+                          <div className="flex items-center justify-center p-2 border rounded bg-muted">
+                            <span className="text-sm text-muted-foreground">
+                              +{analysis.form_fields.length - 12} more
+                            </span>
+                          </div>
                         )}
                       </div>
                     </CardContent>
                   </Card>
                 )}
-              </>
-            ) : analyzing ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Loader2 className="h-12 w-12 mx-auto mb-4 text-primary animate-spin" />
-                  <p className="text-muted-foreground">Analyzing tender...</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <p className="text-muted-foreground">No analysis available yet</p>
-                  <p className="text-sm text-muted-foreground mt-2">Upload a document to start analysis</p>
-                </CardContent>
-              </Card>
+              </div>
             )}
-          </TabsContent>
 
-          <TabsContent value="requirements" className="space-y-4">
-            {analysis?.compliance_summary && typeof analysis.compliance_summary === "object" ? (
-              <>
-                {analysis.compliance_summary.requirements && analysis.compliance_summary.requirements.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5 text-green-600" />
-                        Mandatory Requirements
-                      </CardTitle>
-                      <CardDescription>You must meet these to qualify</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-3">
-                        {analysis.compliance_summary.requirements.map((req: string, idx: number) => (
-                          <li key={idx} className="flex items-start gap-2 pl-6 relative">
-                            <span className="absolute left-0 top-1 w-4 h-4 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-xs font-medium text-green-700 dark:text-green-300">
-                              {idx + 1}
-                            </span>
-                            <span className="text-sm">{req}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
-                {analysis.compliance_summary.disqualifiers && analysis.compliance_summary.disqualifiers.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-destructive">
-                        <XCircle className="h-5 w-5" />
-                        Disqualifiers
-                      </CardTitle>
-                      <CardDescription>These will eliminate your bid</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {analysis.compliance_summary.disqualifiers.map((dis: string, idx: number) => (
-                          <li key={idx} className="flex items-start gap-2">
-                            <AlertCircle className="h-4 w-4 text-destructive mt-0.5" />
-                            <span className="text-sm text-destructive">{dis}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
-                {analysis.compliance_summary.strengtheners && analysis.compliance_summary.strengtheners.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-green-600">
-                        <TrendingUp className="h-5 w-5" />
-                        Strengtheners
-                      </CardTitle>
-                      <CardDescription>These will improve your chances</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {analysis.compliance_summary.strengtheners.map((str: string, idx: number) => (
-                          <li key={idx} className="flex items-start gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5" />
-                            <span className="text-sm text-green-600">{str}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
-              </>
-            ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Target className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <p className="text-muted-foreground">
-                    {analyzing ? "Extracting requirements..." : "No requirements available"}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="documents" className="space-y-4">
-            {documents.length > 0 ? (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">{documents.length} Document(s)</h3>
+            {/* Documents Section */}
+            {activeSection === "documents" && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Tender Documents</h2>
+                  <p className="text-muted-foreground">{documents.length} document(s) uploaded</p>
                 </div>
-                <div className="grid gap-3">
-                  {documents.map((doc: any) => (
-                    <Card key={doc.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-3 flex-1">
-                            <FileText className="h-5 w-5 text-primary mt-0.5" />
-                            <div>
-                              <CardTitle className="text-base">{doc.original_filename}</CardTitle>
-                              <CardDescription className="text-xs mt-1">
-                                {new Date(doc.created_at).toLocaleDateString()}
-                              </CardDescription>
+
+                {documents.length > 0 ? (
+                  <div className="grid gap-4">
+                    {documents.map((doc: any) => (
+                      <Card key={doc.id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-6">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-4 flex-1">
+                              <div className="p-3 bg-primary/10 rounded-lg">
+                                <FileText className="h-6 w-6 text-primary" />
+                              </div>
+                              <div className="flex-1">
+                                <h3 className="font-semibold text-lg">{doc.original_filename}</h3>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  Uploaded {new Date(doc.created_at).toLocaleDateString()}
+                                </p>
+                              </div>
                             </div>
+                            <Button variant="outline" size="sm" onClick={() => handleDownload(doc)}>
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </Button>
                           </div>
-                          <Button variant="outline" size="sm" onClick={() => handleDownload(doc)}>
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardHeader>
-                    </Card>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <p className="text-muted-foreground">No documents uploaded</p>
-                </CardContent>
-              </Card>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card>
+                    <CardContent className="py-16 text-center">
+                      <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                      <p className="text-lg font-medium mb-2">No documents uploaded</p>
+                      <p className="text-sm text-muted-foreground">Upload tender documents to enable analysis</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             )}
-          </TabsContent>
 
-          <TabsContent value="edit" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Edit Tender Details</CardTitle>
-                <CardDescription>Update tender information and save changes</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setTender({ ...tender, title: e.target.value })}
-                  />
+            {/* Financial & BOQ Section */}
+            {activeSection === "financial" && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Financial Planning & BOQ</h2>
+                  <p className="text-muted-foreground">Comprehensive cost analysis and pricing strategy</p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="organization">Organization</Label>
-                  <Input
-                    id="organization"
-                    value={formData.organization}
-                    onChange={(e) => setTender({ ...tender, organization: e.target.value })}
-                  />
+                <BOQManager
+                  tenderId={tender.id}
+                  tenderType="custom"
+                  tenderTitle={String(tender.title || "")}
+                  tenderDescription={String(tender.description || "")}
+                  analysisData={analysis}
+                />
+              </div>
+            )}
+
+            {/* Planning Section */}
+            {activeSection === "planning" && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Comprehensive Planning</h2>
+                  <p className="text-muted-foreground">
+                    Certifications, insurance, compliance, financial readiness, and capacity requirements
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="close_date">Closing Date</Label>
-                    <Input
-                      id="close_date"
-                      type="date"
-                      value={formData.close_date}
-                      onChange={(e) => setTender({ ...tender, close_date: e.target.value })}
-                    />
-                  </div>
+                <ComprehensivePlanView plan={null} />
+              </div>
+            )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="value">Value</Label>
-                    <Input
-                      id="value"
-                      value={formData.value}
-                      onChange={(e) => setTender({ ...tender, value: e.target.value })}
-                    />
-                  </div>
+            {/* Response Form Section */}
+            {activeSection === "respond" && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Response Form</h2>
+                  <p className="text-muted-foreground">
+                    Fill in your tender response. Progress is automatically tracked and saved.
+                  </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    rows={6}
-                    value={formData.description}
-                    onChange={(e) => setTender({ ...tender, description: e.target.value })}
-                  />
-                </div>
-
-                <Button onClick={handleSave} disabled={isSaving} className="w-full">
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Changes
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="respond" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Response Form</CardTitle>
-                <CardDescription>
-                  Fill in your tender response. Your progress is automatically saved and tracked.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
                 {analysis?.form_fields && analysis.form_fields.length > 0 ? (
                   <DynamicTenderForm
                     tenderId={tender.id}
@@ -617,30 +668,56 @@ export default function CustomTenderDetailClient({
                     onProgressChange={handleProgressChange}
                   />
                 ) : (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>No Form Fields Detected</AlertTitle>
-                    <AlertDescription>
-                      Upload tender documents to automatically detect and generate form fields, or manually add response
-                      information.
-                    </AlertDescription>
-                  </Alert>
+                  <Card>
+                    <CardContent className="py-16 text-center">
+                      <Edit3 className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                      <p className="text-lg font-medium mb-2">No Form Fields Detected</p>
+                      <p className="text-sm text-muted-foreground">
+                        Upload tender documents to automatically detect and generate form fields
+                      </p>
+                    </CardContent>
+                  </Card>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+              </div>
+            )}
+          </div>
+        </div>
 
-      {/* AI Strategist Sidebar */}
-      <div className="w-[400px] flex-shrink-0">
-        <TenderContextPanel
-          tenderId={tender.id}
-          tenderTitle={String(tender.title || "")}
-          tenderDescription={String(tender.description || "")}
-          documents={documents}
-          analysis={analysis}
-        />
+        {strategistOpen && (
+          <div className="w-96 border-l bg-muted/20 flex flex-col">
+            <div className="p-4 border-b flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold">AI Strategist</h3>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setStrategistOpen(false)}>
+                <PanelRightClose className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <TenderContextPanel
+                tenderId={tender.id}
+                tenderTitle={String(tender.title || "")}
+                tenderDescription={String(tender.description || "")}
+                documents={documents}
+                analysis={analysis}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Collapsed strategist toggle */}
+        {!strategistOpen && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="fixed bottom-6 right-6 shadow-lg bg-transparent"
+            onClick={() => setStrategistOpen(true)}
+          >
+            <PanelRightOpen className="h-4 w-4 mr-2" />
+            AI Strategist
+          </Button>
+        )}
       </div>
     </div>
   )
