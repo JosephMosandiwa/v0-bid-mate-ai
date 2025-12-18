@@ -48,6 +48,7 @@ interface Message {
 interface Props {
   tender: TenderContext
   className?: string
+  onPlanGenerated?: (plan: any) => void // Added callback for when plan is generated
 }
 
 interface TenderContextPanelProps {
@@ -59,7 +60,7 @@ interface TenderContextPanelProps {
   className?: string
 }
 
-export function TenderContextStrategistPanel({ tender, className }: Props) {
+export function TenderContextStrategistPanel({ tender, className, onPlanGenerated }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
@@ -228,27 +229,37 @@ export function TenderContextStrategistPanel({ tender, className }: Props) {
       if (response.ok) {
         const data = await response.json()
         setProjectPlan(data.plan)
+
+        if (onPlanGenerated && data.plan) {
+          onPlanGenerated(data.plan)
+        }
+
         toast.success("Project plan generated successfully!")
 
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content: `I've generated a comprehensive project plan for "${tender.title}". The plan includes:
+            content: `✅ I've generated a comprehensive project plan for "${tender.title}". 
 
-✅ Budget breakdown with all costs
-✅ Timeline with phases and tasks
-✅ Required certifications and licenses
-✅ Insurance requirements
-✅ Compliance checklist
-✅ Risk assessment
-✅ Resource requirements
+The plan includes:
+• Budget breakdown: R${data.plan.estimated_budget?.total?.toLocaleString() || "0"} total
+• Timeline: ${data.plan.estimated_timeline?.total_weeks || 0} weeks across ${data.plan.estimated_timeline?.phases?.length || 0} phases
+• ${data.plan.certifications_required?.length || 0} required certifications (CIDB, ISO, B-BBEE, etc.)
+• ${data.plan.insurance_requirements?.length || 0} insurance policies needed
+• ${data.plan.compliance_checklist?.length || 0} compliance requirements
+• Risk assessment with ${data.plan.risk_assessment?.risks?.length || 0} identified risks
 
-You can view the full plan in the "Comprehensive Planning" section. Would you like me to help you with any specific aspect of the plan?`,
+📋 View the complete plan in the "Comprehensive Planning" section
+💰 Generate your BOQ in the "Financial & BOQ" section based on this plan
+
+How can I help you with your bid strategy?`,
           },
         ])
       } else {
-        toast.error("Failed to generate project plan")
+        const error = await response.json()
+        console.error("[v0] Plan generation error:", error)
+        toast.error(error.details || "Failed to generate project plan")
       }
     } catch (error) {
       console.error("[v0] Error generating plan:", error)
@@ -463,7 +474,7 @@ You can view the full plan in the "Comprehensive Planning" section. Would you li
                     >
                       {message.content || (
                         <span className="flex items-center gap-2">
-                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                           Thinking...
                         </span>
                       )}

@@ -99,6 +99,8 @@ function ScrapedTenderDetailClient({ id }: { id: string }) {
   const [formProgress, setFormProgress] = useState(0)
   const [activeSection, setActiveSection] = useState<string>("overview")
   const [strategistOpen, setStrategistOpen] = useState(true)
+  const [projectPlan, setProjectPlan] = useState<any>(null)
+  const [boqData, setBoqData] = useState<any>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -169,6 +171,26 @@ function ScrapedTenderDetailClient({ id }: { id: string }) {
 
     triggerAnalysis()
   }, [documents, id, analyzing, toast])
+
+  useEffect(() => {
+    const loadProjectPlan = async () => {
+      try {
+        const response = await fetch(`/api/strategist/plan?tenderId=${tender.id}&tenderType=scraped`)
+        if (response.ok) {
+          const { plan } = await response.json()
+          if (plan) {
+            setProjectPlan(plan)
+          }
+        }
+      } catch (error) {
+        console.error("[v0] Error loading project plan:", error)
+      }
+    }
+
+    if (tender) {
+      loadProjectPlan()
+    }
+  }, [tender])
 
   const handleProgressChange = (progress: number) => {
     setFormProgress(progress)
@@ -575,20 +597,35 @@ function ScrapedTenderDetailClient({ id }: { id: string }) {
                   tenderTitle={tender.title}
                   tenderDescription={tender.description}
                   analysisData={analysis}
+                  projectPlan={projectPlan}
+                  onBoqUpdate={(newBoq) => setBoqData(newBoq)}
                 />
               </div>
             )}
 
             {activeSection === "planning" && (
               <div className="space-y-6">
-                <div>
-                  <h2 className="text-2xl font-bold mb-2">Comprehensive Planning</h2>
-                  <p className="text-muted-foreground">
-                    Certifications, insurance, compliance, financial readiness, and capacity requirements
-                  </p>
-                </div>
-
-                <ComprehensivePlanView plan={null} />
+                {!projectPlan ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Generate Comprehensive Project Plan</CardTitle>
+                      <CardDescription>
+                        Create a detailed plan with budget breakdowns, certifications, insurance, compliance
+                        requirements
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-center">
+                        <p className="text-sm font-medium mb-2">👉 Use the AI Strategist panel to generate your plan</p>
+                        <p className="text-xs text-muted-foreground">
+                          Click "Generate Project Plan" in the strategist panel on the right
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <ComprehensivePlanView plan={projectPlan} />
+                )}
               </div>
             )}
 
@@ -642,6 +679,10 @@ function ScrapedTenderDetailClient({ id }: { id: string }) {
                 tenderDescription={tender.description}
                 documents={documents}
                 analysis={analysis}
+                onPlanGenerated={(plan) => {
+                  setProjectPlan(plan)
+                  setActiveSection("planning")
+                }}
               />
             </div>
           </div>

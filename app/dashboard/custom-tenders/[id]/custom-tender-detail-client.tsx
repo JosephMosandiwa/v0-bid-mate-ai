@@ -67,6 +67,8 @@ export default function CustomTenderDetailClient({
   const [formProgress, setFormProgress] = useState(0)
   const [activeSection, setActiveSection] = useState<string>("overview")
   const [strategistOpen, setStrategistOpen] = useState(true)
+  const [projectPlan, setProjectPlan] = useState<any>(null)
+  const [boqData, setBoqData] = useState<any>(null)
 
   const formData = {
     title: String(tender.title || ""),
@@ -137,6 +139,24 @@ export default function CustomTenderDetailClient({
 
     checkAndTriggerAnalysis()
   }, [documents, analyzing, analysis, tender.id, toast])
+
+  useEffect(() => {
+    const loadProjectPlan = async () => {
+      try {
+        const response = await fetch(`/api/strategist/plan?tenderId=${tender.id}&tenderType=custom`)
+        if (response.ok) {
+          const { plan } = await response.json()
+          if (plan) {
+            setProjectPlan(plan)
+          }
+        }
+      } catch (error) {
+        console.error("[v0] Error loading project plan:", error)
+      }
+    }
+
+    loadProjectPlan()
+  }, [tender.id])
 
   const handleSave = async () => {
     try {
@@ -632,7 +652,22 @@ export default function CustomTenderDetailClient({
                   tenderTitle={String(tender.title || "")}
                   tenderDescription={String(tender.description || "")}
                   analysisData={analysis}
+                  projectPlan={projectPlan}
+                  onBoqUpdate={(newBoq) => setBoqData(newBoq)}
                 />
+
+                {!projectPlan && (
+                  <Alert>
+                    <Sparkles className="h-4 w-4" />
+                    <AlertDescription>
+                      <p className="font-medium">Generate a project plan first</p>
+                      <p className="text-sm mt-1">
+                        Use the AI Strategist to create a comprehensive project plan. The BOQ will be more accurate with
+                        cost estimates from your project plan.
+                      </p>
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             )}
 
@@ -646,7 +681,33 @@ export default function CustomTenderDetailClient({
                   </p>
                 </div>
 
-                <ComprehensivePlanView plan={null} />
+                {!projectPlan ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Generate Comprehensive Project Plan</CardTitle>
+                      <CardDescription>
+                        Create a detailed plan with budget breakdowns, certifications, insurance, compliance
+                        requirements, and risk assessment
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        The AI will analyze your tender and generate a complete project plan tailored to South African
+                        tender requirements including B-BBEE, CIDB, PFMA/MFMA compliance, and more.
+                      </p>
+                      <div className="text-center">
+                        <p className="text-sm font-medium mb-2">
+                          👉 Use the AI Strategist panel on the right to generate your plan
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Click "Generate Project Plan" button in the strategist panel
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <ComprehensivePlanView plan={projectPlan} />
+                )}
               </div>
             )}
 
@@ -701,6 +762,10 @@ export default function CustomTenderDetailClient({
                 tenderDescription={String(tender.description || "")}
                 documents={documents}
                 analysis={analysis}
+                onPlanGenerated={(plan) => {
+                  setProjectPlan(plan)
+                  setActiveSection("planning") // Auto-switch to planning section
+                }}
               />
             </div>
           </div>

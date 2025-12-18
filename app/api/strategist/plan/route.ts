@@ -1,4 +1,4 @@
-import { generateObject } from "ai"
+import { generateText } from "ai"
 import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
@@ -125,65 +125,97 @@ export async function POST(request: Request) {
 
     let plan
     try {
-      const result = await generateObject({
+      const promptText = `Generate a comprehensive, practical project plan for this South African tender:
+
+**Tender**: ${tenderTitle}
+**Description**: ${tenderDescription || "No description provided"}
+${analysisData ? `**Analysis Summary**: ${JSON.stringify(analysisData).slice(0, 800)}` : ""}
+
+Return ONLY valid JSON (no markdown, no extra text) with this exact structure:
+
+{
+  "project_title": "string - Project name based on tender",
+  "project_summary": "string - Executive summary (2-3 paragraphs)",
+  "estimated_budget": {
+    "total": number,
+    "breakdown": {
+      "labor": number,
+      "materials": number,
+      "equipment": number,
+      "overhead": number,
+      "insurance": number,
+      "certifications": number,
+      "compliance": number
+    }
+  },
+  "estimated_timeline": {
+    "total_weeks": number,
+    "phases": [
+      {"name": "string", "duration_weeks": number, "tasks": ["string"]}
+    ]
+  },
+  "resource_requirements": {
+    "personnel": [
+      {"role": "string", "count": number, "skills": ["string"]}
+    ],
+    "equipment": ["string"],
+    "materials": ["string"]
+  },
+  "certifications_required": [
+    {"name": "string", "issuer": "string", "validity_period": "string", "cost": number, "processing_time": "string", "priority": "critical|high|medium|low"}
+  ],
+  "insurance_requirements": [
+    {"type": "string", "coverage_amount": number, "provider_suggestions": ["string"], "annual_cost": number, "priority": "critical|high|medium|low"}
+  ],
+  "compliance_checklist": [
+    {"requirement": "string", "status": "pending", "deadline": "string", "evidence_needed": "string", "notes": "string"}
+  ],
+  "regulatory_requirements": [
+    {"regulation": "string", "description": "string", "authority": "string", "deadline": "string", "penalties": "string"}
+  ],
+  "financial_requirements": {
+    "bank_guarantee": number,
+    "cash_flow_requirements": "string",
+    "working_capital": number,
+    "credit_facilities": "string"
+  },
+  "capacity_requirements": {
+    "past_projects": "string",
+    "references": number,
+    "equipment_owned": ["string"],
+    "personnel_qualifications": ["string"]
+  },
+  "risk_assessment": {
+    "risks": [
+      {"risk": "string", "impact": "high|medium|low", "likelihood": "high|medium|low", "mitigation": "string"}
+    ]
+  },
+  "success_criteria": ["string"],
+  "key_deliverables": ["string"]
+}
+
+Use realistic South African values (ZAR currency). Include at least:
+- 3 certifications (CIDB, ISO, B-BBEE)
+- 3 insurance policies
+- 5 compliance items
+- 3 regulatory requirements
+- 5 risks
+- 3 timeline phases`
+
+      const { text } = await generateText({
         model: "openai/gpt-4o-mini",
-        schema: PROJECT_PLAN_SCHEMA,
-        prompt: `Generate a comprehensive project plan for this South African tender bid:
-
-Title: ${tenderTitle}
-Description: ${tenderDescription || "No description provided"}
-${analysisData ? `Analysis: ${JSON.stringify(analysisData).slice(0, 500)}...` : ""}
-
-Create a detailed, implementable project plan including:
-
-1. **Budget Breakdown** - Include all costs:
-   - Labor (personnel costs)
-   - Materials and supplies
-   - Equipment (purchase or rental)
-   - Overhead and admin
-   - Insurance premiums
-   - Certification and licensing costs
-   - Compliance and legal costs
-
-2. **Timeline** - Realistic phases with tasks (minimum 3 phases)
-
-3. **Resource Requirements** - Personnel (minimum 3 roles), equipment, materials
-
-4. **Certifications Required** - List certifications needed (minimum 3):
-   - CIDB grading, ISO certifications, professional registrations, B-BBEE, tax clearance, etc.
-   - Include: name, issuer, validity period, cost (in ZAR), processing time, and priority
-
-5. **Insurance Requirements** - Specify insurance policies (minimum 3):
-   - Professional indemnity, public liability, COIDA, all-risk, performance bonds
-   - Include: type, coverage amount (in ZAR), provider suggestions, annual cost, priority
-
-6. **Compliance Checklist** - South African regulatory requirements (minimum 5):
-   - B-BBEE, PFMA/MFMA, tax compliance, labour law, health & safety, environmental
-   - For each: requirement, status ("pending"), deadline, evidence needed, notes
-
-7. **Regulatory Requirements** - Specific regulations (minimum 3)
-
-8. **Financial Requirements** - bank guarantee, cash flow, working capital, credit facilities
-
-9. **Capacity Requirements** - past projects, references, equipment, personnel qualifications
-
-10. **Risk Assessment** - Identify risks (minimum 5 risks)
-
-11. **Success Criteria & Deliverables** (minimum 3 each)
-
-Be specific with South African context (ZAR currency, local regulations, B-BBEE requirements).`,
+        prompt: promptText,
       })
-      plan = result.object
+
+      const jsonMatch = text.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) {
+        throw new Error("No JSON found in response")
+      }
+      plan = JSON.parse(jsonMatch[0])
       console.log("[v0] AI plan generated successfully")
-    } catch (aiError: any) {
-      console.error("[v0] AI generation error:", aiError)
-      return NextResponse.json(
-        {
-          error: "Failed to generate plan with AI",
-          details: aiError.message,
-        },
-        { status: 500 },
-      )
+    } catch (error) {
+      console.error("[v0] Failed to parse AI response:", error)
+      throw error
     }
 
     console.log("[v0] Saving plan to database...")
@@ -217,19 +249,30 @@ Be specific with South African context (ZAR currency, local regulations, B-BBEE 
       .single()
 
     if (error) {
-      console.error("[v0] Database error:", error)
+      console.error("[v0] Database save error:", error)
       throw error
     }
 
     console.log("[v0] Plan saved successfully")
-    return NextResponse.json({ plan: savedPlan })
+
+    await supabase.from("tender_progress_logs").insert({
+      tender_id: tenderId,
+      tender_type: tenderType,
+      user_id: user.id,
+      status: "planning",
+      milestone: "Project plan generated",
+      progress_percent: 50,
+      notes: "AI-generated comprehensive project plan created",
+      created_by_system: true,
+    })
+
+    return NextResponse.json({ plan: savedPlan, success: true })
   } catch (error: any) {
     console.error("[v0] Plan generation error:", error)
     return NextResponse.json(
       {
-        error: "Internal server error",
+        error: "Failed to generate project plan",
         details: error.message,
-        stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
       },
       { status: 500 },
     )

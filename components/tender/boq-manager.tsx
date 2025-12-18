@@ -59,6 +59,7 @@ interface BOQManagerProps {
   tenderDescription?: string
   analysisData?: any
   projectPlan?: any
+  onBoqUpdate?: (boq: BOQData) => void // Added callback for BOQ updates
 }
 
 export function BOQManager({
@@ -68,6 +69,7 @@ export function BOQManager({
   tenderDescription,
   analysisData,
   projectPlan,
+  onBoqUpdate, // Destructure callback
 }: BOQManagerProps) {
   const [boq, setBoq] = useState<BOQData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -113,7 +115,7 @@ export function BOQManager({
           tenderTitle,
           tenderDescription,
           analysisData,
-          projectPlan,
+          projectPlan, // Pass project plan for better cost estimates
         }),
       })
 
@@ -121,6 +123,10 @@ export function BOQManager({
 
       const { boq: boqData } = await response.json()
       setBoq(boqData)
+
+      if (onBoqUpdate) {
+        onBoqUpdate(boqData)
+      }
 
       toast({
         title: "BOQ Generated",
