@@ -14,6 +14,20 @@ export interface ScrapedTender {
   tender_url?: string
   document_urls?: Array<{ title: string; url: string }>
   raw_data?: any
+  // Additional fields for comprehensive data capture
+  organization?: string
+  location?: string
+  deadline?: string
+  value?: string
+  requirements?: string[]
+  eligibility_criteria?: string[]
+  submission_method?: string
+  payment_terms?: string
+  contract_duration?: string
+  validity_period?: string
+  compulsory_briefing?: string
+  tender_type?: string
+  procurement_category?: string
 }
 
 export interface ScraperResult {

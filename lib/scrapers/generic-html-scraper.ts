@@ -120,23 +120,20 @@ export class GenericHtmlScraper extends BaseScraper {
 
   private extractTenderData($: cheerio.CheerioAPI, element: cheerio.Cheerio<cheerio.Element>): ScrapedTender | null {
     try {
-      // Try to find title
       const title = this.extractTitle($, element)
       if (!title) return null
 
-      // Try to find link
       const link = this.extractLink($, element)
-
-      // Try to find dates
       const dates = this.extractDates($, element)
-
-      // Try to find description
       const description = this.extractDescription($, element)
-
-      // Try to find reference number
       const reference = this.extractReference($, element)
-
       const documentUrls = this.extractDocumentUrls($, element)
+
+      const organization = this.extractOrganization($, element)
+      const location = this.extractLocation($, element)
+      const value = this.extractValue($, element)
+      const category = this.extractCategory($, element)
+      const contactInfo = this.extractContactInfo($, element)
 
       return {
         title: this.cleanText(title),
@@ -145,9 +142,18 @@ export class GenericHtmlScraper extends BaseScraper {
         tender_url: link ? this.makeAbsoluteUrl(link, this.sourceUrl) : undefined,
         publish_date: dates.publishDate,
         close_date: dates.closeDate,
-        document_urls: documentUrls.length > 0 ? documentUrls : undefined, // Add document URLs
+        opening_date: dates.openingDate,
+        document_urls: documentUrls.length > 0 ? documentUrls : undefined,
+        organization,
+        location,
+        estimated_value: value,
+        category,
+        contact_email: contactInfo.email,
+        contact_phone: contactInfo.phone,
+        contact_person: contactInfo.person,
         raw_data: {
-          html: element.html()?.substring(0, 500), // Store first 500 chars for debugging
+          html: element.html()?.substring(0, 1000), // Store more HTML for debugging
+          extracted_at: new Date().toISOString(),
         },
       }
     } catch (error) {
@@ -180,8 +186,13 @@ export class GenericHtmlScraper extends BaseScraper {
   ): {
     publishDate?: string
     closeDate?: string
+    openingDate?: string
   } {
-    const datePatterns = [/(\d{4}[-/]\d{2}[-/]\d{2})/g, /(\d{2}[-/]\d{2}[-/]\d{4})/g]
+    const datePatterns = [
+      /(\d{4}[-/]\d{2}[-/]\d{2})/g,
+      /(\d{2}[-/]\d{2}[-/]\d{4})/g,
+      /(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})/gi,
+    ]
 
     const text = element.text()
     const dates: string[] = []
@@ -196,6 +207,7 @@ export class GenericHtmlScraper extends BaseScraper {
     return {
       publishDate: dates[0] ? this.parseDate(dates[0]) : undefined,
       closeDate: dates[1] ? this.parseDate(dates[1]) : undefined,
+      openingDate: dates[2] ? this.parseDate(dates[2]) : undefined,
     }
   }
 
@@ -241,39 +253,173 @@ export class GenericHtmlScraper extends BaseScraper {
     return new Date(date).toISOString()
   }
 
-  private extractDocumentUrls($: cheerio.CheerioAPI, element: cheerio.Cheerio<cheerio.Element>): string[] {
-    const documentUrls: string[] = []
+  private extractDocumentUrls(
+    $: cheerio.CheerioAPI,
+    element: cheerio.Cheerio<cheerio.Element>,
+  ): Array<{ title: string; url: string }> {
+    const documentUrls: Array<{ title: string; url: string }> = []
 
-    // Common document file extensions
-    const docExtensions = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".zip", ".rar"]
+    const docExtensions = [
+      ".pdf",
+      ".doc",
+      ".docx",
+      ".xls",
+      ".xlsx",
+      ".zip",
+      ".rar",
+      ".ppt",
+      ".pptx",
+      ".txt",
+      ".csv",
+      ".odt",
+      ".ods",
+      ".7z",
+    ]
 
-    // Find all links in the element
     element.find("a").each((_, linkEl) => {
       const href = $(linkEl).attr("href")
       if (!href) return
 
-      // Check if the link points to a document
       const isDocument = docExtensions.some((ext) => href.toLowerCase().includes(ext))
 
-      // Also check for common document keywords in the link text or href
       const linkText = $(linkEl).text().toLowerCase()
       const hasDocKeyword =
         linkText.includes("download") ||
         linkText.includes("document") ||
         linkText.includes("attachment") ||
         linkText.includes("file") ||
+        linkText.includes("tender") ||
+        linkText.includes("rfp") ||
+        linkText.includes("specification") ||
         href.toLowerCase().includes("document") ||
-        href.toLowerCase().includes("attachment")
+        href.toLowerCase().includes("attachment") ||
+        href.toLowerCase().includes("download")
 
       if (isDocument || hasDocKeyword) {
         const absoluteUrl = this.makeAbsoluteUrl(href, this.sourceUrl)
-        if (!documentUrls.includes(absoluteUrl)) {
-          documentUrls.push(absoluteUrl)
-          console.log(`[v0] GenericHtmlScraper: Found document URL: ${absoluteUrl}`)
+        const title = $(linkEl).text().trim() || "Document"
+
+        if (!documentUrls.some((doc) => doc.url === absoluteUrl)) {
+          documentUrls.push({ title, url: absoluteUrl })
+          console.log(`[v0] GenericHtmlScraper: Found document: ${title} - ${absoluteUrl}`)
         }
       }
     })
 
     return documentUrls
+  }
+
+  private extractOrganization($: cheerio.CheerioAPI, element: cheerio.Cheerio<cheerio.Element>): string | undefined {
+    const selectors = [".organization", ".entity", ".client", "td:contains('Organization')", ".issuing-authority"]
+
+    for (const selector of selectors) {
+      const text = element.find(selector).first().text()
+      if (text && text.trim().length > 3) {
+        return this.cleanText(text)
+      }
+    }
+
+    // Try to find organization patterns in text
+    const fullText = element.text()
+    const orgPatterns = [/(?:Organization|Entity|Client|Authority)[:\s]+([^,\n]+)/i, /issued by[:\s]+([^,\n]+)/i]
+
+    for (const pattern of orgPatterns) {
+      const match = fullText.match(pattern)
+      if (match) return this.cleanText(match[1])
+    }
+
+    return undefined
+  }
+
+  private extractLocation($: cheerio.CheerioAPI, element: cheerio.Cheerio<cheerio.Element>): string | undefined {
+    const selectors = [".location", ".province", ".region", "td:contains('Location')", ".venue"]
+
+    for (const selector of selectors) {
+      const text = element.find(selector).first().text()
+      if (text && text.trim().length > 2) {
+        return this.cleanText(text)
+      }
+    }
+
+    // Try to find location patterns
+    const fullText = element.text()
+    const locationPatterns = [
+      /(Gauteng|Western Cape|Eastern Cape|KwaZulu-Natal|Limpopo|Mpumalanga|Northern Cape|North West|Free State)/i,
+      /(?:Location|Province|Region)[:\s]+([^,\n]+)/i,
+    ]
+
+    for (const pattern of locationPatterns) {
+      const match = fullText.match(pattern)
+      if (match) return this.cleanText(match[1])
+    }
+
+    return undefined
+  }
+
+  private extractValue($: cheerio.CheerioAPI, element: cheerio.Cheerio<cheerio.Element>): string | undefined {
+    const selectors = [".value", ".amount", ".price", "td:contains('Value')", ".estimated-value"]
+
+    for (const selector of selectors) {
+      const text = element.find(selector).first().text()
+      if (text && (text.includes("R") || text.includes("ZAR") || /\d+/.test(text))) {
+        return this.cleanText(text)
+      }
+    }
+
+    // Try to find value patterns
+    const fullText = element.text()
+    const valuePatterns = [/R\s*[\d\s,]+/i, /ZAR\s*[\d\s,]+/i, /(?:Value|Amount|Price)[:\s]+(R?\s*[\d\s,]+)/i]
+
+    for (const pattern of valuePatterns) {
+      const match = fullText.match(pattern)
+      if (match) return this.cleanText(match[0])
+    }
+
+    return undefined
+  }
+
+  private extractCategory($: cheerio.CheerioAPI, element: cheerio.Cheerio<cheerio.Element>): string | undefined {
+    const selectors = [".category", ".type", ".classification", "td:contains('Category')"]
+
+    for (const selector of selectors) {
+      const text = element.find(selector).first().text()
+      if (text && text.trim().length > 2) {
+        return this.cleanText(text)
+      }
+    }
+
+    return undefined
+  }
+
+  private extractContactInfo(
+    $: cheerio.CheerioAPI,
+    element: cheerio.Cheerio<cheerio.Element>,
+  ): {
+    email?: string
+    phone?: string
+    person?: string
+  } {
+    const fullText = element.text()
+
+    // Extract email
+    const emailMatch = fullText.match(/[\w.-]+@[\w.-]+\.\w+/)
+    const email = emailMatch ? emailMatch[0] : undefined
+
+    // Extract phone
+    const phoneMatch = fullText.match(/(?:\+27|0)\s*\d{2}\s*\d{3}\s*\d{4}/)
+    const phone = phoneMatch ? phoneMatch[0] : undefined
+
+    // Extract contact person
+    let person: string | undefined
+    const personSelectors = [".contact-person", ".contact-name", "td:contains('Contact Person')"]
+    for (const selector of personSelectors) {
+      const text = element.find(selector).first().text()
+      if (text && text.trim().length > 3) {
+        person = this.cleanText(text)
+        break
+      }
+    }
+
+    return { email, phone, person }
   }
 }

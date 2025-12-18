@@ -114,11 +114,16 @@ function ScrapedTenderDetailClient({ id }: { id: string }) {
           throw new Error("Failed to load tender")
         }
 
-        const { tender: tenderData, documents: docsData } = await response.json()
+        const { tender: tenderData, documents: docsData, analysis: existingAnalysis } = await response.json()
         console.log("[v0] Loaded tender with", docsData.length, "documents")
 
         setTender(tenderData)
         setDocuments(docsData)
+
+        if (existingAnalysis) {
+          console.log("[v0] Found existing analysis")
+          setAnalysis(existingAnalysis)
+        }
       } catch (error) {
         console.error("[v0] Error loading tender:", error)
         toast({
@@ -135,14 +140,14 @@ function ScrapedTenderDetailClient({ id }: { id: string }) {
   }, [id, toast])
 
   useEffect(() => {
-    if (!documents.length || analyzing) {
+    if (!tender || !documents.length || analyzing || analysis) {
       return
     }
 
     const triggerAnalysis = async () => {
       try {
         setAnalyzing(true)
-        console.log("[v0] Triggering automatic analysis...")
+        console.log("[v0] Triggering automatic analysis for scraped tender...")
 
         const analyzeResponse = await fetch(`/api/tenders/scraped/${id}/analyze`, {
           method: "POST",
@@ -157,10 +162,15 @@ function ScrapedTenderDetailClient({ id }: { id: string }) {
         console.log("[v0] Analysis completed successfully")
 
         setAnalysis(newAnalysis)
+
+        toast({
+          title: "Analysis Complete",
+          description: "Tender documents have been analyzed",
+        })
       } catch (error) {
         console.error("[v0] Error during analysis:", error)
         toast({
-          title: "Error",
+          title: "Analysis Failed",
           description: error instanceof Error ? error.message : "Failed to analyze tender",
           variant: "destructive",
         })
@@ -170,7 +180,7 @@ function ScrapedTenderDetailClient({ id }: { id: string }) {
     }
 
     triggerAnalysis()
-  }, [documents, id, analyzing, toast])
+  }, [tender, documents, id, analyzing, analysis, toast])
 
   useEffect(() => {
     const loadProjectPlan = async () => {
