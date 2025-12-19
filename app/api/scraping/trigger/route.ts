@@ -17,8 +17,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-    // For now, allow scraping without strict user auth since we're using service role key
-    // In production, you'd want to add proper admin role checking
     console.log("[v0] Using service role key for scraping operations")
 
     const { sourceId, scrapeAll } = await request.json()
@@ -28,9 +26,36 @@ export async function POST(request: NextRequest) {
 
     if (scrapeAll) {
       console.log("[v0] Triggering scrape for all active sources")
-      const result = await scrapingService.scrapeAllActiveSources()
+
+      const { data: progressData } = await supabase
+        .from("scraping_progress")
+        .insert({
+          status: "running",
+          total_sources: 0,
+          completed_sources: 0,
+          current_source: null,
+          started_at: new Date().toISOString(),
+        })
+        .select()
+        .single()
+
+      const progressId = progressData?.id
+
+      const result = await scrapingService.scrapeAllActiveSources(progressId)
+
+      if (progressId) {
+        await supabase
+          .from("scraping_progress")
+          .update({
+            status: "completed",
+            completed_at: new Date().toISOString(),
+            total_tenders: result.totalScraped || 0,
+          })
+          .eq("id", progressId)
+      }
+
       console.log("[v0] Scrape all result:", JSON.stringify(result, null, 2))
-      return Response.json(result)
+      return Response.json({ ...result, progressId })
     } else if (sourceId) {
       console.log(`[v0] Triggering scrape for source ${sourceId}`)
       const result = await scrapingService.scrapeSource(sourceId)

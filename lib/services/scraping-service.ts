@@ -347,7 +347,7 @@ export class ScrapingService {
       .eq("id", sourceId)
   }
 
-  async scrapeAllActiveSources() {
+  async scrapeAllActiveSources(progressId?: string) {
     console.log("[ScrapingService] Starting scrape for all active sources")
 
     const { data: sources, error } = await this.supabase
@@ -363,11 +363,43 @@ export class ScrapingService {
 
     console.log(`[ScrapingService] Found ${sources.length} active sources to scrape`)
 
+    if (progressId) {
+      await this.supabase.from("scraping_progress").update({ total_sources: sources.length }).eq("id", progressId)
+    }
+
     const results = []
-    for (const source of sources) {
-      console.log(`[ScrapingService] Scraping source: ${source.name}`)
+    for (let i = 0; i < sources.length; i++) {
+      const source = sources[i]
+      console.log(`[ScrapingService] Scraping source ${i + 1}/${sources.length}: ${source.name}`)
+
+      if (progressId) {
+        await this.supabase
+          .from("scraping_progress")
+          .update({
+            current_source: source.name,
+            current_source_id: source.id,
+            completed_sources: i,
+          })
+          .eq("id", progressId)
+      }
+
       const result = await this.scrapeSource(source.id)
       results.push({ sourceId: source.id, sourceName: source.name, ...result })
+
+      if (progressId && result.scrapedCount) {
+        const { data: currentProgress } = await this.supabase
+          .from("scraping_progress")
+          .select("total_tenders")
+          .eq("id", progressId)
+          .single()
+
+        await this.supabase
+          .from("scraping_progress")
+          .update({
+            total_tenders: (currentProgress?.total_tenders || 0) + result.scrapedCount,
+          })
+          .eq("id", progressId)
+      }
 
       // Add delay between scrapes to be respectful
       await new Promise((resolve) => setTimeout(resolve, 2000))
@@ -375,6 +407,10 @@ export class ScrapingService {
 
     const totalScraped = results.reduce((sum, r) => sum + (r.scrapedCount || 0), 0)
     const successCount = results.filter((r) => r.success).length
+
+    if (progressId) {
+      await this.supabase.from("scraping_progress").update({ completed_sources: sources.length }).eq("id", progressId)
+    }
 
     console.log(`[ScrapingService] Completed scraping ${sources.length} sources, total tenders: ${totalScraped}`)
 

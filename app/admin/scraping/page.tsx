@@ -58,6 +58,12 @@ export default function ScrapingAdminPage() {
   const [scraping, setScraping] = useState<number | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [levelFilter, setLevelFilter] = useState<string>("all")
+  const [scrapingProgress, setScrapingProgress] = useState<{
+    currentSource: string | null
+    completedSources: number
+    totalSources: number
+    totalTenders: number
+  } | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -165,8 +171,39 @@ export default function ScrapingAdminPage() {
     }
   }
 
+  const pollProgress = async (progressId: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/scraping/progress/${progressId}`)
+        if (response.ok) {
+          const data = await response.json()
+
+          setScrapingProgress({
+            currentSource: data.current_source,
+            completedSources: data.completed_sources,
+            totalSources: data.total_sources,
+            totalTenders: data.total_tenders,
+          })
+
+          if (data.status === "completed" || data.status === "failed") {
+            clearInterval(interval)
+            setScrapingProgress(null)
+            setScraping(null)
+            loadData()
+          }
+        }
+      } catch (error) {
+        console.error("[v0] Error polling progress:", error)
+      }
+    }, 1000) // Poll every second
+
+    return interval
+  }
+
   const handleScrapeAll = async () => {
     setScraping(-1)
+    setScrapingProgress({ currentSource: "Initializing...", completedSources: 0, totalSources: 0, totalTenders: 0 })
+
     try {
       console.log("[v0] Starting scrape for all sources")
 
@@ -181,6 +218,12 @@ export default function ScrapingAdminPage() {
       console.log("[v0] Scrape all response status:", response.status)
       const result = await response.json()
       console.log("[v0] Scrape all response data:", result)
+
+      if (result.progressId) {
+        const interval = await pollProgress(result.progressId)
+        // Clean up interval when component unmounts
+        return () => clearInterval(interval)
+      }
 
       if (!response.ok) {
         throw new Error(result.error || result.details || "Failed to trigger scraping")
@@ -209,6 +252,7 @@ export default function ScrapingAdminPage() {
         description: error instanceof Error ? error.message : "Failed to scrape all sources",
         variant: "destructive",
       })
+      setScrapingProgress(null)
     } finally {
       setScraping(null)
     }
@@ -248,7 +292,6 @@ export default function ScrapingAdminPage() {
             <p className="text-muted-foreground">Manage tender sources and scraping operations</p>
           </div>
 
-          {/* Statistics Cards */}
           {stats && (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
@@ -306,13 +349,12 @@ export default function ScrapingAdminPage() {
             </div>
           )}
 
-          {/* Actions */}
           <Card>
             <CardHeader>
               <CardTitle>Scraping Actions</CardTitle>
               <CardDescription>Trigger scraping operations for all or individual sources</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <Button onClick={handleScrapeAll} disabled={scraping !== null} size="lg">
                 {scraping === -1 ? (
                   <>
@@ -326,17 +368,33 @@ export default function ScrapingAdminPage() {
                   </>
                 )}
               </Button>
+
+              {scrapingProgress && (
+                <div className="mt-4 p-4 border rounded-lg space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Currently scraping: {scrapingProgress.currentSource || "Initializing..."}</span>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Progress: {scrapingProgress.completedSources} / {scrapingProgress.totalSources} sources completed
+                  </div>
+                  {scrapingProgress.totalTenders > 0 && (
+                    <div className="text-sm text-green-600">
+                      Found {scrapingProgress.totalTenders} tender{scrapingProgress.totalTenders !== 1 ? "s" : ""} so
+                      far
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Sources Table */}
           <Card>
             <CardHeader>
               <CardTitle>Tender Sources</CardTitle>
               <CardDescription>Manage individual tender sources and their scraping configuration</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Filters */}
               <div className="flex gap-4">
                 <div className="flex-1">
                   <Input
@@ -361,7 +419,6 @@ export default function ScrapingAdminPage() {
                 </Select>
               </div>
 
-              {/* Table */}
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
