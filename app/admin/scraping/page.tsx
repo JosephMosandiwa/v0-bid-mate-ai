@@ -121,6 +121,8 @@ export default function ScrapingAdminPage() {
   const handleScrapeSource = async (sourceId: number) => {
     setScraping(sourceId)
     try {
+      console.log("[v0] Starting scrape for source:", sourceId)
+
       const response = await fetch("/api/scraping/trigger", {
         method: "POST",
         headers: {
@@ -129,22 +131,32 @@ export default function ScrapingAdminPage() {
         body: JSON.stringify({ sourceId }),
       })
 
+      console.log("[v0] Scrape response status:", response.status)
+      const result = await response.json()
+      console.log("[v0] Scrape response data:", result)
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || "Failed to trigger scraping")
+        throw new Error(result.error || result.details || "Failed to trigger scraping")
       }
 
-      const result = await response.json()
+      const message =
+        result.scrapedCount > 0
+          ? `Successfully scraped ${result.scrapedCount} tender${result.scrapedCount !== 1 ? "s" : ""}`
+          : result.error
+            ? `Scraping completed but found no tenders. Error: ${result.error}`
+            : "Scraping completed but found no tenders"
 
       toast({
-        title: "Scraping Complete",
-        description: `Scraped ${result.scrapedCount || 0} tenders`,
+        title: result.scrapedCount > 0 ? "Scraping Complete" : "No Tenders Found",
+        description: message,
+        variant: result.scrapedCount > 0 ? "default" : "destructive",
       })
 
       loadData()
     } catch (error) {
+      console.error("[v0] Scraping error:", error)
       toast({
-        title: "Error",
+        title: "Scraping Error",
         description: error instanceof Error ? error.message : "Failed to scrape source",
         variant: "destructive",
       })
@@ -156,6 +168,8 @@ export default function ScrapingAdminPage() {
   const handleScrapeAll = async () => {
     setScraping(-1)
     try {
+      console.log("[v0] Starting scrape for all sources")
+
       const response = await fetch("/api/scraping/trigger", {
         method: "POST",
         headers: {
@@ -164,22 +178,34 @@ export default function ScrapingAdminPage() {
         body: JSON.stringify({ scrapeAll: true }),
       })
 
+      console.log("[v0] Scrape all response status:", response.status)
+      const result = await response.json()
+      console.log("[v0] Scrape all response data:", result)
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || "Failed to trigger scraping")
+        throw new Error(result.error || result.details || "Failed to trigger scraping")
       }
 
-      const result = await response.json()
+      const successCount = result.successfulSources || 0
+      const totalCount = result.sourcesScraped || 0
+      const tendersFound = result.totalScraped || 0
+
+      const message =
+        tendersFound > 0
+          ? `Found ${tendersFound} tender${tendersFound !== 1 ? "s" : ""} from ${successCount}/${totalCount} sources`
+          : `Scraped ${totalCount} sources but found no tenders`
 
       toast({
-        title: "Scraping Complete",
-        description: `Scraped ${result.totalScraped || 0} tenders from all sources`,
+        title: tendersFound > 0 ? "Scraping Complete" : "No Tenders Found",
+        description: message,
+        variant: tendersFound > 0 ? "default" : "destructive",
       })
 
       loadData()
     } catch (error) {
+      console.error("[v0] Scraping all error:", error)
       toast({
-        title: "Error",
+        title: "Scraping Error",
         description: error instanceof Error ? error.message : "Failed to scrape all sources",
         variant: "destructive",
       })

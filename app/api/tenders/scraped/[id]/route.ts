@@ -36,11 +36,24 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       console.error("[v0] Error fetching documents:", docsError)
     }
 
-    console.log("[v0] Found tender with", documents?.length || 0, "documents")
+    const { data: analysisData, error: analysisError } = await supabase
+      .from("tender_analysis")
+      .select("*")
+      .eq("tender_id", id.toString())
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single()
+
+    if (analysisError && analysisError.code !== "PGRST116") {
+      console.error("[v0] Error fetching analysis:", analysisError)
+    }
+
+    console.log("[v0] Found tender with", documents?.length || 0, "documents", analysisData ? "and analysis" : "")
 
     return NextResponse.json({
       tender,
       documents: documents || [],
+      analysis: analysisData?.analysis_data || null, // Include analysis in response
     })
   } catch (error) {
     console.error("[v0] Error in scraped tender API:", error)

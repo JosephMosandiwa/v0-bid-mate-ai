@@ -6,6 +6,15 @@ export async function POST(request: NextRequest) {
   try {
     console.log("[v0] Scraping trigger API called")
 
+    const scrapingApiKey = process.env.SCRAPING_API_KEY
+    if (!scrapingApiKey) {
+      console.warn(
+        "[v0] WARNING: SCRAPING_API_KEY environment variable is not set! Scraping will use direct requests which may be blocked.",
+      )
+    } else {
+      console.log("[v0] SCRAPING_API_KEY is configured")
+    }
+
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
     // For now, allow scraping without strict user auth since we're using service role key
@@ -20,12 +29,12 @@ export async function POST(request: NextRequest) {
     if (scrapeAll) {
       console.log("[v0] Triggering scrape for all active sources")
       const result = await scrapingService.scrapeAllActiveSources()
-      console.log("[v0] Scrape all result:", result)
+      console.log("[v0] Scrape all result:", JSON.stringify(result, null, 2))
       return Response.json(result)
     } else if (sourceId) {
       console.log(`[v0] Triggering scrape for source ${sourceId}`)
       const result = await scrapingService.scrapeSource(sourceId)
-      console.log("[v0] Scrape result:", result)
+      console.log("[v0] Scrape result:", JSON.stringify(result, null, 2))
       return Response.json(result)
     } else {
       console.log("[v0] Missing sourceId or scrapeAll parameter")
@@ -34,7 +43,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[v0] Scraping trigger error:", error)
     return Response.json(
-      { error: "Failed to trigger scraping", details: error instanceof Error ? error.message : "Unknown error" },
+      {
+        error: "Failed to trigger scraping",
+        details: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+      },
       { status: 500 },
     )
   }
