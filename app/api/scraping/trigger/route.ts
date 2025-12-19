@@ -27,23 +27,41 @@ export async function POST(request: NextRequest) {
     if (scrapeAll) {
       console.log("[v0] Triggering scrape for all active sources")
 
-      const { data: progressData } = await supabase
-        .from("scraping_progress")
-        .insert({
-          status: "running",
-          total_sources: 0,
-          completed_sources: 0,
-          current_source: null,
-          started_at: new Date().toISOString(),
-        })
-        .select()
-        .single()
+      console.log("[v0] Checking if scraping_progress table exists...")
+      const { data: tableCheck, error: tableError } = await supabase.from("scraping_progress").select("id").limit(1)
 
-      const progressId = progressData?.id
+      let progressId = null
+      if (tableError) {
+        console.error("[v0] WARNING: scraping_progress table does not exist or is inaccessible:", tableError.message)
+        console.log("[v0] Continuing scraping without progress tracking")
+      } else {
+        console.log("[v0] scraping_progress table exists, creating progress record")
+        const { data: progressData, error: insertError } = await supabase
+          .from("scraping_progress")
+          .insert({
+            status: "running",
+            total_sources: 0,
+            completed_sources: 0,
+            current_source: null,
+            started_at: new Date().toISOString(),
+          })
+          .select()
+          .single()
 
+        if (insertError) {
+          console.error("[v0] Error creating progress record:", insertError)
+        } else {
+          progressId = progressData?.id
+          console.log("[v0] Created progress record with ID:", progressId)
+        }
+      }
+
+      console.log("[v0] Starting scrapeAllActiveSources with progressId:", progressId)
       const result = await scrapingService.scrapeAllActiveSources(progressId)
+      console.log("[v0] scrapeAllActiveSources completed:", result)
 
       if (progressId) {
+        console.log("[v0] Updating progress record as completed")
         await supabase
           .from("scraping_progress")
           .update({
