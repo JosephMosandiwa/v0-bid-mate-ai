@@ -265,16 +265,35 @@ export class ScrapingService {
   private async saveTenders(sourceId: number, source: any, tenders: ScrapedTender[]) {
     console.log(`[v0] ScrapingService: Processing ${tenders.length} tenders through engine orchestrator`)
 
+    console.log(`[v0] ScrapingService: ==================== DETAILED TENDER ANALYSIS ====================`)
+    console.log(`[v0] ScrapingService: Source: ${source.name}`)
+    console.log(`[v0] ScrapingService: Found ${tenders.length} raw tender(s) to validate`)
+
     const validatedTenders: any[] = []
 
-    for (const tender of tenders) {
-      console.log(`[v0] ScrapingService: Validating tender - ${tender.title}`)
+    for (let i = 0; i < tenders.length; i++) {
+      const tender = tenders[i]
+      console.log(`\n[v0] ScrapingService: ========== Tender ${i + 1}/${tenders.length} ==========`)
+      console.log(`[v0] ScrapingService: Title: ${tender.title}`)
+      console.log(
+        `[v0] ScrapingService: Has Description: ${!!tender.description} (${tender.description?.length || 0} chars)`,
+      )
+      console.log(`[v0] ScrapingService: Has Reference: ${!!tender.tender_reference}`)
+      console.log(`[v0] ScrapingService: Has URL: ${!!tender.tender_url}`)
+      console.log(`[v0] ScrapingService: Has Close Date: ${!!tender.close_date}`)
+      console.log(`[v0] ScrapingService: Has Organization: ${!!tender.organization}`)
+      console.log(`[v0] ScrapingService: Has Location: ${!!tender.location}`)
+      console.log(`[v0] ScrapingService: Has Value: ${!!tender.estimated_value}`)
+      console.log(`[v0] ScrapingService: Has Category: ${!!tender.category}`)
+      console.log(`[v0] ScrapingService: Document URLs: ${tender.document_urls?.length || 0}`)
+
+      console.log(`[v0] ScrapingService: Raw tender data:`, JSON.stringify(tender, null, 2).substring(0, 500))
 
       const result = await engineOrchestrator.processScrapedTender(tender)
 
       if (result.success && result.tender) {
         console.log(
-          `[v0] ScrapingService: ✓ Tender validated - ${result.tender.title} (${result.validation?.grade}, ${result.validation?.completeness}% complete)`,
+          `[v0] ScrapingService: ✓ Tender ACCEPTED - ${result.tender.title} (${result.validation?.grade}, ${result.validation?.completeness}% complete)`,
         )
         validatedTenders.push({
           source_id: sourceId,
@@ -288,17 +307,29 @@ export class ScrapingService {
           quality_grade: result.validation?.grade || "F",
         })
       } else {
-        console.warn(
-          `[v0] ScrapingService: ✗ Tender rejected - ${tender.title}: ${result.error || "Below quality threshold"}`,
-        )
-        console.warn(
-          `[v0] ScrapingService:   Validation: ${result.validation?.completeness}% complete, Grade: ${result.validation?.grade}`,
-        )
+        console.warn(`[v0] ScrapingService: ✗ Tender REJECTED - ${tender.title}`)
+        console.warn(`[v0] ScrapingService:   Reason: ${result.error || "Below quality threshold"}`)
+        console.warn(`[v0] ScrapingService:   Validation Score: ${result.validation?.completeness}%`)
+        console.warn(`[v0] ScrapingService:   Grade: ${result.validation?.grade}`)
+        console.warn(`[v0] ScrapingService:   Missing fields: ${result.validation?.missingFields?.join(", ") || "N/A"}`)
       }
     }
 
+    console.log(`\n[v0] ScrapingService: ==================== VALIDATION SUMMARY ====================`)
+    console.log(`[v0] ScrapingService: Total scraped: ${tenders.length}`)
+    console.log(`[v0] ScrapingService: Passed validation: ${validatedTenders.length}`)
+    console.log(`[v0] ScrapingService: Rejected: ${tenders.length - validatedTenders.length}`)
+    console.log(`[v0] ScrapingService: Success rate: ${((validatedTenders.length / tenders.length) * 100).toFixed(1)}%`)
+
     if (validatedTenders.length === 0) {
-      console.log("[v0] ScrapingService: ⚠️ No tenders passed validation (all below 40% completeness threshold)")
+      console.log("[v0] ScrapingService: ⚠️ WARNING: NO TENDERS PASSED VALIDATION!")
+      console.log("[v0] ScrapingService: Common reasons:")
+      console.log("[v0] ScrapingService:   1. Scraped data is incomplete (missing title, dates, organization, etc.)")
+      console.log("[v0] ScrapingService:   2. Website structure doesn't match generic scraper selectors")
+      console.log("[v0] ScrapingService:   3. Content is behind JavaScript/authentication")
+      console.log(
+        "[v0] ScrapingService: SOLUTION: Check the 'Raw tender data' logs above to see what's being extracted",
+      )
       return []
     }
 
