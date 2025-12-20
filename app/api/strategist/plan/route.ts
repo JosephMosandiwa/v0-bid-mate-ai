@@ -220,7 +220,11 @@ Use realistic South African values (ZAR currency). Include at least:
 
     console.log("[v0] Saving plan to database...")
 
-    const { data: savedPlan, error } = await supabase
+    let savedPlan
+    let error
+
+    // Try upsert with conflict resolution (requires unique constraint)
+    const upsertResult = await supabase
       .from("tender_project_plans")
       .upsert(
         {
@@ -247,6 +251,79 @@ Use realistic South African values (ZAR currency). Include at least:
       )
       .select()
       .single()
+
+    if (upsertResult.error && upsertResult.error.message.includes("unique or exclusion constraint")) {
+      console.log("[v0] Unique constraint missing, trying manual upsert...")
+
+      // Check if record exists
+      const { data: existing } = await supabase
+        .from("tender_project_plans")
+        .select("id")
+        .eq("tender_id", tenderId)
+        .eq("tender_type", tenderType)
+        .eq("user_id", user.id)
+        .single()
+
+      if (existing) {
+        // Update existing record
+        const updateResult = await supabase
+          .from("tender_project_plans")
+          .update({
+            project_title: plan.project_title,
+            project_summary: plan.project_summary,
+            estimated_budget: plan.estimated_budget,
+            estimated_timeline: plan.estimated_timeline,
+            resource_requirements: plan.resource_requirements,
+            risk_assessment: plan.risk_assessment,
+            certifications_required: plan.certifications_required,
+            insurance_requirements: plan.insurance_requirements,
+            compliance_checklist: plan.compliance_checklist,
+            regulatory_requirements: plan.regulatory_requirements,
+            financial_requirements: plan.financial_requirements,
+            capacity_requirements: plan.capacity_requirements,
+            success_criteria: plan.success_criteria,
+            key_deliverables: plan.key_deliverables,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id)
+          .select()
+          .single()
+
+        savedPlan = updateResult.data
+        error = updateResult.error
+      } else {
+        // Insert new record
+        const insertResult = await supabase
+          .from("tender_project_plans")
+          .insert({
+            tender_id: tenderId,
+            tender_type: tenderType,
+            user_id: user.id,
+            project_title: plan.project_title,
+            project_summary: plan.project_summary,
+            estimated_budget: plan.estimated_budget,
+            estimated_timeline: plan.estimated_timeline,
+            resource_requirements: plan.resource_requirements,
+            risk_assessment: plan.risk_assessment,
+            certifications_required: plan.certifications_required,
+            insurance_requirements: plan.insurance_requirements,
+            compliance_checklist: plan.compliance_checklist,
+            regulatory_requirements: plan.regulatory_requirements,
+            financial_requirements: plan.financial_requirements,
+            capacity_requirements: plan.capacity_requirements,
+            success_criteria: plan.success_criteria,
+            key_deliverables: plan.key_deliverables,
+          })
+          .select()
+          .single()
+
+        savedPlan = insertResult.data
+        error = insertResult.error
+      }
+    } else {
+      savedPlan = upsertResult.data
+      error = upsertResult.error
+    }
 
     if (error) {
       console.error("[v0] Database save error:", error)
