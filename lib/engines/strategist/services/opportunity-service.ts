@@ -257,4 +257,202 @@ export class OpportunityService {
 
     return !error
   }
+
+  /**
+   * Create an opportunity from tender data
+   */
+  static async createOpportunity(params: {
+    userId: string
+    tenderId: string
+    tenderType: "custom" | "scraped"
+    tenderTitle: string
+    tenderData: any
+  }): Promise<any> {
+    try {
+      const supabase = await createClient()
+
+      // Get user preferences for scoring
+      const { data: preferences } = await supabase
+        .from("strategist_user_preferences")
+        .select("*")
+        .eq("user_id", params.userId)
+        .single()
+
+      if (!preferences) {
+        console.warn("[Opportunity] User preferences not found, skipping opportunity creation")
+        return null
+      }
+
+      // Calculate match score
+      const matchScore = this.calculateMatchScoreForTender(params.tenderData, preferences)
+
+      if (matchScore < 0.3) {
+        console.log("[Opportunity] Match score too low, skipping opportunity creation")
+        return null
+      }
+
+      // Determine opportunity type
+      let opportunityType: "high_margin" | "strategic" | "quick_win" | "low_risk" | "growth" = "strategic"
+      if (matchScore >= 0.7) opportunityType = "high_margin"
+      else if (matchScore >= 0.5) opportunityType = "low_risk"
+      else if (matchScore >= 0.4) opportunityType = "growth"
+
+      // Create opportunity
+      const { data, error } = await supabase
+        .from("strategist_opportunities")
+        .upsert(
+          {
+            user_id: params.userId,
+            scraped_tender_id: params.tenderType === "scraped" ? params.tenderId : null,
+            custom_tender_id: params.tenderType === "custom" ? params.tenderId : null,
+            match_score: matchScore,
+            match_reasons: this.getMatchReasonsForTender(params.tenderData, preferences),
+            opportunity_type: opportunityType,
+            ai_insights: {
+              tender_title: params.tenderTitle,
+              analysis: "Automatically generated from tender data",
+            },
+            expires_at: params.tenderData.close_date || params.tenderData.deadline,
+          },
+          {
+            onConflict: params.tenderType === "scraped" ? "user_id,scraped_tender_id" : "user_id,custom_tender_id",
+          },
+        )
+        .select()
+        .single()
+
+      if (error) {
+        console.error("[Opportunity] Error creating opportunity:", error)
+        return null
+      }
+
+      return data
+    } catch (error) {
+      console.error("[Opportunity] Error in createOpportunity:", error)
+      return null
+    }
+  }
+
+  /**
+   * Find similar opportunities for a tender
+   */
+  static async findSimilar(params: {
+    userId: string
+    tenderId: string
+    tenderType: "custom" | "scraped"
+  }): Promise<any[]> {
+    try {
+      const supabase = await createClient()
+
+      // Get the source tender
+      const table = params.tenderType === "custom" ? "user_custom_tenders" : "scraped_tenders"
+      const { data: sourceTender } = await supabase.from(table).select("*").eq("id", params.tenderId).single()
+
+      if (!sourceTender) {
+        return []
+      }
+
+      // Find similar tenders based on category and location
+      const { data: similarTenders } = await supabase
+        .from("scraped_tenders")
+        .select("id, title, source_name, category, source_province, close_date")
+        .eq("is_active", true)
+        .gte("close_date", new Date().toISOString())
+        .neq("id", params.tenderType === "scraped" ? params.tenderId : "")
+        .limit(5)
+
+      if (!similarTenders || similarTenders.length === 0) {
+        return []
+      }
+
+      // Filter by similarity (category or province match)
+      const similar = similarTenders.filter((tender) => {
+        const categoryMatch =
+          sourceTender.category &&
+          tender.category &&
+          (tender.category.toLowerCase().includes(sourceTender.category.toLowerCase()) ||
+            sourceTender.category.toLowerCase().includes(tender.category.toLowerCase()))
+
+        const provinceMatch =
+          sourceTender.source_province &&
+          tender.source_province &&
+          tender.source_province.toLowerCase() === sourceTender.source_province.toLowerCase()
+
+        return categoryMatch || provinceMatch
+      })
+
+      return similar
+    } catch (error) {
+      console.error("[Opportunity] Error finding similar opportunities:", error)
+      return []
+    }
+  }
+
+  /**
+   * Calculate match score for a tender
+   */
+  private static calculateMatchScoreForTender(tender: any, preferences: any): number {
+    let score = 0
+
+    // Category/Industry match
+    if (preferences.industries?.length && tender.category) {
+      const categoryMatch = preferences.industries.some((ind: string) =>
+        tender.category.toLowerCase().includes(ind.toLowerCase()),
+      )
+      if (categoryMatch) score += 0.3
+    }
+
+    // Province match
+    if (preferences.provinces?.length && (tender.source_province || tender.location)) {
+      const province = tender.source_province || tender.location
+      const provinceMatch = preferences.provinces.some((p: string) => province?.toLowerCase().includes(p.toLowerCase()))
+      if (provinceMatch) score += 0.25
+    }
+
+    // Deadline consideration
+    const deadline = tender.close_date || tender.deadline
+    if (deadline) {
+      const daysUntilClose = Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      if (daysUntilClose > 14) score += 0.2
+      else if (daysUntilClose > 7) score += 0.15
+      else score += 0.05
+    }
+
+    // Base score for any tender
+    score += 0.25
+
+    return Math.min(score, 1)
+  }
+
+  /**
+   * Get match reasons for a tender
+   */
+  private static getMatchReasonsForTender(tender: any, preferences: any): string[] {
+    const reasons: string[] = []
+
+    if (preferences.industries?.length && tender.category) {
+      const categoryMatch = preferences.industries.some((ind: string) =>
+        tender.category.toLowerCase().includes(ind.toLowerCase()),
+      )
+      if (categoryMatch) reasons.push("Matches your industry expertise")
+    }
+
+    if (preferences.provinces?.length) {
+      const province = tender.source_province || tender.location
+      const provinceMatch = preferences.provinces.some((p: string) => province?.toLowerCase().includes(p.toLowerCase()))
+      if (provinceMatch) reasons.push("Located in your preferred province")
+    }
+
+    const deadline = tender.close_date || tender.deadline
+    if (deadline) {
+      const daysUntilClose = Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      if (daysUntilClose > 14) reasons.push("Sufficient time to prepare quality bid")
+    }
+
+    if (reasons.length === 0) {
+      reasons.push("General opportunity match")
+    }
+
+    return reasons
+  }
 }

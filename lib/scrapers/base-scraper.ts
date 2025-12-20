@@ -1,4 +1,7 @@
 // Base scraper class that all specific scrapers will extend
+import { TenderService, TenderValidator } from "@/lib/engines/tenders"
+import type { TenderField } from "@/lib/engines/tenders/types"
+
 export interface ScrapedTender {
   tender_reference?: string
   title: string
@@ -41,11 +44,14 @@ export abstract class BaseScraper {
   protected sourceId: number
   protected sourceName: string
   protected sourceUrl: string
+  protected tenderSchema: TenderField[]
 
   constructor(sourceId: number, sourceName: string, sourceUrl: string) {
     this.sourceId = sourceId
     this.sourceName = sourceName
     this.sourceUrl = sourceUrl
+    this.tenderSchema = TenderService.getTenderSchema().fields
+    console.log(`[v0] ${sourceName} scraper initialized with ${this.tenderSchema.length} field definitions`)
   }
 
   // Abstract method that each scraper must implement
@@ -89,6 +95,44 @@ export abstract class BaseScraper {
       return new URL(url, base.origin).toString()
     } catch {
       return url
+    }
+  }
+
+  protected getFieldExtractionHints(fieldName: string): TenderField | undefined {
+    return this.tenderSchema.find((f) => f.name === fieldName)
+  }
+
+  protected validateExtractedTender(tenderData: any): {
+    isValid: boolean
+    score: number
+    quality: string
+  } {
+    const validation = TenderValidator.validate(tenderData)
+    const quality = TenderValidator.getQualityScore(tenderData)
+
+    console.log(
+      `[v0] Tender validation: ${quality.grade} (${quality.score}%) - ${validation.isValid ? "Valid" : "Invalid"}`,
+    )
+    console.log(`[v0] Missing fields: ${validation.missingFields.join(", ") || "None"}`)
+
+    return {
+      isValid: validation.isValid,
+      score: quality.score,
+      quality: quality.grade,
+    }
+  }
+
+  protected normalizeTenderData(rawData: any): ScrapedTender {
+    const normalized = TenderService.normalizeScrapedData(rawData)
+    const validation = this.validateExtractedTender(normalized)
+
+    return {
+      ...normalized,
+      raw_data: {
+        ...rawData,
+        quality_score: validation.score,
+        quality_grade: validation.quality,
+      },
     }
   }
 }

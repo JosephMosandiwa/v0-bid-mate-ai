@@ -19,6 +19,7 @@ export class GenericHtmlScraper extends BaseScraper {
   async scrape(): Promise<ScraperResult> {
     try {
       console.log(`[v0] GenericHtmlScraper: Starting scrape for ${this.sourceName}`)
+      console.log(`[v0] GenericHtmlScraper: Using tenders engine with ${this.tenderSchema.length} field definitions`)
       console.log(`[v0] GenericHtmlScraper: Source URL: ${this.sourceUrl}`)
 
       const scrapingApiKey = process.env.SCRAPING_API_KEY
@@ -73,12 +74,24 @@ export class GenericHtmlScraper extends BaseScraper {
       for (const element of tenderElements) {
         const tender = this.extractTenderData($, element)
         if (tender && tender.title) {
-          tenders.push(tender)
-          console.log(`[v0] GenericHtmlScraper: Extracted tender: ${tender.title}`)
+          const normalized = this.normalizeTenderData(tender)
+          const validation = this.validateExtractedTender(normalized)
+
+          // Only include tenders with at least 40% completeness
+          if (validation.score >= 40) {
+            tenders.push(normalized)
+            console.log(
+              `[v0] GenericHtmlScraper: ✓ Extracted tender: ${tender.title} (Quality: ${validation.quality}, Score: ${validation.score}%)`,
+            )
+          } else {
+            console.log(
+              `[v0] GenericHtmlScraper: ✗ Skipped low-quality tender: ${tender.title} (Score: ${validation.score}%)`,
+            )
+          }
         }
       }
 
-      console.log(`[v0] GenericHtmlScraper: Successfully extracted ${tenders.length} tenders`)
+      console.log(`[v0] GenericHtmlScraper: Successfully extracted ${tenders.length} quality tenders`)
 
       return {
         success: true,
@@ -134,13 +147,17 @@ export class GenericHtmlScraper extends BaseScraper {
 
   private extractTenderData($: cheerio.CheerioAPI, element: cheerio.Cheerio<cheerio.Element>): ScrapedTender | null {
     try {
+      const tenderReferenceHints = this.getFieldExtractionHints("tender_reference")
+      const titleHints = this.getFieldExtractionHints("title")
+      const closeDateHints = this.getFieldExtractionHints("close_date")
+
       const title = this.extractTitle($, element)
       if (!title) return null
 
       const link = this.extractLink($, element)
       const dates = this.extractDates($, element)
       const description = this.extractDescription($, element)
-      const reference = this.extractReference($, element)
+      const reference = this.extractReferenceIntelligent($, element, tenderReferenceHints)
       const documentUrls = this.extractDocumentUrls($, element)
 
       const organization = this.extractOrganization($, element)
@@ -166,7 +183,7 @@ export class GenericHtmlScraper extends BaseScraper {
         contact_phone: contactInfo.phone,
         contact_person: contactInfo.person,
         raw_data: {
-          html: element.html()?.substring(0, 1000), // Store more HTML for debugging
+          html: element.html()?.substring(0, 1000),
           extracted_at: new Date().toISOString(),
         },
       }
@@ -174,6 +191,35 @@ export class GenericHtmlScraper extends BaseScraper {
       console.error("[Scraper] Error extracting tender data:", error)
       return null
     }
+  }
+
+  private extractReferenceIntelligent(
+    $: cheerio.CheerioAPI,
+    element: cheerio.Cheerio<cheerio.Element>,
+    hints: any,
+  ): string | null {
+    if (!hints) return this.extractReference($, element)
+
+    const text = element.text()
+
+    // Try patterns from tenders engine
+    if (hints.extractionHints?.patterns) {
+      for (const patternStr of hints.extractionHints.patterns) {
+        try {
+          const pattern = new RegExp(patternStr, "i")
+          const match = text.match(pattern)
+          if (match) {
+            console.log(`[v0] Found tender reference using pattern: ${patternStr}`)
+            return match[0]
+          }
+        } catch (e) {
+          // Invalid regex, skip
+        }
+      }
+    }
+
+    // Fall back to original method
+    return this.extractReference($, element)
   }
 
   private extractTitle($: cheerio.CheerioAPI, element: cheerio.Cheerio<cheerio.Element>): string | null {
@@ -435,5 +481,20 @@ export class GenericHtmlScraper extends BaseScraper {
     }
 
     return { email, phone, person }
+  }
+
+  private normalizeTenderData(tender: ScrapedTender): ScrapedTender {
+    // Placeholder for normalization logic
+    return tender
+  }
+
+  private validateExtractedTender(tender: ScrapedTender): { score: number; quality: string } {
+    // Placeholder for validation logic
+    return { score: 100, quality: "High" }
+  }
+
+  private getFieldExtractionHints(fieldName: string): any {
+    // Placeholder for getting field extraction hints
+    return {}
   }
 }

@@ -9,14 +9,18 @@ export class CompetitivenessService {
   /**
    * Calculate competitiveness score for a user
    */
-  static async calculateScore(userId: string, tenderId?: string): Promise<StrategistCompetitivenessScore | null> {
+  static async calculateScore(params: {
+    userId: string
+    tenderId?: string
+    tenderType?: "custom" | "scraped"
+  }): Promise<StrategistCompetitivenessScore | null> {
     const supabase = await createClient()
 
     // Get user data
     const [preferencesResult, companyResult, profileResult] = await Promise.all([
-      supabase.from("strategist_user_preferences").select("*").eq("user_id", userId).single(),
-      supabase.from("companies").select("*").eq("user_id", userId).single(),
-      supabase.from("profiles").select("*").eq("id", userId).single(),
+      supabase.from("strategist_user_preferences").select("*").eq("user_id", params.userId).single(),
+      supabase.from("companies").select("*").eq("user_id", params.userId).single(),
+      supabase.from("profiles").select("*").eq("id", params.userId).single(),
     ])
 
     const preferences = preferencesResult.data
@@ -33,7 +37,7 @@ export class CompetitivenessService {
     // Calculate overall and win probability
     const overallScore = (documentationScore + pricingScore + complianceScore + experienceScore + capacityScore) / 5
 
-    const winProbability = this.estimateWinProbability(overallScore, preferences, tenderId)
+    const winProbability = this.estimateWinProbability(overallScore, preferences, params.tenderId)
 
     // Build score breakdown
     const scoreBreakdown = {
@@ -67,8 +71,8 @@ export class CompetitivenessService {
       .from("strategist_competitiveness_scores")
       .upsert(
         {
-          user_id: userId,
-          tender_id: tenderId,
+          user_id: params.userId,
+          tender_id: params.tenderId,
           documentation_score: documentationScore,
           pricing_score: pricingScore,
           compliance_score: complianceScore,
@@ -117,7 +121,7 @@ export class CompetitivenessService {
     }
 
     // Calculate new score
-    return this.calculateScore(userId, tenderId)
+    return this.calculateScore({ userId, tenderId })
   }
 
   // Score calculation helpers

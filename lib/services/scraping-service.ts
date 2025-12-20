@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js"
 import { ScraperFactory } from "../scrapers/scraper-factory"
 import type { ScrapedTender } from "../scrapers/base-scraper"
 import { DocumentService } from "./document-service"
+import { engineOrchestrator } from "../engines/orchestrator"
 
 interface PostScrapeHook {
   name: string
@@ -262,45 +263,52 @@ export class ScrapingService {
   }
 
   private async saveTenders(sourceId: number, source: any, tenders: ScrapedTender[]) {
-    console.log(`[ScrapingService] Preparing to save ${tenders.length} tenders`)
+    console.log(`[v0] ScrapingService: Processing ${tenders.length} tenders through engine orchestrator`)
 
-    const tendersToInsert = tenders.map((tender) => ({
-      source_id: sourceId,
-      source_name: source.name,
-      source_url: source.tender_page_url,
-      source_level: source.level,
-      source_province: source.province,
-      tender_reference: tender.tender_reference,
-      title: tender.title,
-      description: tender.description,
-      category: tender.category,
-      publish_date: tender.publish_date,
-      close_date: tender.close_date,
-      opening_date: tender.opening_date,
-      estimated_value: tender.estimated_value,
-      contact_person: tender.contact_person,
-      contact_email: tender.contact_email,
-      contact_phone: tender.contact_phone,
-      tender_url: tender.tender_url,
-      document_urls: tender.document_urls,
-      raw_data: tender.raw_data,
-      is_active: true,
-    }))
+    const validatedTenders: any[] = []
+
+    for (const tender of tenders) {
+      const result = await engineOrchestrator.processScrapedTender(tender)
+
+      if (result.success && result.tender) {
+        console.log(`[v0] ScrapingService: Tender validated - ${result.tender.title} (${result.validation?.grade})`)
+        validatedTenders.push({
+          source_id: sourceId,
+          source_name: source.name,
+          source_url: source.tender_page_url,
+          source_level: source.level,
+          source_province: source.province,
+          ...result.tender,
+          is_active: true,
+          quality_score: result.validation?.completeness || 0,
+          quality_grade: result.validation?.grade || "F",
+        })
+      } else {
+        console.warn(`[v0] ScrapingService: Tender rejected - ${tender.title}: ${result.error}`)
+      }
+    }
+
+    if (validatedTenders.length === 0) {
+      console.log("[v0] ScrapingService: No tenders passed validation")
+      return []
+    }
+
+    console.log(`[v0] ScrapingService: Saving ${validatedTenders.length} validated tenders to database`)
 
     const { data, error } = await this.supabase
       .from("scraped_tenders")
-      .upsert(tendersToInsert, {
+      .upsert(validatedTenders, {
         onConflict: "source_id,title",
         ignoreDuplicates: false,
       })
       .select()
 
     if (error) {
-      console.error("[ScrapingService] Error saving tenders:", error)
+      console.error("[v0] ScrapingService: Error saving tenders:", error)
       throw error
     }
 
-    console.log(`[ScrapingService] Successfully saved ${tenders.length} tenders`)
+    console.log(`[v0] ScrapingService: Successfully saved ${validatedTenders.length} tenders`)
     return data || []
   }
 

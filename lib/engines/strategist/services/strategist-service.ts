@@ -348,4 +348,71 @@ export class StrategistService {
 
     return !error
   }
+
+  /**
+   * Generate strategic recommendations for a tender
+   */
+  static async generateRecommendations(params: {
+    userId: string
+    tenderId: string
+    tenderType: "custom" | "scraped"
+    competitiveness?: any
+  }): Promise<string[]> {
+    const recommendations: string[] = []
+
+    try {
+      const supabase = await createClient()
+
+      // Get tender data
+      const table = params.tenderType === "custom" ? "user_custom_tenders" : "scraped_tenders"
+      const { data: tender } = await supabase.from(table).select("*").eq("id", params.tenderId).single()
+
+      if (!tender) {
+        return ["Unable to generate recommendations: Tender not found"]
+      }
+
+      // Get user preferences
+      const preferences = await this.getUserPreferences(params.userId)
+
+      // Generate recommendations based on competitiveness score
+      if (params.competitiveness) {
+        if (params.competitiveness.documentation_score < 0.7) {
+          recommendations.push("Complete all required documentation before submitting your bid")
+        }
+        if (params.competitiveness.compliance_score < 0.8) {
+          recommendations.push("Ensure tax clearance and CSD registration are up to date")
+        }
+        if (params.competitiveness.win_probability < 0.5) {
+          recommendations.push("Consider partnering with experienced companies to strengthen your bid")
+        }
+      }
+
+      // Time-based recommendations
+      if (tender.close_date) {
+        const daysUntilClose = Math.ceil((new Date(tender.close_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+        if (daysUntilClose < 7) {
+          recommendations.push("Urgent: Prioritize this tender due to approaching deadline")
+        } else if (daysUntilClose > 30) {
+          recommendations.push("You have time to prepare a comprehensive bid - use it wisely")
+        }
+      }
+
+      // Experience-based recommendations
+      if (preferences?.experience_level === "beginner") {
+        recommendations.push("Consider seeking mentorship or guidance from experienced bidders")
+        recommendations.push("Start with smaller value tenders to build your track record")
+      }
+
+      // Default recommendation
+      if (recommendations.length === 0) {
+        recommendations.push("Review tender requirements carefully and ensure full compliance")
+        recommendations.push("Conduct thorough cost analysis before submitting your pricing")
+      }
+
+      return recommendations
+    } catch (error) {
+      console.error("[Strategist] Error generating recommendations:", error)
+      return ["Unable to generate recommendations at this time"]
+    }
+  }
 }
