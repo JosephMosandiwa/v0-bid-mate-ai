@@ -230,7 +230,7 @@ export function TenderContextStrategistPanel({
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.details || "Failed to generate project plan")
+        throw new Error(error.details || error.error || "Failed to generate project plan")
       }
 
       const { plan } = await response.json()
@@ -240,16 +240,13 @@ export function TenderContextStrategistPanel({
         onPlanGenerated(plan)
       }
 
-      toast({
-        title: "Project Plan Generated",
+      toast.success("Project Plan Generated", {
         description: "Your comprehensive project plan is now available in the Planning section",
       })
     } catch (error) {
       console.error("[v0] Plan generation error:", error)
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error instanceof Error ? error.message : "Failed to generate project plan",
-        variant: "destructive",
       })
     } finally {
       setGeneratingPlan(false)
@@ -274,7 +271,7 @@ export function TenderContextStrategistPanel({
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.details || "Failed to generate BOQ")
+        throw new Error(error.details || error.error || "Failed to generate BOQ")
       }
 
       const { boq } = await response.json()
@@ -284,16 +281,13 @@ export function TenderContextStrategistPanel({
         onBoqGenerated(boq)
       }
 
-      toast({
-        title: "BOQ Generated",
+      toast.success("BOQ Generated", {
         description: "Your Bill of Quantities is now available in the Financial section",
       })
     } catch (error) {
       console.error("[v0] BOQ generation error:", error)
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error instanceof Error ? error.message : "Failed to generate BOQ",
-        variant: "destructive",
       })
     }
   }
@@ -315,16 +309,13 @@ export function TenderContextStrategistPanel({
         onReadinessGenerated(readiness)
       }
 
-      toast({
-        title: "Readiness Check Complete",
+      toast.success("Readiness Check Complete", {
         description: "Your bid readiness assessment is now available in the Overview section",
       })
     } catch (error) {
       console.error("[v0] Readiness check error:", error)
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: "Failed to check readiness",
-        variant: "destructive",
       })
     }
   }

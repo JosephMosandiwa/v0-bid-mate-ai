@@ -151,11 +151,52 @@ Return ONLY valid JSON with this exact structure.`
       const vat_amount = subtotal_with_profit * (boqData.vat_percent / 100)
       const total_amount = subtotal_with_profit + vat_amount
 
-      // Save to database
-      const { data: savedBoq, error } = await supabase
+      // First, check if BOQ already exists
+      const { data: existingBoq } = await supabase
         .from("tender_boq")
-        .upsert(
-          {
+        .select("id")
+        .eq("tender_id", finalTenderId)
+        .eq("tender_type", finalTenderType)
+        .eq("user_id", user.id)
+        .maybeSingle()
+
+      let savedBoq
+      if (existingBoq) {
+        // Update existing
+        const { data, error } = await supabase
+          .from("tender_boq")
+          .update({
+            boq_items: boqData.boq_items,
+            subtotal,
+            contingency_percent: boqData.contingency_percent,
+            contingency_amount,
+            profit_margin_percent: boqData.profit_margin_percent,
+            profit_amount,
+            vat_percent: boqData.vat_percent,
+            vat_amount,
+            total_amount,
+            pricing_strategy: boqData.pricing_strategy,
+            direct_costs: boqData.direct_costs,
+            indirect_costs: boqData.indirect_costs,
+            break_even_analysis: boqData.break_even_analysis,
+            cash_flow_projection: boqData.cash_flow_projection,
+            profitability_analysis: boqData.profitability_analysis,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingBoq.id)
+          .select()
+          .single()
+
+        if (error) {
+          console.error("[Strategist] Error updating BOQ:", error)
+          return Response.json({ error: "Failed to update BOQ", details: error.message }, { status: 500 })
+        }
+        savedBoq = data
+      } else {
+        // Insert new
+        const { data, error } = await supabase
+          .from("tender_boq")
+          .insert({
             tender_id: finalTenderId,
             tender_type: finalTenderType,
             user_id: user.id,
@@ -174,20 +215,18 @@ Return ONLY valid JSON with this exact structure.`
             break_even_analysis: boqData.break_even_analysis,
             cash_flow_projection: boqData.cash_flow_projection,
             profitability_analysis: boqData.profitability_analysis,
-            updated_at: new Date().toISOString(),
-          },
-          {
-            onConflict: "tender_id,tender_type,user_id",
-          },
-        )
-        .select()
-        .single()
+          })
+          .select()
+          .single()
 
-      if (error) {
-        console.error("[Strategist] Error saving BOQ:", error)
-        throw error
+        if (error) {
+          console.error("[Strategist] Error inserting BOQ:", error)
+          return Response.json({ error: "Failed to create BOQ", details: error.message }, { status: 500 })
+        }
+        savedBoq = data
       }
 
+      console.log("[Strategist] BOQ saved successfully")
       return Response.json({ boq: savedBoq })
     }
 
@@ -258,7 +297,7 @@ ${boq_items ? JSON.stringify(boq_items, null, 2) : "No BOQ items provided - prov
     })
   } catch (error: any) {
     console.error("[Strategist] BOQ error:", error)
-    return Response.json({ error: "Failed to analyze BOQ" }, { status: 500 })
+    return Response.json({ error: "Failed to analyze BOQ", details: error.message }, { status: 500 })
   }
 }
 
@@ -297,6 +336,6 @@ export async function GET(request: Request) {
     return Response.json({ boq: boq || null })
   } catch (error: any) {
     console.error("[Strategist] BOQ GET error:", error)
-    return Response.json({ error: "Failed to fetch BOQ" }, { status: 500 })
+    return Response.json({ error: "Failed to fetch BOQ", details: error.message }, { status: 500 })
   }
 }
