@@ -56,24 +56,54 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      console.log("[v0] Starting scrapeAllActiveSources with progressId:", progressId)
-      const result = await scrapingService.scrapeAllActiveSources(progressId)
-      console.log("[v0] scrapeAllActiveSources completed:", result)
+      console.log("[v0] Starting background scraping with progressId:", progressId)
 
-      if (progressId) {
-        console.log("[v0] Updating progress record as completed")
-        await supabase
-          .from("scraping_progress")
-          .update({
-            status: "completed",
-            completed_at: new Date().toISOString(),
-            total_tenders: result.totalScraped || 0,
-          })
-          .eq("id", progressId)
-      }
+      // Run scraping in background without blocking the response
+      scrapingService
+        .scrapeAllActiveSources(progressId)
+        .then((result) => {
+          console.log("[v0] Background scraping completed:", result)
 
-      console.log("[v0] Scrape all result:", JSON.stringify(result, null, 2))
-      return Response.json({ ...result, progressId })
+          // Update progress as completed
+          if (progressId) {
+            supabase
+              .from("scraping_progress")
+              .update({
+                status: "completed",
+                completed_at: new Date().toISOString(),
+                total_tenders: result.totalScraped || 0,
+              })
+              .eq("id", progressId)
+              .then(() => console.log("[v0] Progress marked as completed"))
+              .catch((err) => console.error("[v0] Error updating progress:", err))
+          }
+        })
+        .catch((error) => {
+          console.error("[v0] Background scraping error:", error)
+
+          // Mark progress as failed
+          if (progressId) {
+            supabase
+              .from("scraping_progress")
+              .update({
+                status: "failed",
+                completed_at: new Date().toISOString(),
+                error: error instanceof Error ? error.message : "Unknown error",
+              })
+              .eq("id", progressId)
+              .then(() => console.log("[v0] Progress marked as failed"))
+              .catch((err) => console.error("[v0] Error updating failed progress:", err))
+          }
+        })
+
+      // Return immediately with progressId for tracking
+      console.log("[v0] Returning immediately with progressId for polling")
+      return Response.json({
+        success: true,
+        message: "Scraping started in background",
+        progressId,
+        polling: true,
+      })
     } else if (sourceId) {
       console.log(`[v0] Triggering scrape for source ${sourceId}`)
       const result = await scrapingService.scrapeSource(sourceId)
