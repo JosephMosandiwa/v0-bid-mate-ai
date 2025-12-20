@@ -362,18 +362,27 @@ export class ScrapingService {
     }
 
     console.log(`[v0] ScrapingService: Found ${sources.length} active sources to scrape`)
-    sources.forEach((source, index) => {
-      console.log(`[v0] ScrapingService: Source ${index + 1}: ${source.name} - ${source.tender_page_url}`)
-    })
 
     if (sources.length === 0) {
-      console.log("[v0] ScrapingService: WARNING - No active sources found! Please check tender_sources table.")
+      console.warn("[v0] ScrapingService: ⚠️ WARNING - NO ACTIVE SOURCES FOUND!")
+      console.warn("[v0] ScrapingService: Please check the tender_sources table:")
+      console.warn("[v0] ScrapingService: - Ensure rows exist in the table")
+      console.warn("[v0] ScrapingService: - Ensure is_active = true")
+      console.warn("[v0] ScrapingService: - Ensure scraping_enabled = true")
+    } else {
+      sources.forEach((source, index) => {
+        console.log(`[v0] ScrapingService: Source ${index + 1}: ${source.name} - ${source.tender_page_url}`)
+      })
+    }
+
+    if (sources.length === 0) {
       return {
         success: true,
         results: [],
         totalScraped: 0,
         sourcesScraped: 0,
         successfulSources: 0,
+        message: "No active sources available to scrape",
       }
     }
 

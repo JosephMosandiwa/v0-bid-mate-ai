@@ -207,6 +207,20 @@ export default function ScrapingAdminPage() {
     try {
       console.log("[v0] Starting scrape for all sources")
 
+      const activeSourceCount = sources.filter((s) => s.is_active && s.scraping_enabled).length
+      console.log("[v0] Active sources available for scraping:", activeSourceCount)
+
+      if (activeSourceCount === 0) {
+        toast({
+          title: "No Active Sources",
+          description: "There are no enabled tender sources to scrape. Please enable at least one source first.",
+          variant: "destructive",
+        })
+        setScraping(null)
+        setScrapingProgress(null)
+        return
+      }
+
       const response = await fetch("/api/scraping/trigger", {
         method: "POST",
         headers: {
