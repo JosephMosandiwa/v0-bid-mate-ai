@@ -216,17 +216,20 @@ export default function ScrapingAdminPage() {
       })
 
       console.log("[v0] Scrape all response status:", response.status)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("[v0] Scrape all error response:", errorText)
+        throw new Error(`Server responded with ${response.status}: ${errorText}`)
+      }
+
       const result = await response.json()
       console.log("[v0] Scrape all response data:", result)
 
       if (result.progressId) {
-        const interval = await pollProgress(result.progressId)
-        // Clean up interval when component unmounts
-        return () => clearInterval(interval)
-      }
-
-      if (!response.ok) {
-        throw new Error(result.error || result.details || "Failed to trigger scraping")
+        console.log("[v0] Starting progress polling for ID:", result.progressId)
+        pollProgress(result.progressId)
+        return
       }
 
       const successCount = result.successfulSources || 0
@@ -244,6 +247,8 @@ export default function ScrapingAdminPage() {
         variant: tendersFound > 0 ? "default" : "destructive",
       })
 
+      setScrapingProgress(null)
+      setScraping(null)
       loadData()
     } catch (error) {
       console.error("[v0] Scraping all error:", error)
@@ -253,7 +258,6 @@ export default function ScrapingAdminPage() {
         variant: "destructive",
       })
       setScrapingProgress(null)
-    } finally {
       setScraping(null)
     }
   }
