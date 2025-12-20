@@ -19,15 +19,34 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const tenderId = searchParams.get("tenderId") || searchParams.get("tender_id") || undefined
 
-    console.log("[v0] Readiness check for tender:", tenderId, "user:", user.id)
+    let tenderData = null
+    if (tenderId) {
+      const { data } = await supabase.from("user_tenders").select("*").eq("id", tenderId).single()
+      tenderData = data
+    }
+
+    console.log(
+      "[v0] Readiness check for THIS SPECIFIC tender:",
+      tenderId,
+      tenderData?.title || "General",
+      "user:",
+      user.id,
+    )
 
     try {
       const score = await CompetitivenessService.getScore(user.id, tenderId)
       if (score) {
-        return Response.json({ ...score, overall_score: score.overall_score || 75 })
+        return Response.json({
+          ...score,
+          overall_score: score.overall_score || 75,
+          tender_title: tenderData?.title,
+          tender_context: tenderData
+            ? `Readiness assessment for: "${tenderData.title}" (${tenderData.organization || "Unknown org"})`
+            : "General readiness",
+        })
       }
     } catch (serviceError) {
-      console.log("[v0] CompetitivenessService not available, returning mock data:", serviceError)
+      console.log("[v0] CompetitivenessService not available, returning tender-specific mock data:", serviceError)
     }
 
     const mockReadiness = {
@@ -37,7 +56,15 @@ export async function GET(request: Request) {
       experience_score: 75,
       capacity_score: 70,
       pricing_score: 80,
-      improvement_areas: ["Upload more supporting documents", "Complete B-BBEE certificate verification"],
+      improvement_areas: tenderData
+        ? [
+            `Upload tender-specific documents for "${tenderData.title}"`,
+            `Verify compliance requirements for ${tenderData.organization || "this organization"}`,
+            `Prepare financial capacity evidence for this ${tenderData.value || "tender"}`,
+          ]
+        : ["Upload more supporting documents", "Complete B-BBEE certificate verification"],
+      tender_title: tenderData?.title,
+      tender_context: tenderData ? `Assessment for: "${tenderData.title}"` : "General assessment",
     }
 
     return Response.json(mockReadiness)

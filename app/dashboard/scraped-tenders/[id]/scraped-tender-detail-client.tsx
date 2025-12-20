@@ -23,8 +23,6 @@ import {
   Edit3,
   Calculator,
   Award,
-  MessageSquare,
-  PanelRightClose,
   PanelRightOpen,
   Globe,
   Clock,
@@ -101,6 +99,7 @@ function ScrapedTenderDetailClient({ id }: { id: string }) {
   const [strategistOpen, setStrategistOpen] = useState(true)
   const [projectPlan, setProjectPlan] = useState<any>(null)
   const [boqData, setBoqData] = useState<any>(null)
+  const [readinessScore, setReadinessScore] = useState<any>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -204,6 +203,21 @@ function ScrapedTenderDetailClient({ id }: { id: string }) {
 
   const handleProgressChange = (progress: number) => {
     setFormProgress(progress)
+  }
+
+  const handlePlanGenerated = (plan: any) => {
+    setProjectPlan(plan)
+    setActiveSection("planning") // Automatically switch to planning section
+  }
+
+  const handleBoqGenerated = (boq: any) => {
+    setBoqData(boq)
+    setActiveSection("financial") // Automatically switch to financial section
+  }
+
+  const handleReadinessGenerated = (readiness: any) => {
+    setReadinessScore(readiness)
+    setActiveSection("overview") // Show in overview section
   }
 
   const sections = [
@@ -430,6 +444,22 @@ function ScrapedTenderDetailClient({ id }: { id: string }) {
                                 <span className="text-sm">{rec}</span>
                               </div>
                             ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {readinessScore && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Readiness Score</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <div className="flex items-start gap-2">
+                              <Sparkles className="h-4 w-4 text-primary mt-0.5" />
+                              <span className="text-sm">{readinessScore}</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -672,30 +702,23 @@ function ScrapedTenderDetailClient({ id }: { id: string }) {
           </div>
         </div>
         {strategistOpen && (
-          <div className="w-96 border-l bg-muted/20 flex flex-col">
-            <div className="p-4 border-b flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold">AI Strategist</h3>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setStrategistOpen(false)}>
-                <PanelRightClose className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <TenderContextPanel
-                tenderId={tender.id}
-                tenderTitle={tender.title}
-                tenderDescription={tender.description}
-                documents={documents}
-                analysis={analysis}
-                onPlanGenerated={(plan) => {
-                  setProjectPlan(plan)
-                  setActiveSection("planning")
-                }}
-              />
-            </div>
-          </div>
+          <aside className="w-96 border-l bg-muted/30 overflow-hidden flex flex-col">
+            <TenderContextPanel
+              tender={{
+                id: tender.id,
+                title: tender.title,
+                organization: tender.source_name,
+                description: tender.description,
+                deadline: tender.close_date,
+                value: tender.estimated_value,
+                requirements: tender.requirements,
+                analysis: analysis,
+              }}
+              onPlanGenerated={handlePlanGenerated}
+              onBoqGenerated={handleBoqGenerated}
+              onReadinessGenerated={handleReadinessGenerated}
+            />
+          </aside>
         )}
 
         {!strategistOpen && (
@@ -714,5 +737,5 @@ function ScrapedTenderDetailClient({ id }: { id: string }) {
   )
 }
 
-export default ScrapedTenderDetailClient
 export { ScrapedTenderDetailClient }
+export default ScrapedTenderDetailClient

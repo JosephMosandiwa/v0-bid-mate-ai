@@ -41,53 +41,63 @@ export async function POST(request: Request) {
 
     // If this is a BOQ generation request (has tenderTitle)
     if (tenderTitle) {
-      console.log("[Strategist] Generating comprehensive BOQ for:", tenderTitle)
+      console.log("[Strategist] Generating comprehensive BOQ for THIS SPECIFIC TENDER:", tenderTitle)
 
-      const prompt = `Generate a comprehensive Bill of Quantities (BOQ) for this South African tender:
+      const prompt = `You are generating a Bill of Quantities specifically for THIS tender:
 
-**Tender Details:**
-Title: ${tenderTitle}
-Description: ${tenderDescription || "Not provided"}
+**🎯 THIS TENDER: "${tenderTitle}"**
+Organization: ${analysisData?.organization || "Not specified"}
+Deadline: ${analysisData?.deadline || "Not specified"}
+Estimated Value: ${analysisData?.value || "Not specified"}
 
-**Analysis Data:**
+**Description:**
+${tenderDescription || "Not provided"}
+
+**THIS TENDER'S Specific Requirements:**
+${analysisData?.requirements ? JSON.stringify(analysisData.requirements, null, 2) : "Standard requirements"}
+
+**Analysis of THIS TENDER:**
 ${analysisData ? JSON.stringify(analysisData, null, 2) : "Not available"}
 
-**Project Plan:**
+**Project Plan for THIS TENDER:**
 ${projectPlan ? JSON.stringify(projectPlan, null, 2) : "Not available"}
 
-Generate a detailed, realistic BOQ with the following structure:
+🚨 CRITICAL: Every line item MUST be directly relevant to delivering THIS SPECIFIC tender ("${tenderTitle}").
+Do NOT provide generic BOQ templates - tailor EVERYTHING to what THIS tender actually requires.
 
-1. **BOQ Items** (15-30 line items):
+Generate a detailed, realistic BOQ specifically for "${tenderTitle}" with the following structure:
+
+1. **BOQ Items** (15-30 line items SPECIFIC TO THIS TENDER):
    - Item number (format: "1.1", "1.2", etc.)
-   - Description (detailed description of work/material)
+   - Description (detailed description of work/material REQUIRED FOR THIS TENDER)
    - Category (Labor, Materials, Equipment, Subcontractors, Professional Services, etc.)
    - Unit (e.g., m², hours, kg, each, lot)
-   - Quantity
+   - Quantity (realistic for THIS TENDER's scope)
    - Unit rate in ZAR (realistic South African market rates for 2025)
    - Amount (quantity × unit rate)
-   - Notes (any special considerations)
+   - Notes (any special considerations FOR THIS TENDER)
 
-2. **Pricing Strategy:**
+2. **Pricing Strategy FOR THIS TENDER:**
    - strategy_type: "competitive", "value_based", "cost_plus", or "strategic_loss_leader"
-   - competitive_analysis: Brief analysis of likely competition
-   - risk_premium_percent: Risk premium (0-10%)
-   - discount_offered_percent: Any discount to win (0-5%)
+   - competitive_analysis: Analysis of competition FOR THIS SPECIFIC tender
+   - risk_premium_percent: Risk premium for THIS tender (0-10%)
+   - discount_offered_percent: Discount to win THIS tender (0-5%)
    - payment_terms: e.g., "30/60/90 days" or "Monthly progress payments"
-   - pricing_rationale: Why this pricing approach
+   - pricing_rationale: Why this pricing approach FOR THIS tender
 
-3. **Direct Costs Breakdown:**
-   - labor: Total labor costs
-   - materials: Total material costs
-   - equipment: Total equipment costs
-   - subcontractors: Total subcontractor costs
+3. **Direct Costs Breakdown FOR THIS TENDER:**
+   - labor: Total labor costs FOR THIS PROJECT
+   - materials: Total material costs FOR THIS PROJECT
+   - equipment: Total equipment costs FOR THIS PROJECT
+   - subcontractors: Total subcontractor costs FOR THIS PROJECT
 
-4. **Indirect Costs Breakdown:**
+4. **Indirect Costs Breakdown FOR THIS TENDER:**
    - overhead: Office overhead (10-15% of direct)
    - admin: Admin costs (3-5% of direct)
-   - transport: Transport/logistics costs
-   - insurance: Insurance premiums
-   - certifications: Certification costs (CIDB, ISO, etc.)
-   - compliance: Compliance costs (B-BBEE, H&S, etc.)
+   - transport: Transport/logistics costs FOR THIS PROJECT
+   - insurance: Insurance premiums FOR THIS PROJECT
+   - certifications: Certification costs required FOR THIS TENDER (CIDB, ISO, etc.)
+   - compliance: Compliance costs FOR THIS TENDER (B-BBEE, H&S, etc.)
 
 5. **Financial Calculations:**
    - contingency_percent: 10
@@ -95,19 +105,21 @@ Generate a detailed, realistic BOQ with the following structure:
    - vat_percent: 15
    - Calculate all amounts correctly
 
-6. **Break-Even Analysis:**
-   - break_even_value: ZAR amount to break even
-   - break_even_timeline: "X months"
-   - profitability_threshold: Description
+6. **Break-Even Analysis FOR THIS TENDER:**
+   - break_even_value: ZAR amount to break even ON THIS PROJECT
+   - break_even_timeline: "X months" FOR THIS PROJECT
+   - profitability_threshold: Description FOR THIS PROJECT
 
-7. **Cash Flow Projection:**
-   - months: Array of 6-12 months with inflow, outflow, net_cash_flow, cumulative_cash_flow
+7. **Cash Flow Projection FOR THIS TENDER:**
+   - months: Array of 6-12 months with inflow, outflow, net_cash_flow, cumulative_cash_flow BASED ON THIS TENDER
 
-8. **Profitability Analysis:**
-   - gross_profit_margin: percentage
-   - net_profit_margin: percentage
-   - return_on_investment: percentage
-   - payback_period_months: number
+8. **Profitability Analysis FOR THIS TENDER:**
+   - gross_profit_margin: percentage FOR THIS PROJECT
+   - net_profit_margin: percentage FOR THIS PROJECT
+   - return_on_investment: percentage FOR THIS PROJECT
+   - payback_period_months: number FOR THIS PROJECT
+
+Remember: EVERY item must be justified by THIS tender's specific requirements. Reference "${tenderTitle}" throughout.
 
 Return ONLY valid JSON with this exact structure.`
 
@@ -189,36 +201,48 @@ Return ONLY valid JSON with this exact structure.`
       .eq("tender_id", finalTenderId)
       .single()
 
-    const systemPrompt = `You are an expert pricing strategist for South African government tenders.
+    const { data: tenderData } = await supabase.from("user_tenders").select("*").eq("id", finalTenderId).single()
 
-## Your Role
-- Analyze BOQ (Bill of Quantities) structures
-- Provide pricing guidance and margin recommendations
-- Identify pricing risks and opportunities
-- Suggest competitive positioning strategies
+    const systemPrompt = `You are an expert pricing strategist focused EXCLUSIVELY on helping the user win THIS SPECIFIC tender.
+
+🎯 **YOU ARE WORKING ON THIS TENDER:**
+Title: "${tenderData?.title || "Tender"}"
+Organization: ${tenderData?.organization || "Not specified"}
+Deadline: ${tenderData?.deadline || "Not specified"}
+Value: ${tenderData?.value || "Not specified"}
+Description: ${tenderData?.description || "No description"}
+
+🚨 **CRITICAL**: Every piece of advice MUST be specific to THIS tender. Do NOT give generic pricing advice.
+
+## Your Role FOR THIS TENDER
+- Analyze BOQ (Bill of Quantities) structures FOR THIS SPECIFIC tender
+- Provide pricing guidance and margin recommendations FOR THIS tender
+- Identify pricing risks and opportunities SPECIFIC TO THIS tender
+- Suggest competitive positioning strategies FOR THIS tender
 
 ## User Context
 ${context.company_profile?.company_name ? `Company: ${context.company_profile.company_name}` : ""}
 ${context.company_profile?.industry ? `Industry: ${context.company_profile.industry}` : ""}
 ${context.user_preferences?.experience_level ? `Experience: ${context.user_preferences.experience_level}` : ""}
 
-## Tender Context
-${analysis?.analysis_data?.tender_summary ? JSON.stringify(analysis.analysis_data.tender_summary, null, 2) : "Not available"}
+## THIS TENDER's Analysis
+${analysis?.analysis_data ? JSON.stringify(analysis.analysis_data, null, 2) : "Not available"}
 
-## Guidelines
-- Be specific with percentage ranges and ZAR amounts
-- Consider South African market conditions
-- Factor in B-BBEE requirements and local content
-- Warn about underpricing risks
-- Suggest areas for cost optimization`
+## Guidelines FOR THIS TENDER
+- Reference "${tenderData?.title}" in your responses
+- Be specific with percentage ranges and ZAR amounts FOR THIS tender
+- Consider South African market conditions relevant TO THIS tender
+- Factor in B-BBEE requirements and local content FOR THIS tender
+- Warn about underpricing risks SPECIFIC TO THIS tender
+- Suggest areas for cost optimization IN THIS tender`
 
     const userPrompt =
       question ||
-      `Analyze this BOQ and provide pricing strategy recommendations:
+      `Analyze this BOQ for "${tenderData?.title || "this tender"}" and provide pricing strategy recommendations specifically tailored to winning this tender:
 
-${boq_items ? JSON.stringify(boq_items, null, 2) : "No BOQ items provided - provide general pricing guidance for this tender."}`
+${boq_items ? JSON.stringify(boq_items, null, 2) : "No BOQ items provided - provide general pricing guidance for THIS specific tender based on the tender details above."}`
 
-    console.log("[Strategist] BOQ analysis for tender:", finalTenderId)
+    console.log("[Strategist] BOQ analysis for THIS SPECIFIC tender:", finalTenderId, tenderData?.title)
 
     const { text } = await generateText({
       model: "openai/gpt-4-turbo",

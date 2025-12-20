@@ -27,10 +27,7 @@ import {
   Edit3,
   Calculator,
   Award,
-  MessageSquare,
   ChevronRight,
-  PanelRightClose,
-  PanelRightOpen,
 } from "lucide-react"
 import { TenderContextPanel } from "@/components/strategist/tender-context-panel"
 import { useToast } from "@/hooks/use-toast"
@@ -66,9 +63,10 @@ export default function CustomTenderDetailClient({
   const [progressStatus, setProgressStatus] = useState(tender.progress_status || "reviewing")
   const [formProgress, setFormProgress] = useState(0)
   const [activeSection, setActiveSection] = useState<string>("overview")
-  const [strategistOpen, setStrategistOpen] = useState(true)
+  const [showStrategist, setShowStrategist] = useState(true)
   const [projectPlan, setProjectPlan] = useState<any>(null)
   const [boqData, setBoqData] = useState<any>(null)
+  const [readinessScore, setReadinessScore] = useState<any>(null) // Added readiness state
 
   const formData = {
     title: String(tender.title || ""),
@@ -243,8 +241,23 @@ export default function CustomTenderDetailClient({
     )
   }
 
+  const handlePlanGenerated = (plan: any) => {
+    setProjectPlan(plan)
+    setActiveSection("planning") // Automatically switch to planning section
+  }
+
+  const handleBoqGenerated = (boq: any) => {
+    setBoqData(boq)
+    setActiveSection("financial") // Automatically switch to financial section
+  }
+
+  const handleReadinessGenerated = (readiness: any) => {
+    setReadinessScore(readiness)
+    setActiveSection("overview") // Show in overview section
+  }
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="min-h-screen bg-background">
       <div className="border-b bg-background p-6 space-y-4">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
@@ -313,7 +326,7 @@ export default function CustomTenderDetailClient({
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex-1 flex overflow-hidden">
         <div className="w-56 border-r bg-muted/20 p-4">
           <nav className="space-y-1">
             {sections.map((section) => {
@@ -337,8 +350,9 @@ export default function CustomTenderDetailClient({
           </nav>
         </div>
 
-        <div className={cn("flex-1 overflow-auto", strategistOpen ? "" : "")}>
-          <div className="p-6 space-y-6 max-w-7xl mx-auto">
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="container max-w-6xl mx-auto p-6">
             {/* Overview Section */}
             {activeSection === "overview" && (
               <div className="space-y-6">
@@ -346,6 +360,33 @@ export default function CustomTenderDetailClient({
                   <h2 className="text-2xl font-bold mb-2">Tender Overview</h2>
                   <p className="text-muted-foreground">AI-powered analysis and insights for this tender</p>
                 </div>
+
+                {readinessScore && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                        Bid Readiness Assessment
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <div className="p-4 border rounded-lg">
+                          <p className="text-sm text-muted-foreground mb-1">Overall Score</p>
+                          <p className="text-3xl font-bold text-primary">{readinessScore.overall_score}/100</p>
+                        </div>
+                        <div className="p-4 border rounded-lg">
+                          <p className="text-sm text-muted-foreground mb-1">Competitiveness</p>
+                          <p className="text-3xl font-bold">{readinessScore.competitiveness_score}/100</p>
+                        </div>
+                        <div className="p-4 border rounded-lg">
+                          <p className="text-sm text-muted-foreground mb-1">Compliance</p>
+                          <p className="text-3xl font-bold">{readinessScore.compliance_score}/100</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* AI Summary */}
                 {analysis?.tender_summary && (
@@ -742,46 +783,20 @@ export default function CustomTenderDetailClient({
               </div>
             )}
           </div>
-        </div>
+        </main>
 
-        {strategistOpen && (
-          <div className="w-96 border-l bg-muted/20 flex flex-col">
-            <div className="p-4 border-b flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold">AI Strategist</h3>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setStrategistOpen(false)}>
-                <PanelRightClose className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <TenderContextPanel
-                tenderId={tender.id}
-                tenderTitle={String(tender.title || "")}
-                tenderDescription={String(tender.description || "")}
-                documents={documents}
-                analysis={analysis}
-                onPlanGenerated={(plan) => {
-                  setProjectPlan(plan)
-                  setActiveSection("planning") // Auto-switch to planning section
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Collapsed strategist toggle */}
-        {!strategistOpen && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="fixed bottom-6 right-6 shadow-lg bg-transparent"
-            onClick={() => setStrategistOpen(true)}
-          >
-            <PanelRightOpen className="h-4 w-4 mr-2" />
-            AI Strategist
-          </Button>
+        {/* AI Strategist Panel */}
+        {showStrategist && (
+          <aside className="w-96 border-l bg-muted/30 overflow-hidden flex flex-col">
+            <TenderContextPanel
+              tender={tender}
+              documents={documents}
+              analysis={analysis}
+              onPlanGenerated={handlePlanGenerated} // Pass callbacks
+              onBoqGenerated={handleBoqGenerated}
+              onReadinessGenerated={handleReadinessGenerated}
+            />
+          </aside>
         )}
       </div>
     </div>

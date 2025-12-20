@@ -26,7 +26,13 @@ export async function POST(request: Request) {
       return Response.json({ error: "Tender ID is required" }, { status: 400 })
     }
 
-    console.log("[Strategist] Generating strategy for tender:", tender_id)
+    const { data: tenderData } = await supabase.from("user_tenders").select("*").eq("id", tender_id).single()
+
+    if (!tenderData) {
+      return Response.json({ error: "Tender not found" }, { status: 404 })
+    }
+
+    console.log("[Strategist] Generating strategy for THIS SPECIFIC TENDER:", tender_id, tenderData.title)
     console.log("[Strategist] Strategy type:", strategy_type)
 
     // Get tender analysis
@@ -43,14 +49,31 @@ export async function POST(request: Request) {
     // Build user context
     const context = await StrategistService.buildContext(user.id, tender_id, "strategy")
 
-    // Generate strategy prompt
-    const prompt = buildStrategyGenerationPrompt(strategy_type as StrategyType, tenderAnalysis.analysis_data, context)
+    const enhancedPrompt = `🎯 **YOU ARE CREATING A STRATEGY FOR THIS SPECIFIC TENDER:**
 
-    console.log("[Strategist] Generating strategy with AI...")
+**Tender Title:** "${tenderData.title}"
+**Organization:** ${tenderData.organization || "Not specified"}
+**Deadline:** ${tenderData.deadline || "Not specified"}
+**Value:** ${tenderData.value || "Not specified"}
+**Description:** ${tenderData.description || "No description provided"}
+
+🚨 **CRITICAL INSTRUCTION:**
+- EVERY piece of strategy MUST reference THIS specific tender: "${tenderData.title}"
+- Do NOT provide generic tender strategies
+- Tailor EVERYTHING to winning THIS particular opportunity
+- Reference the organization (${tenderData.organization || "this client"}) throughout
+- Consider THIS tender's deadline: ${tenderData.deadline || "upcoming"}
+- Focus on THIS tender's value: ${tenderData.value || "the tender value"}
+
+${buildStrategyGenerationPrompt(strategy_type as StrategyType, tenderAnalysis.analysis_data, context)}
+
+Remember: You are NOT creating a general strategy template. You are creating a specific, actionable strategy to win "${tenderData.title}" from ${tenderData.organization || "this organization"}.`
+
+    console.log("[Strategist] Generating tender-specific strategy with AI...")
 
     const { text: aiResponse } = await generateText({
       model: "openai/gpt-4-turbo",
-      prompt,
+      prompt: enhancedPrompt,
       temperature: 0.6,
       maxTokens: 4000,
     })
