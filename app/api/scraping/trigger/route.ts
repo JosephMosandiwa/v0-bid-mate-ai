@@ -42,10 +42,11 @@ export async function POST(request: NextRequest) {
         const { data: progressData, error: insertError } = await supabase
           .from("scraping_progress")
           .insert({
-            status: "running",
+            status: "in_progress",
             total_sources: 0,
             completed_sources: 0,
-            current_source: null,
+            current_source: "Initializing...",
+            total_tenders: 0,
             started_at: new Date().toISOString(),
           })
           .select()
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
               .update({
                 status: "failed",
                 completed_at: new Date().toISOString(),
-                error: error instanceof Error ? error.message : "Unknown error",
+                error_message: error instanceof Error ? error.message : "Unknown error",
               })
               .eq("id", progressId)
               .then(() => console.log("[v0] Progress marked as failed"))

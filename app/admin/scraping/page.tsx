@@ -174,9 +174,11 @@ export default function ScrapingAdminPage() {
   const pollProgress = async (progressId: string) => {
     const interval = setInterval(async () => {
       try {
+        console.log("[v0] Polling progress for ID:", progressId)
         const response = await fetch(`/api/scraping/progress/${progressId}`)
         if (response.ok) {
           const data = await response.json()
+          console.log("[v0] Progress data:", data)
 
           setScrapingProgress({
             currentSource: data.current_source,
@@ -186,9 +188,19 @@ export default function ScrapingAdminPage() {
           })
 
           if (data.status === "completed" || data.status === "failed") {
+            console.log("[v0] Scraping finished with status:", data.status)
             clearInterval(interval)
             setScrapingProgress(null)
             setScraping(null)
+
+            if (data.status === "completed") {
+              toast.success(
+                `Scraping completed - Found ${data.total_tenders} tenders from ${data.completed_sources} sources`,
+              )
+            } else {
+              toast.error(`Scraping failed - ${data.error_message || "An error occurred during scraping"}`)
+            }
+
             loadData()
           }
         }

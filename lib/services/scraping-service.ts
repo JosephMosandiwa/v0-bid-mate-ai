@@ -366,6 +366,12 @@ export class ScrapingService {
 
     if (error || !sources) {
       console.error("[v0] ScrapingService: Error fetching active sources:", error)
+      if (progressId) {
+        await this.supabase
+          .from("scraping_progress")
+          .update({ status: "failed", error_message: "Failed to fetch active sources" })
+          .eq("id", progressId)
+      }
       return { success: false, error: "Failed to fetch active sources" }
     }
 
@@ -377,10 +383,21 @@ export class ScrapingService {
       console.warn("[v0] ScrapingService: - Ensure rows exist in the table")
       console.warn("[v0] ScrapingService: - Ensure is_active = true")
       console.warn("[v0] ScrapingService: - Ensure scraping_enabled = true")
+
+      if (progressId) {
+        await this.supabase
+          .from("scraping_progress")
+          .update({ status: "completed", completed_sources: 0, total_sources: 0 })
+          .eq("id", progressId)
+      }
     } else {
       sources.forEach((source, index) => {
         console.log(`[v0] ScrapingService: Source ${index + 1}: ${source.name} - ${source.tender_page_url}`)
       })
+
+      if (progressId) {
+        await this.supabase.from("scraping_progress").update({ total_sources: sources.length }).eq("id", progressId)
+      }
     }
 
     if (sources.length === 0) {
@@ -436,7 +453,14 @@ export class ScrapingService {
     const successCount = results.filter((r) => r.success).length
 
     if (progressId) {
-      await this.supabase.from("scraping_progress").update({ completed_sources: sources.length }).eq("id", progressId)
+      await this.supabase
+        .from("scraping_progress")
+        .update({
+          status: "completed",
+          completed_sources: sources.length,
+          current_source: null,
+        })
+        .eq("id", progressId)
     }
 
     console.log(`[v0] ScrapingService: Completed scraping ${sources.length} sources, total tenders: ${totalScraped}`)
