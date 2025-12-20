@@ -268,10 +268,14 @@ export class ScrapingService {
     const validatedTenders: any[] = []
 
     for (const tender of tenders) {
+      console.log(`[v0] ScrapingService: Validating tender - ${tender.title}`)
+
       const result = await engineOrchestrator.processScrapedTender(tender)
 
       if (result.success && result.tender) {
-        console.log(`[v0] ScrapingService: Tender validated - ${result.tender.title} (${result.validation?.grade})`)
+        console.log(
+          `[v0] ScrapingService: ✓ Tender validated - ${result.tender.title} (${result.validation?.grade}, ${result.validation?.completeness}% complete)`,
+        )
         validatedTenders.push({
           source_id: sourceId,
           source_name: source.name,
@@ -284,12 +288,17 @@ export class ScrapingService {
           quality_grade: result.validation?.grade || "F",
         })
       } else {
-        console.warn(`[v0] ScrapingService: Tender rejected - ${tender.title}: ${result.error}`)
+        console.warn(
+          `[v0] ScrapingService: ✗ Tender rejected - ${tender.title}: ${result.error || "Below quality threshold"}`,
+        )
+        console.warn(
+          `[v0] ScrapingService:   Validation: ${result.validation?.completeness}% complete, Grade: ${result.validation?.grade}`,
+        )
       }
     }
 
     if (validatedTenders.length === 0) {
-      console.log("[v0] ScrapingService: No tenders passed validation")
+      console.log("[v0] ScrapingService: ⚠️ No tenders passed validation (all below 40% completeness threshold)")
       return []
     }
 
@@ -308,7 +317,9 @@ export class ScrapingService {
       throw error
     }
 
-    console.log(`[v0] ScrapingService: Successfully saved ${validatedTenders.length} tenders`)
+    console.log(
+      `[v0] ScrapingService: ✓ Successfully saved ${validatedTenders.length} tenders to scraped_tenders table`,
+    )
     return data || []
   }
 

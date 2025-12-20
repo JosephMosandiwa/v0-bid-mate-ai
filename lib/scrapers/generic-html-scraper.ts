@@ -482,19 +482,4 @@ export class GenericHtmlScraper extends BaseScraper {
 
     return { email, phone, person }
   }
-
-  private normalizeTenderData(tender: ScrapedTender): ScrapedTender {
-    // Placeholder for normalization logic
-    return tender
-  }
-
-  private validateExtractedTender(tender: ScrapedTender): { score: number; quality: string } {
-    // Placeholder for validation logic
-    return { score: 100, quality: "High" }
-  }
-
-  private getFieldExtractionHints(fieldName: string): any {
-    // Placeholder for getting field extraction hints
-    return {}
-  }
 }
