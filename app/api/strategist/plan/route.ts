@@ -207,143 +207,127 @@ Use realistic South African values (ZAR currency). Include at least:
         prompt: promptText,
       })
 
+      console.log("[v0] AI response received, length:", text.length)
+
       const jsonMatch = text.match(/\{[\s\S]*\}/)
       if (!jsonMatch) {
+        console.error("[v0] No JSON found in AI response:", text.slice(0, 200))
         throw new Error("No JSON found in response")
       }
       plan = JSON.parse(jsonMatch[0])
-      console.log("[v0] AI plan generated successfully")
+      console.log("[v0] AI plan parsed successfully, keys:", Object.keys(plan))
     } catch (error) {
-      console.error("[v0] Failed to parse AI response:", error)
-      throw error
+      console.error("[v0] Failed to generate or parse AI response:", error)
+      return NextResponse.json(
+        {
+          error: "Failed to generate project plan",
+          details: error instanceof Error ? error.message : "AI generation failed",
+        },
+        { status: 500 },
+      )
     }
 
     console.log("[v0] Saving plan to database...")
 
-    let savedPlan
-    let error
-
-    // Try upsert with conflict resolution (requires unique constraint)
-    const upsertResult = await supabase
-      .from("tender_project_plans")
-      .upsert(
-        {
-          tender_id: tenderId,
-          tender_type: tenderType,
-          user_id: user.id,
-          project_title: plan.project_title,
-          project_summary: plan.project_summary,
-          estimated_budget: plan.estimated_budget,
-          estimated_timeline: plan.estimated_timeline,
-          resource_requirements: plan.resource_requirements,
-          risk_assessment: plan.risk_assessment,
-          certifications_required: plan.certifications_required,
-          insurance_requirements: plan.insurance_requirements,
-          compliance_checklist: plan.compliance_checklist,
-          regulatory_requirements: plan.regulatory_requirements,
-          financial_requirements: plan.financial_requirements,
-          capacity_requirements: plan.capacity_requirements,
-          success_criteria: plan.success_criteria,
-          key_deliverables: plan.key_deliverables,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "tender_id,tender_type,user_id" },
-      )
-      .select()
-      .single()
-
-    if (upsertResult.error && upsertResult.error.message.includes("unique or exclusion constraint")) {
-      console.log("[v0] Unique constraint missing, trying manual upsert...")
-
+    try {
       // Check if record exists
-      const { data: existing } = await supabase
+      const { data: existing, error: checkError } = await supabase
         .from("tender_project_plans")
         .select("id")
         .eq("tender_id", tenderId)
         .eq("tender_type", tenderType)
         .eq("user_id", user.id)
-        .single()
+        .maybeSingle()
+
+      if (checkError) {
+        console.error("[v0] Error checking existing plan:", checkError)
+        throw checkError
+      }
+
+      console.log("[v0] Existing plan check:", existing ? "found" : "not found")
+
+      const planData = {
+        tender_id: tenderId,
+        tender_type: tenderType,
+        user_id: user.id,
+        project_title: plan.project_title,
+        project_summary: plan.project_summary,
+        estimated_budget: plan.estimated_budget,
+        estimated_timeline: plan.estimated_timeline,
+        resource_requirements: plan.resource_requirements,
+        risk_assessment: plan.risk_assessment,
+        certifications_required: plan.certifications_required,
+        insurance_requirements: plan.insurance_requirements,
+        compliance_checklist: plan.compliance_checklist,
+        regulatory_requirements: plan.regulatory_requirements,
+        financial_requirements: plan.financial_requirements,
+        capacity_requirements: plan.capacity_requirements,
+        success_criteria: plan.success_criteria,
+        key_deliverables: plan.key_deliverables,
+        updated_at: new Date().toISOString(),
+      }
+
+      let savedPlan
+      let error
 
       if (existing) {
+        console.log("[v0] Updating existing plan, id:", existing.id)
         // Update existing record
         const updateResult = await supabase
           .from("tender_project_plans")
-          .update({
-            project_title: plan.project_title,
-            project_summary: plan.project_summary,
-            estimated_budget: plan.estimated_budget,
-            estimated_timeline: plan.estimated_timeline,
-            resource_requirements: plan.resource_requirements,
-            risk_assessment: plan.risk_assessment,
-            certifications_required: plan.certifications_required,
-            insurance_requirements: plan.insurance_requirements,
-            compliance_checklist: plan.compliance_checklist,
-            regulatory_requirements: plan.regulatory_requirements,
-            financial_requirements: plan.financial_requirements,
-            capacity_requirements: plan.capacity_requirements,
-            success_criteria: plan.success_criteria,
-            key_deliverables: plan.key_deliverables,
-            updated_at: new Date().toISOString(),
-          })
+          .update(planData)
           .eq("id", existing.id)
           .select()
           .single()
 
         savedPlan = updateResult.data
         error = updateResult.error
+        console.log("[v0] Update result:", error ? "error" : "success")
       } else {
-        // Insert new record
-        const insertResult = await supabase
-          .from("tender_project_plans")
-          .insert({
-            tender_id: tenderId,
-            tender_type: tenderType,
-            user_id: user.id,
-            project_title: plan.project_title,
-            project_summary: plan.project_summary,
-            estimated_budget: plan.estimated_budget,
-            estimated_timeline: plan.estimated_timeline,
-            resource_requirements: plan.resource_requirements,
-            risk_assessment: plan.risk_assessment,
-            certifications_required: plan.certifications_required,
-            insurance_requirements: plan.insurance_requirements,
-            compliance_checklist: plan.compliance_checklist,
-            regulatory_requirements: plan.regulatory_requirements,
-            financial_requirements: plan.financial_requirements,
-            capacity_requirements: plan.capacity_requirements,
-            success_criteria: plan.success_criteria,
-            key_deliverables: plan.key_deliverables,
-          })
-          .select()
-          .single()
+        console.log("[v0] Inserting new plan")
+        // Insert new record (remove updated_at for insert)
+        const { updated_at, ...insertData } = planData
+        const insertResult = await supabase.from("tender_project_plans").insert(insertData).select().single()
 
         savedPlan = insertResult.data
         error = insertResult.error
+        console.log("[v0] Insert result:", error ? "error" : "success")
       }
-    } else {
-      savedPlan = upsertResult.data
-      error = upsertResult.error
+
+      if (error) {
+        console.error("[v0] Database save error:", error)
+        throw error
+      }
+
+      console.log("[v0] Plan saved successfully, id:", savedPlan?.id)
+
+      try {
+        await supabase.from("tender_progress_logs").insert({
+          tender_id: tenderId,
+          tender_type: tenderType,
+          user_id: user.id,
+          status: "planning",
+          milestone: "Project plan generated",
+          progress_percent: 50,
+          notes: "AI-generated comprehensive project plan created",
+          created_by_system: true,
+        })
+        console.log("[v0] Progress log created")
+      } catch (progressError) {
+        console.error("[v0] Failed to log progress (non-critical):", progressError)
+      }
+
+      return NextResponse.json({ plan: savedPlan, success: true })
+    } catch (dbError: any) {
+      console.error("[v0] Database operation failed:", dbError)
+      return NextResponse.json(
+        {
+          error: "Failed to save project plan",
+          details: dbError.message,
+        },
+        { status: 500 },
+      )
     }
-
-    if (error) {
-      console.error("[v0] Database save error:", error)
-      throw error
-    }
-
-    console.log("[v0] Plan saved successfully")
-
-    await supabase.from("tender_progress_logs").insert({
-      tender_id: tenderId,
-      tender_type: tenderType,
-      user_id: user.id,
-      status: "planning",
-      milestone: "Project plan generated",
-      progress_percent: 50,
-      notes: "AI-generated comprehensive project plan created",
-      created_by_system: true,
-    })
-
-    return NextResponse.json({ plan: savedPlan, success: true })
   } catch (error: any) {
     console.error("[v0] Plan generation error:", error)
     return NextResponse.json(
