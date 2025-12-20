@@ -11,8 +11,11 @@ export async function POST(request: NextRequest) {
       console.warn(
         "[v0] WARNING: SCRAPING_API_KEY environment variable is not set! Scraping will use direct requests which may be blocked.",
       )
+      console.warn(
+        "[v0] To fix this, set the SCRAPING_API_KEY environment variable with a key from https://www.scraperapi.com",
+      )
     } else {
-      console.log("[v0] SCRAPING_API_KEY is configured")
+      console.log("[v0] SCRAPING_API_KEY is configured (length:", scrapingApiKey.length, "chars)")
     }
 
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)

@@ -97,6 +97,12 @@ export class GenericHtmlScraper extends BaseScraper {
   }
 
   private findTenderElements($: cheerio.CheerioAPI): cheerio.Cheerio<cheerio.Element>[] {
+    console.log(`[v0] GenericHtmlScraper: Searching for tender elements...`)
+    console.log(`[v0] GenericHtmlScraper: Page title: ${$("title").text()}`)
+    console.log(`[v0] GenericHtmlScraper: Total links on page: ${$("a").length}`)
+    console.log(`[v0] GenericHtmlScraper: Total tables on page: ${$("table").length}`)
+    console.log(`[v0] GenericHtmlScraper: Total divs on page: ${$("div").length}`)
+
     const selectors = [
       "table.tenders tr",
       "div.tender-item",
@@ -105,15 +111,23 @@ export class GenericHtmlScraper extends BaseScraper {
       ".tender-list .item",
       "table tbody tr",
       "ul.tenders li",
+      "table tr:has(a)",
+      "div:has(a[href*='tender'])",
+      "tr:has(td)",
     ]
 
     for (const selector of selectors) {
       const elements = $(selector)
       if (elements.length > 0) {
-        console.log(`[Scraper] Using selector: ${selector}`)
+        console.log(`[v0] GenericHtmlScraper: Found ${elements.length} elements using selector: ${selector}`)
         return elements.toArray().map((el) => $(el))
+      } else {
+        console.log(`[v0] GenericHtmlScraper: No elements found with selector: ${selector}`)
       }
     }
+
+    console.log(`[v0] GenericHtmlScraper: No tender elements found with any selector!`)
+    console.log(`[v0] GenericHtmlScraper: Page body HTML (first 500 chars):`, $("body").html()?.substring(0, 500))
 
     return []
   }

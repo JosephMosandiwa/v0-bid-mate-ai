@@ -348,29 +348,39 @@ export class ScrapingService {
   }
 
   async scrapeAllActiveSources(progressId?: string) {
-    console.log("[ScrapingService] Starting scrape for all active sources")
+    console.log("[v0] ScrapingService: Starting scrape for all active sources")
 
     const { data: sources, error } = await this.supabase
       .from("tender_sources")
-      .select("id, name")
+      .select("id, name, tender_page_url, scraping_enabled, is_active")
       .eq("is_active", true)
       .eq("scraping_enabled", true)
 
     if (error || !sources) {
-      console.error("[ScrapingService] Error fetching active sources:", error)
+      console.error("[v0] ScrapingService: Error fetching active sources:", error)
       return { success: false, error: "Failed to fetch active sources" }
     }
 
-    console.log(`[ScrapingService] Found ${sources.length} active sources to scrape`)
+    console.log(`[v0] ScrapingService: Found ${sources.length} active sources to scrape`)
+    sources.forEach((source, index) => {
+      console.log(`[v0] ScrapingService: Source ${index + 1}: ${source.name} - ${source.tender_page_url}`)
+    })
 
-    if (progressId) {
-      await this.supabase.from("scraping_progress").update({ total_sources: sources.length }).eq("id", progressId)
+    if (sources.length === 0) {
+      console.log("[v0] ScrapingService: WARNING - No active sources found! Please check tender_sources table.")
+      return {
+        success: true,
+        results: [],
+        totalScraped: 0,
+        sourcesScraped: 0,
+        successfulSources: 0,
+      }
     }
 
     const results = []
     for (let i = 0; i < sources.length; i++) {
       const source = sources[i]
-      console.log(`[ScrapingService] Scraping source ${i + 1}/${sources.length}: ${source.name}`)
+      console.log(`[v0] ScrapingService: Scraping source ${i + 1}/${sources.length}: ${source.name}`)
 
       if (progressId) {
         await this.supabase
@@ -412,7 +422,7 @@ export class ScrapingService {
       await this.supabase.from("scraping_progress").update({ completed_sources: sources.length }).eq("id", progressId)
     }
 
-    console.log(`[ScrapingService] Completed scraping ${sources.length} sources, total tenders: ${totalScraped}`)
+    console.log(`[v0] ScrapingService: Completed scraping ${sources.length} sources, total tenders: ${totalScraped}`)
 
     return {
       success: true,
