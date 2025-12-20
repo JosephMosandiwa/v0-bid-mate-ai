@@ -39,6 +39,9 @@ export async function POST(request: Request) {
       return Response.json({ error: "Tender ID required" }, { status: 400 })
     }
 
+    console.log("[v0] BOQ generation request for tender:", finalTenderId, "Type:", finalTenderType)
+    console.log("[v0] Tender title:", tenderTitle)
+
     // If this is a BOQ generation request (has tenderTitle)
     if (tenderTitle) {
       console.log("[Strategist] Generating comprehensive BOQ for THIS SPECIFIC TENDER:", tenderTitle)
@@ -65,64 +68,75 @@ ${projectPlan ? JSON.stringify(projectPlan, null, 2) : "Not available"}
 🚨 CRITICAL: Every line item MUST be directly relevant to delivering THIS SPECIFIC tender ("${tenderTitle}").
 Do NOT provide generic BOQ templates - tailor EVERYTHING to what THIS tender actually requires.
 
-Generate a detailed, realistic BOQ specifically for "${tenderTitle}" with the following structure:
+Generate a detailed, realistic BOQ specifically for "${tenderTitle}" with the following structure.
 
-1. **BOQ Items** (15-30 line items SPECIFIC TO THIS TENDER):
-   - Item number (format: "1.1", "1.2", etc.)
-   - Description (detailed description of work/material REQUIRED FOR THIS TENDER)
-   - Category (Labor, Materials, Equipment, Subcontractors, Professional Services, etc.)
-   - Unit (e.g., m², hours, kg, each, lot)
-   - Quantity (realistic for THIS TENDER's scope)
-   - Unit rate in ZAR (realistic South African market rates for 2025)
-   - Amount (quantity × unit rate)
-   - Notes (any special considerations FOR THIS TENDER)
+YOU MUST RETURN ONLY VALID JSON - NO MARKDOWN, NO EXPLANATIONS, JUST THE JSON OBJECT.
 
-2. **Pricing Strategy FOR THIS TENDER:**
-   - strategy_type: "competitive", "value_based", "cost_plus", or "strategic_loss_leader"
-   - competitive_analysis: Analysis of competition FOR THIS SPECIFIC tender
-   - risk_premium_percent: Risk premium for THIS tender (0-10%)
-   - discount_offered_percent: Discount to win THIS tender (0-5%)
-   - payment_terms: e.g., "30/60/90 days" or "Monthly progress payments"
-   - pricing_rationale: Why this pricing approach FOR THIS tender
+{
+  "boq_items": [
+    {
+      "item_number": "1.1",
+      "description": "Detailed description of work/material",
+      "category": "Labor|Materials|Equipment|Subcontractors|Professional Services",
+      "unit": "m²|hours|kg|each|lot",
+      "quantity": 100,
+      "unit_rate": 500,
+      "amount": 50000,
+      "notes": "Special considerations"
+    }
+  ],
+  "pricing_strategy": {
+    "strategy_type": "competitive|value_based|cost_plus|strategic_loss_leader",
+    "competitive_analysis": "Analysis text",
+    "risk_premium_percent": 5,
+    "discount_offered_percent": 2,
+    "payment_terms": "30/60/90 days",
+    "pricing_rationale": "Why this approach"
+  },
+  "direct_costs": {
+    "labor": 100000,
+    "materials": 50000,
+    "equipment": 20000,
+    "subcontractors": 30000
+  },
+  "indirect_costs": {
+    "overhead": 20000,
+    "admin": 8000,
+    "transport": 5000,
+    "insurance": 3000,
+    "certifications": 2000,
+    "compliance": 2000
+  },
+  "contingency_percent": 10,
+  "profit_margin_percent": 15,
+  "vat_percent": 15,
+  "break_even_analysis": {
+    "break_even_value": 180000,
+    "break_even_timeline": "4 months",
+    "profitability_threshold": "Description"
+  },
+  "cash_flow_projection": {
+    "months": [
+      {
+        "month": 1,
+        "inflow": 50000,
+        "outflow": 40000,
+        "net_cash_flow": 10000,
+        "cumulative_cash_flow": 10000
+      }
+    ]
+  },
+  "profitability_analysis": {
+    "gross_profit_margin": 25,
+    "net_profit_margin": 15,
+    "return_on_investment": 20,
+    "payback_period_months": 6
+  }
+}
 
-3. **Direct Costs Breakdown FOR THIS TENDER:**
-   - labor: Total labor costs FOR THIS PROJECT
-   - materials: Total material costs FOR THIS PROJECT
-   - equipment: Total equipment costs FOR THIS PROJECT
-   - subcontractors: Total subcontractor costs FOR THIS PROJECT
+REMEMBER: Return ONLY the JSON object, no markdown code blocks, no explanations.`
 
-4. **Indirect Costs Breakdown FOR THIS TENDER:**
-   - overhead: Office overhead (10-15% of direct)
-   - admin: Admin costs (3-5% of direct)
-   - transport: Transport/logistics costs FOR THIS PROJECT
-   - insurance: Insurance premiums FOR THIS PROJECT
-   - certifications: Certification costs required FOR THIS TENDER (CIDB, ISO, etc.)
-   - compliance: Compliance costs FOR THIS TENDER (B-BBEE, H&S, etc.)
-
-5. **Financial Calculations:**
-   - contingency_percent: 10
-   - profit_margin_percent: 15
-   - vat_percent: 15
-   - Calculate all amounts correctly
-
-6. **Break-Even Analysis FOR THIS TENDER:**
-   - break_even_value: ZAR amount to break even ON THIS PROJECT
-   - break_even_timeline: "X months" FOR THIS PROJECT
-   - profitability_threshold: Description FOR THIS PROJECT
-
-7. **Cash Flow Projection FOR THIS TENDER:**
-   - months: Array of 6-12 months with inflow, outflow, net_cash_flow, cumulative_cash_flow BASED ON THIS TENDER
-
-8. **Profitability Analysis FOR THIS TENDER:**
-   - gross_profit_margin: percentage FOR THIS PROJECT
-   - net_profit_margin: percentage FOR THIS PROJECT
-   - return_on_investment: percentage FOR THIS PROJECT
-   - payback_period_months: number FOR THIS PROJECT
-
-Remember: EVERY item must be justified by THIS tender's specific requirements. Reference "${tenderTitle}" throughout.
-
-Return ONLY valid JSON with this exact structure.`
-
+      console.log("[v0] Calling AI to generate BOQ...")
       const { text } = await generateText({
         model: "openai/gpt-4o",
         prompt,
@@ -130,26 +144,55 @@ Return ONLY valid JSON with this exact structure.`
         maxTokens: 4000,
       })
 
+      console.log("[v0] AI response received, length:", text.length)
+      console.log("[v0] First 500 chars:", text.substring(0, 500))
+
       // Parse the generated BOQ
       let boqData
       try {
         // Extract JSON from markdown if present
         const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/```\s*([\s\S]*?)\s*```/)
-        const jsonText = jsonMatch ? jsonMatch[1] : text
+        const jsonText = jsonMatch ? jsonMatch[1] : text.trim()
+
+        console.log("[v0] Attempting to parse JSON, first 200 chars:", jsonText.substring(0, 200))
         boqData = JSON.parse(jsonText)
-      } catch (parseError) {
-        console.error("[Strategist] Failed to parse BOQ JSON:", parseError)
-        return Response.json({ error: "Failed to generate valid BOQ" }, { status: 500 })
+        console.log("[v0] JSON parsed successfully")
+      } catch (parseError: any) {
+        console.error("[v0] Failed to parse BOQ JSON:", parseError.message)
+        console.error("[v0] Raw text that failed to parse:", text)
+        return Response.json(
+          {
+            error: "Failed to generate valid BOQ",
+            details: `JSON parse error: ${parseError.message}`,
+            raw_response: text.substring(0, 500),
+          },
+          { status: 500 },
+        )
       }
 
+      if (!boqData.boq_items || !Array.isArray(boqData.boq_items) || boqData.boq_items.length === 0) {
+        console.error("[v0] BOQ data missing required boq_items array")
+        return Response.json(
+          {
+            error: "Invalid BOQ structure",
+            details: "Missing or empty boq_items array",
+          },
+          { status: 500 },
+        )
+      }
+
+      console.log("[v0] BOQ has", boqData.boq_items.length, "items")
+
       // Calculate totals
-      const subtotal = boqData.boq_items.reduce((sum: number, item: any) => sum + item.amount, 0)
-      const contingency_amount = subtotal * (boqData.contingency_percent / 100)
+      const subtotal = boqData.boq_items.reduce((sum: number, item: any) => sum + (item.amount || 0), 0)
+      const contingency_amount = subtotal * ((boqData.contingency_percent || 10) / 100)
       const subtotal_with_contingency = subtotal + contingency_amount
-      const profit_amount = subtotal_with_contingency * (boqData.profit_margin_percent / 100)
+      const profit_amount = subtotal_with_contingency * ((boqData.profit_margin_percent || 15) / 100)
       const subtotal_with_profit = subtotal_with_contingency + profit_amount
-      const vat_amount = subtotal_with_profit * (boqData.vat_percent / 100)
+      const vat_amount = subtotal_with_profit * ((boqData.vat_percent || 15) / 100)
       const total_amount = subtotal_with_profit + vat_amount
+
+      console.log("[v0] Calculated totals - Subtotal:", subtotal, "Total:", total_amount)
 
       // First, check if BOQ already exists
       const { data: existingBoq } = await supabase
@@ -163,24 +206,25 @@ Return ONLY valid JSON with this exact structure.`
       let savedBoq
       if (existingBoq) {
         // Update existing
+        console.log("[v0] Updating existing BOQ:", existingBoq.id)
         const { data, error } = await supabase
           .from("tender_boq")
           .update({
             boq_items: boqData.boq_items,
             subtotal,
-            contingency_percent: boqData.contingency_percent,
+            contingency_percent: boqData.contingency_percent || 10,
             contingency_amount,
-            profit_margin_percent: boqData.profit_margin_percent,
+            profit_margin_percent: boqData.profit_margin_percent || 15,
             profit_amount,
-            vat_percent: boqData.vat_percent,
+            vat_percent: boqData.vat_percent || 15,
             vat_amount,
             total_amount,
-            pricing_strategy: boqData.pricing_strategy,
-            direct_costs: boqData.direct_costs,
-            indirect_costs: boqData.indirect_costs,
-            break_even_analysis: boqData.break_even_analysis,
-            cash_flow_projection: boqData.cash_flow_projection,
-            profitability_analysis: boqData.profitability_analysis,
+            pricing_strategy: boqData.pricing_strategy || {},
+            direct_costs: boqData.direct_costs || {},
+            indirect_costs: boqData.indirect_costs || {},
+            break_even_analysis: boqData.break_even_analysis || {},
+            cash_flow_projection: boqData.cash_flow_projection || {},
+            profitability_analysis: boqData.profitability_analysis || {},
             updated_at: new Date().toISOString(),
           })
           .eq("id", existingBoq.id)
@@ -188,12 +232,13 @@ Return ONLY valid JSON with this exact structure.`
           .single()
 
         if (error) {
-          console.error("[Strategist] Error updating BOQ:", error)
+          console.error("[v0] Error updating BOQ:", error)
           return Response.json({ error: "Failed to update BOQ", details: error.message }, { status: 500 })
         }
         savedBoq = data
       } else {
         // Insert new
+        console.log("[v0] Inserting new BOQ")
         const { data, error } = await supabase
           .from("tender_boq")
           .insert({
@@ -202,31 +247,31 @@ Return ONLY valid JSON with this exact structure.`
             user_id: user.id,
             boq_items: boqData.boq_items,
             subtotal,
-            contingency_percent: boqData.contingency_percent,
+            contingency_percent: boqData.contingency_percent || 10,
             contingency_amount,
-            profit_margin_percent: boqData.profit_margin_percent,
+            profit_margin_percent: boqData.profit_margin_percent || 15,
             profit_amount,
-            vat_percent: boqData.vat_percent,
+            vat_percent: boqData.vat_percent || 15,
             vat_amount,
             total_amount,
-            pricing_strategy: boqData.pricing_strategy,
-            direct_costs: boqData.direct_costs,
-            indirect_costs: boqData.indirect_costs,
-            break_even_analysis: boqData.break_even_analysis,
-            cash_flow_projection: boqData.cash_flow_projection,
-            profitability_analysis: boqData.profitability_analysis,
+            pricing_strategy: boqData.pricing_strategy || {},
+            direct_costs: boqData.direct_costs || {},
+            indirect_costs: boqData.indirect_costs || {},
+            break_even_analysis: boqData.break_even_analysis || {},
+            cash_flow_projection: boqData.cash_flow_projection || {},
+            profitability_analysis: boqData.profitability_analysis || {},
           })
           .select()
           .single()
 
         if (error) {
-          console.error("[Strategist] Error inserting BOQ:", error)
+          console.error("[v0] Error inserting BOQ:", error)
           return Response.json({ error: "Failed to create BOQ", details: error.message }, { status: 500 })
         }
         savedBoq = data
       }
 
-      console.log("[Strategist] BOQ saved successfully")
+      console.log("[v0] BOQ saved successfully, id:", savedBoq.id)
       return Response.json({ boq: savedBoq })
     }
 
