@@ -19,8 +19,8 @@ export default function ETenderFetchPage() {
     setResult(null)
 
     try {
-      console.log("[v0] Calling new API tenders fetch...")
-      const response = await fetch("/api/fetch-api-tenders", {
+      console.log("[v0] Calling multi-source API tenders fetch...")
+      const response = await fetch("/api/fetch-all-api-tenders", {
         method: "POST",
       })
 
@@ -29,6 +29,9 @@ export default function ETenderFetchPage() {
 
       if (!response.ok || !data.success) {
         setError(data.error || "Failed to fetch tenders")
+        if (data.sources && data.sources.length > 0) {
+          setResult(data)
+        }
         return
       }
 
@@ -69,9 +72,9 @@ export default function ETenderFetchPage() {
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">eTender API Direct Fetch</h1>
+        <h1 className="text-3xl font-bold">API Tender Fetcher</h1>
         <p className="text-muted-foreground mt-2">
-          Fetch tenders directly from the South African National Treasury eTender API (OCDS Format)
+          Fetch tenders from all available South African tender APIs (eTender, EasyTenders, and more)
         </p>
       </div>
 
@@ -162,9 +165,9 @@ export default function ETenderFetchPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Fetch Latest Tenders</CardTitle>
+          <CardTitle>Fetch Latest Tenders from All API Sources</CardTitle>
           <CardDescription>
-            This will fetch tenders from the last 30 days and save them directly to the database
+            This will fetch tenders from all available APIs (eTender OCDS, EasyTenders) from the last 30 days
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -172,12 +175,12 @@ export default function ETenderFetchPage() {
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Fetching Tenders...
+                Fetching from All API Sources...
               </>
             ) : (
               <>
                 <Download className="mr-2 h-4 w-4" />
-                Fetch from eTender API
+                Fetch from All APIs
               </>
             )}
           </Button>
@@ -197,55 +200,63 @@ export default function ETenderFetchPage() {
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              Success!
+              {result.success ? (
+                <>
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  Success!
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-5 w-5 text-yellow-500" />
+                  Partial Success
+                </>
+              )}
             </CardTitle>
             <CardDescription>
-              Source: {result.source} | Date Range: {result.dateRange?.from} to {result.dateRange?.to}
+              Total: {result.totalFetched} fetched, {result.totalSaved} saved to database
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
-                <h3 className="font-semibold mb-2">Summary</h3>
-                <ul className="space-y-1 text-sm">
-                  <li>
-                    Tenders Found in API: <strong>{result.tendersFound || 0}</strong>
-                  </li>
-                  <li>
-                    Tenders Processed: <strong>{result.tendersProcessed || 0}</strong>
-                  </li>
-                  <li>
-                    Tenders Saved: <strong>{result.tendersSaved || 0}</strong>
-                  </li>
-                </ul>
-              </div>
-
-              {result.sampleTender && (
-                <div>
-                  <h3 className="font-semibold mb-2">Sample Tender</h3>
-                  <div className="bg-muted p-4 rounded-lg text-sm space-y-2">
-                    <div>
-                      <strong>Title:</strong> {result.sampleTender.title}
+                <h3 className="font-semibold mb-3">Results by Source</h3>
+                <div className="space-y-3">
+                  {result.sources?.map((source: any, index: number) => (
+                    <div
+                      key={index}
+                      className={`p-4 rounded-lg border ${
+                        source.error
+                          ? "border-red-200 bg-red-50"
+                          : source.saved > 0
+                            ? "border-green-200 bg-green-50"
+                            : "border-gray-200 bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="font-semibold flex items-center gap-2">
+                            {source.error ? (
+                              <XCircle className="h-4 w-4 text-red-500" />
+                            ) : source.saved > 0 ? (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-gray-400" />
+                            )}
+                            {source.name}
+                          </div>
+                          {source.error ? (
+                            <div className="text-sm text-red-600 mt-1">{source.error}</div>
+                          ) : (
+                            <div className="text-sm text-muted-foreground mt-1">
+                              Fetched: {source.fetched} | Saved: {source.saved}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <strong>Organization:</strong> {result.sampleTender.source_name}
-                    </div>
-                    <div>
-                      <strong>Reference:</strong> {result.sampleTender.tender_reference}
-                    </div>
-                    <div>
-                      <strong>Close Date:</strong> {result.sampleTender.close_date || "N/A"}
-                    </div>
-                    <div>
-                      <strong>Value:</strong> {result.sampleTender.estimated_value || "N/A"}
-                    </div>
-                    <div>
-                      <strong>Category:</strong> {result.sampleTender.category || "N/A"}
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              )}
+              </div>
 
               <Alert>
                 <AlertDescription>
