@@ -3,8 +3,11 @@ import type { TenderField, TenderSchema } from "./types"
 // Central tender schema - this is what scrapers should aim to extract
 export const TENDER_SCHEMA: TenderSchema = {
   version: "1.0.0",
-  requiredFields: ["title", "organization", "tender_reference", "close_date", "description"],
+  requiredFields: ["title", "organization"],
   optionalFields: [
+    "tender_reference",
+    "close_date",
+    "description",
     "category",
     "location",
     "estimated_value",
@@ -37,7 +40,7 @@ export const TENDER_SCHEMA: TenderSchema = {
       name: "tender_reference",
       displayName: "Tender Reference Number",
       type: "string",
-      required: true,
+      required: false,
       description: "Unique identifier for the tender",
       extractionHints: {
         aliases: ["tender number", "reference", "tender no", "ref no", "reference number", "tender id"],
@@ -76,7 +79,7 @@ export const TENDER_SCHEMA: TenderSchema = {
       name: "description",
       displayName: "Description",
       type: "string",
-      required: true,
+      required: false,
       description: "Detailed description of what is being procured",
       extractionHints: {
         aliases: ["description", "scope", "scope of work", "requirements", "details"],
@@ -143,7 +146,7 @@ export const TENDER_SCHEMA: TenderSchema = {
       name: "close_date",
       displayName: "Closing Date",
       type: "date",
-      required: true,
+      required: false,
       description: "Submission deadline",
       validationRules: {
         format: "ISO8601",

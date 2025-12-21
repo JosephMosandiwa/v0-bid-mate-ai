@@ -72,7 +72,7 @@ export class EngineOrchestrator {
       console.log("[v0] Orchestrator: Step 1 - Validating tender data...")
       const validation = validateTender(tender)
 
-      if (validation.completeness < 0.4) {
+      if (validation.completeness < 0.25) {
         console.warn(`[v0] Orchestrator: Tender quality too low (${validation.completeness * 100}%)`)
         return {
           success: false,

@@ -166,16 +166,16 @@ export class GenericHtmlScraper extends BaseScraper {
       const category = this.extractCategory($, element)
       const contactInfo = this.extractContactInfo($, element)
 
-      return {
+      const tenderData: ScrapedTender = {
         title: this.cleanText(title),
-        description: description ? this.cleanText(description) : undefined,
-        tender_reference: reference ? this.cleanText(reference) : undefined,
-        tender_url: link ? this.makeAbsoluteUrl(link, this.sourceUrl) : undefined,
-        publish_date: dates.publishDate,
+        description: description ? this.cleanText(description) : title, // Use title as fallback
+        tender_reference: reference ? this.cleanText(reference) : `AUTO-${Date.now()}`, // Generate reference
+        organization: organization || this.sourceName, // Use source name as fallback
+        tender_url: link ? this.makeAbsoluteUrl(link, this.sourceUrl) : this.sourceUrl,
+        publish_date: dates.publishDate || new Date().toISOString(), // Use current date if missing
         close_date: dates.closeDate,
         opening_date: dates.openingDate,
         document_urls: documentUrls.length > 0 ? documentUrls : undefined,
-        organization,
         location,
         estimated_value: value,
         category,
@@ -187,6 +187,14 @@ export class GenericHtmlScraper extends BaseScraper {
           extracted_at: new Date().toISOString(),
         },
       }
+
+      console.log(`[v0] GenericHtmlScraper: Extracted tender data for: ${tenderData.title}`)
+      console.log(`[v0] GenericHtmlScraper:   - Reference: ${tenderData.tender_reference}`)
+      console.log(`[v0] GenericHtmlScraper:   - Organization: ${tenderData.organization}`)
+      console.log(`[v0] GenericHtmlScraper:   - Close Date: ${tenderData.close_date || "MISSING"}`)
+      console.log(`[v0] GenericHtmlScraper:   - Description: ${tenderData.description?.substring(0, 50)}...`)
+
+      return tenderData
     } catch (error) {
       console.error("[Scraper] Error extracting tender data:", error)
       return null
@@ -223,13 +231,33 @@ export class GenericHtmlScraper extends BaseScraper {
   }
 
   private extractTitle($: cheerio.CheerioAPI, element: cheerio.Cheerio<cheerio.Element>): string | null {
-    const selectors = ["td.title", "td:first-child", ".tender-title", "h3", "h4", "a", "strong"]
+    const selectors = [
+      "td.title",
+      "td:first-child",
+      ".tender-title",
+      ".title",
+      "h3",
+      "h4",
+      "h5",
+      "a[href*='tender']",
+      "a[href*='bid']",
+      "a",
+      "strong",
+      "b",
+      "td:nth-child(1)",
+      "td:nth-child(2)",
+    ]
 
     for (const selector of selectors) {
       const text = element.find(selector).first().text()
       if (text && text.trim().length > 10) {
         return text
       }
+    }
+
+    const linkText = element.find("a").first().text()
+    if (linkText && linkText.trim().length > 10) {
+      return linkText
     }
 
     return null
