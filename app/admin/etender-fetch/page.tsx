@@ -19,15 +19,15 @@ export default function ETenderFetchPage() {
     setResult(null)
 
     try {
-      console.log("[v0] Calling eTender API fetch...")
-      const response = await fetch("/api/etender/fetch", {
+      console.log("[v0] Calling new API tenders fetch...")
+      const response = await fetch("/api/fetch-api-tenders", {
         method: "POST",
       })
 
       const data = await response.json()
       console.log("[v0] Response:", data)
 
-      if (!response.ok) {
+      if (!response.ok || !data.success) {
         setError(data.error || "Failed to fetch tenders")
         return
       }
@@ -71,7 +71,7 @@ export default function ETenderFetchPage() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold">eTender API Direct Fetch</h1>
         <p className="text-muted-foreground mt-2">
-          Fetch tenders directly from the South African National Treasury eTender API
+          Fetch tenders directly from the South African National Treasury eTender API (OCDS Format)
         </p>
       </div>
 
@@ -200,6 +200,9 @@ export default function ETenderFetchPage() {
               <CheckCircle className="h-5 w-5 text-green-500" />
               Success!
             </CardTitle>
+            <CardDescription>
+              Source: {result.source} | Date Range: {result.dateRange?.from} to {result.dateRange?.to}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -207,33 +210,38 @@ export default function ETenderFetchPage() {
                 <h3 className="font-semibold mb-2">Summary</h3>
                 <ul className="space-y-1 text-sm">
                   <li>
-                    Tenders Processed: <strong>{result.tendersProcessed}</strong>
+                    Tenders Found in API: <strong>{result.tendersFound || 0}</strong>
                   </li>
                   <li>
-                    Tenders Saved: <strong>{result.tendersSaved}</strong>
+                    Tenders Processed: <strong>{result.tendersProcessed || 0}</strong>
+                  </li>
+                  <li>
+                    Tenders Saved: <strong>{result.tendersSaved || 0}</strong>
                   </li>
                 </ul>
               </div>
 
-              {result.sample && (
+              {result.sampleTender && (
                 <div>
                   <h3 className="font-semibold mb-2">Sample Tender</h3>
-                  <div className="bg-muted p-4 rounded-lg text-sm">
+                  <div className="bg-muted p-4 rounded-lg text-sm space-y-2">
                     <div>
-                      <strong>Title:</strong> {result.sample.title}
+                      <strong>Title:</strong> {result.sampleTender.title}
                     </div>
                     <div>
-                      <strong>Organization:</strong> {result.sample.organization}
+                      <strong>Organization:</strong> {result.sampleTender.source_name}
                     </div>
                     <div>
-                      <strong>Reference:</strong> {result.sample.tender_reference}
+                      <strong>Reference:</strong> {result.sampleTender.tender_reference}
                     </div>
                     <div>
-                      <strong>Close Date:</strong> {result.sample.close_date || "N/A"}
+                      <strong>Close Date:</strong> {result.sampleTender.close_date || "N/A"}
                     </div>
                     <div>
-                      <strong>Value:</strong>{" "}
-                      {result.sample.value ? `${result.sample.currency} ${result.sample.value}` : "N/A"}
+                      <strong>Value:</strong> {result.sampleTender.estimated_value || "N/A"}
+                    </div>
+                    <div>
+                      <strong>Category:</strong> {result.sampleTender.category || "N/A"}
                     </div>
                   </div>
                 </div>
