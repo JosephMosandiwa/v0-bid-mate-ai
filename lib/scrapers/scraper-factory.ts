@@ -5,6 +5,7 @@ import { CIDBScraper } from "./cidb-scraper"
 import { ProvincialScraper } from "./provincial-scraper"
 import { MunicipalScraper } from "./municipal-scraper"
 import { PrivateSectorScraper } from "./private-sector-scraper"
+import { ETenderApiScraper } from "./etender-api-scraper"
 
 export interface TenderSource {
   id: number
@@ -18,7 +19,13 @@ export class ScraperFactory {
   static createScraper(source: TenderSource): BaseScraper {
     const { id, name, tender_page_url, scraper_type, scraper_config } = source
 
+    console.log(`[v0] ScraperFactory: Creating scraper type '${scraper_type || "generic"}' for ${name}`)
+
     switch (scraper_type) {
+      case "etender_api":
+        console.log(`[v0] ScraperFactory: Using eTender API scraper (official National Treasury API)`)
+        return new ETenderApiScraper(id, name, tender_page_url)
+
       case "etender":
         return new ETenderScraper(id, name, tender_page_url)
 
@@ -36,6 +43,7 @@ export class ScraperFactory {
 
       case "generic":
       default:
+        console.log(`[v0] ScraperFactory: Using generic HTML scraper (fallback)`)
         return new GenericHtmlScraper(id, name, tender_page_url, scraper_config)
     }
   }

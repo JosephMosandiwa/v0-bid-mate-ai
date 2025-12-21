@@ -34,6 +34,7 @@ interface TenderSource {
   last_scrape_status: string | null
   total_tenders_scraped: number
   scraping_frequency_hours: number
+  scraper_type: string | null
 }
 
 interface ScrapingStats {
@@ -455,6 +456,7 @@ export default function ScrapingAdminPage() {
                     <TableRow>
                       <TableHead>Source</TableHead>
                       <TableHead>Level</TableHead>
+                      <TableHead>Scraper Type</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Last Scraped</TableHead>
                       <TableHead>Tenders</TableHead>
@@ -472,6 +474,19 @@ export default function ScrapingAdminPage() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{source.level}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {source.scraper_type?.includes("api") ? (
+                            <Badge className="bg-blue-500/10 text-blue-600 border-blue-200">
+                              <Database className="h-3 w-3 mr-1" />
+                              API
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">
+                              <Search className="h-3 w-3 mr-1" />
+                              HTML
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
