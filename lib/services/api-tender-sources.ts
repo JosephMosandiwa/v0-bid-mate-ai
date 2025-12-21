@@ -82,7 +82,6 @@ export const API_TENDER_SOURCES: TenderAPISource[] = [
     apiKey: undefined, // Declared the apiKey variable
     fetchFunction: async () => {
       try {
-        // Calculate date range (last 30 days)
         const dateTo = new Date()
         const dateFrom = new Date()
         dateFrom.setDate(dateFrom.getDate() - 30)
@@ -90,9 +89,9 @@ export const API_TENDER_SOURCES: TenderAPISource[] = [
         const dateToStr = dateTo.toISOString().split("T")[0]
         const dateFromStr = dateFrom.toISOString().split("T")[0]
 
-        const url = `https://ocds-api.etenders.gov.za/api/OCDSReleases?PageNumber=1&PageSize=100&dateFrom=${dateFromStr}&dateTo=${dateToStr}`
+        const url = `https://ocds-api.etenders.gov.za/api/OCDSReleases?PageNumber=1&PageSize=50&dateFrom=${dateFromStr}&dateTo=${dateToStr}`
 
-        console.log(`[v0] Fetching eTender API: ${url}`)
+        console.log(`[v0] eTender API URL: ${url}`)
 
         const response = await fetch(url, {
           headers: {
@@ -102,66 +101,57 @@ export const API_TENDER_SOURCES: TenderAPISource[] = [
           signal: AbortSignal.timeout(30000),
         })
 
-        console.log(`[v0] eTender API response status: ${response.status}`)
+        console.log(`[v0] eTender API status: ${response.status}`)
 
         if (!response.ok) {
           const errorText = await response.text()
-          console.log(`[v0] eTender API error: ${errorText.substring(0, 500)}`)
+          console.error(`[v0] eTender API error response: ${errorText.substring(0, 500)}`)
           return []
         }
 
         const data = await response.json()
-        console.log(`[v0] eTender API response structure:`, {
-          type: typeof data,
-          isArray: Array.isArray(data),
-          keys: typeof data === "object" ? Object.keys(data) : [],
-          length: Array.isArray(data) ? data.length : "N/A",
-          firstItemKeys: Array.isArray(data) && data.length > 0 ? Object.keys(data[0]) : [],
-        })
 
-        // The API returns an array of OCDS releases
-        const releases = Array.isArray(data) ? data : []
+        console.log(`[v0] eTender API response type: ${typeof data}, isArray: ${Array.isArray(data)}`)
 
-        console.log(`[v0] Parsed ${releases.length} releases from eTender API`)
-
-        if (releases.length > 0) {
-          console.log(`[v0] Sample release:`, JSON.stringify(releases[0]).substring(0, 500))
-
-          return releases.map((release: any) => {
-            const tender = release.tender || {}
-            const buyer = release.buyer || release.parties?.find((p: any) => p.roles?.includes("buyer")) || {}
-
-            return {
-              tender_reference: release.ocid || release.id || `ETENDER-${Date.now()}`,
-              title: tender.title || release.title || "Untitled Tender",
-              description: tender.description || release.description || "",
-              organization: buyer.name || tender.procuringEntity?.name || "National Treasury",
-              estimated_value: tender.value?.amount ? `R ${tender.value.amount.toLocaleString()}` : null,
-              category:
-                tender.mainProcurementCategory ||
-                tender.items?.[0]?.classification?.description ||
-                tender.classification?.description ||
-                "General Procurement",
-              close_date: tender.tenderPeriod?.endDate || null,
-              publish_date: release.date || tender.tenderPeriod?.startDate || new Date().toISOString(),
-              source_url: `https://www.etenders.gov.za/tender/${release.ocid}`,
-              contact_email: buyer.contactPoint?.email || tender.contactPoint?.email || null,
-              contact_phone: buyer.contactPoint?.telephone || tender.contactPoint?.telephone || null,
-              contact_person: buyer.contactPoint?.name || tender.contactPoint?.name || null,
-              document_urls: tender.documents?.map((doc: any) => doc.url).filter(Boolean) || [],
-              source_province: buyer.address?.region || "All",
-              raw_data: release,
-            }
-          })
+        if (!Array.isArray(data)) {
+          console.error(`[v0] eTender API returned non-array data:`, Object.keys(data))
+          return []
         }
 
-        console.log(`[v0] No releases found in response`)
-        return []
-      } catch (error: any) {
-        console.error(`[v0] eTender API error:`, {
-          message: error.message,
-          name: error.name,
+        console.log(`[v0] eTender API returned ${data.length} releases`)
+
+        if (data.length === 0) {
+          return []
+        }
+
+        const tenders = data.map((release: any) => {
+          const tender = release.tender || {}
+          const buyer = release.buyer || release.parties?.find((p: any) => p.roles?.includes("buyer")) || {}
+
+          return {
+            tender_reference:
+              release.ocid || release.id || `ETENDER-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+            title: tender.title || release.title || "Untitled Tender",
+            description: tender.description || release.description || "No description provided",
+            organization: buyer.name || "National Treasury",
+            estimated_value: tender.value?.amount ? `R ${tender.value.amount.toLocaleString()}` : null,
+            category: tender.mainProcurementCategory || "General",
+            close_date: tender.tenderPeriod?.endDate || null,
+            publish_date: release.date || new Date().toISOString(),
+            source_url: `https://www.etenders.gov.za/tender/${release.ocid}`,
+            contact_email: buyer.contactPoint?.email || null,
+            contact_phone: buyer.contactPoint?.telephone || null,
+            contact_person: buyer.contactPoint?.name || null,
+            document_urls: tender.documents?.map((doc: any) => doc.url).filter(Boolean) || [],
+            source_province: buyer.address?.region || "All",
+            raw_data: release,
+          }
         })
+
+        console.log(`[v0] eTender API mapped ${tenders.length} tenders`)
+        return tenders
+      } catch (error: any) {
+        console.error(`[v0] eTender API exception:`, error.message)
         return []
       }
     },
