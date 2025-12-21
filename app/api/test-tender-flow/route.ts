@@ -47,8 +47,8 @@ export async function POST() {
     // Step 3: Insert a test tender
     results.steps.push({ step: 3, name: "Insert test tender", status: "running" })
     const testTender = {
-      source_id: existingSource.id, // Use the existing source ID
-      tender_reference: `TEST-${Date.now()}`,
+      source_id: existingSource.id,
+      tender_reference: `TEST-${Date.now()}-${Math.random().toString(36).substring(7)}`,
       title: "TEST: Website Development Services",
       description: "This is a test tender to verify the scraping and display pipeline is working correctly.",
       source_name: "Test Municipality",
