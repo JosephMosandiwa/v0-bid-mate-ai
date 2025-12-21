@@ -286,23 +286,12 @@ export async function fetchFromAllAPISources(): Promise<{
         continue
       }
 
-      // Get or create tender source in database
       let sourceId: number | null = null
 
-      const { data: existingSource, error: sourceError } = await supabase
+      const { data: upsertedSource, error: upsertError } = await supabase
         .from("tender_sources")
-        .select("id")
-        .eq("name", source.name)
-        .single()
-
-      if (existingSource) {
-        sourceId = existingSource.id
-        console.log(`[v0] Using existing source ID: ${sourceId} for ${source.name}`)
-      } else {
-        console.log(`[v0] Creating new source for ${source.name}`)
-        const { data: newSource, error: insertError } = await supabase
-          .from("tender_sources")
-          .insert({
+        .upsert(
+          {
             name: source.name,
             level: "National",
             province: "All",
@@ -311,32 +300,35 @@ export async function fetchFromAllAPISources(): Promise<{
             is_active: true,
             scraping_enabled: true,
             notes: `API integration for ${source.name}`,
-          })
-          .select("id")
-          .single()
+          },
+          {
+            onConflict: "name",
+          },
+        )
+        .select()
+        .single()
 
-        if (insertError) {
-          console.error(`[v0] Failed to create source ${source.name}:`, insertError)
-          results.sources.push({
-            name: source.name,
-            fetched: tenders.length,
-            saved: 0,
-            error: `Failed to create source: ${insertError.message}`,
-          })
-          continue
-        }
-
-        sourceId = newSource?.id
-        console.log(`[v0] Created new source ID: ${sourceId} for ${source.name}`)
-      }
-
-      if (!sourceId) {
-        console.error(`[v0] No source ID for ${source.name}`)
+      if (upsertError) {
+        console.error(`[v0] Failed to upsert source ${source.name}:`, upsertError)
         results.sources.push({
           name: source.name,
           fetched: tenders.length,
           saved: 0,
-          error: "Failed to get source ID",
+          error: `Failed to create source: ${upsertError.message}`,
+        })
+        continue
+      }
+
+      sourceId = upsertedSource?.id
+      console.log(`[v0] Using source ID: ${sourceId} for ${source.name}`)
+
+      if (!sourceId) {
+        console.error(`[v0] No source ID returned for ${source.name}`)
+        results.sources.push({
+          name: source.name,
+          fetched: tenders.length,
+          saved: 0,
+          error: "Failed to get source ID from database",
         })
         continue
       }
