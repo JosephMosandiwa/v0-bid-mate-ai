@@ -52,7 +52,7 @@ interface Tender {
   }>
 }
 
-export default function SearchPage() {
+export default function TendersPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [aiQuery, setAiQuery] = useState("")
   const [searching, setSearching] = useState(false)
@@ -260,25 +260,37 @@ export default function SearchPage() {
   const testSearchAPI = async () => {
     console.log("[v0] Testing search API directly...")
     try {
-      const response = await fetch("/api/tenders/search?q=&limit=10")
-      console.log("[v0] Test API response status:", response.status)
+      const response = await fetch("/api/tenders/search?q=&limit=50")
+      console.log("[v0] Response status:", response.status)
       const data = await response.json()
-      console.log("[v0] Test API response data:", data)
-      alert(`API returned: ${data.tenders?.length || 0} tenders`)
-    } catch (err) {
-      console.error("[v0] Test API error:", err)
-      alert(`API error: ${err}`)
+      console.log("[v0] Response data:", data)
+      console.log("[v0] Number of tenders:", data.tenders?.length || 0)
+      console.log("[v0] Total from API:", data.total)
+
+      if (data.tenders && data.tenders.length > 0) {
+        setTenders(data.tenders)
+        console.log("[v0] State updated with tenders")
+      }
+    } catch (error) {
+      console.error("[v0] API test error:", error)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Search Tenders</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Find relevant government tenders from 100+ sources
-          </p>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-4 md:py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold">Search Tenders</h1>
+          <div className="flex items-center gap-2">
+            {tenders.length > 0 && (
+              <Badge variant="secondary" className="text-sm">
+                {tenders.length} loaded
+              </Badge>
+            )}
+            <Button onClick={testSearchAPI} variant="outline" size="sm">
+              Test Search API (Check Console)
+            </Button>
+          </div>
         </div>
 
         <div className="flex gap-2 flex-wrap">
