@@ -9,77 +9,13 @@ export interface TenderAPISource {
   fetchFunction: () => Promise<any[]>
 }
 
-function generateRealisticSampleTenders(count = 10): any[] {
-  const categories = [
-    "Office Furniture and Equipment",
-    "Road Maintenance and Rehabilitation",
-    "IT Infrastructure and Software",
-    "Building Construction and Maintenance",
-    "Water and Sanitation Services",
-    "Security Services",
-    "Cleaning and Hygiene Services",
-    "Fleet Management and Vehicle Maintenance",
-    "Professional Consulting Services",
-    "Medical Equipment and Supplies",
-  ]
-
-  const organizations = [
-    "Department of Public Works",
-    "City of Johannesburg Metropolitan Municipality",
-    "eThekwini Metropolitan Municipality",
-    "City of Cape Town Metropolitan Municipality",
-    "Department of Health",
-    "Department of Education",
-    "South African Police Service",
-    "Department of Transport",
-    "National Treasury",
-    "Provincial Government Western Cape",
-  ]
-
-  const provinces = ["Gauteng", "KwaZulu-Natal", "Western Cape", "Eastern Cape", "Limpopo"]
-
-  const tenders = []
-  for (let i = 0; i < count; i++) {
-    const closeDate = new Date()
-    closeDate.setDate(closeDate.getDate() + Math.floor(Math.random() * 60) + 7) // 7-67 days from now
-
-    const publishDate = new Date()
-    publishDate.setDate(publishDate.getDate() - Math.floor(Math.random() * 14)) // 0-14 days ago
-
-    const value = Math.floor(Math.random() * 5000000) + 100000 // R100k to R5M
-
-    tenders.push({
-      tender_reference: `SA-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`,
-      title: `Supply and Delivery of ${categories[i % categories.length]}`,
-      description: `The ${organizations[i % organizations.length]} invites suitably qualified service providers to submit proposals for ${categories[i % categories.length].toLowerCase()}. The successful bidder will be required to provide quality services in accordance with the specifications outlined in the tender documents.`,
-      organization: organizations[i % organizations.length],
-      estimated_value: `R ${value.toLocaleString()}`,
-      category: categories[i % categories.length],
-      close_date: closeDate.toISOString(),
-      publish_date: publishDate.toISOString(),
-      source_url: `https://www.etenders.gov.za/tender/sample-${i}`,
-      contact_email: `procurement${i}@gov.za`,
-      contact_phone: `012 ${Math.floor(Math.random() * 900 + 100)} ${Math.floor(Math.random() * 9000 + 1000)}`,
-      contact_person: `Procurement Officer ${i + 1}`,
-      document_urls: [
-        `https://www.etenders.gov.za/documents/sample-${i}-specifications.pdf`,
-        `https://www.etenders.gov.za/documents/sample-${i}-sbd-forms.pdf`,
-      ],
-      source_province: provinces[i % provinces.length],
-      raw_data: { generated: true, timestamp: new Date().toISOString() },
-    })
-  }
-
-  return tenders
-}
-
 export const API_TENDER_SOURCES: TenderAPISource[] = [
   {
     name: "National Treasury eTender (OCDS)",
     baseUrl: "https://ocds-api.etenders.gov.za",
     apiType: "ocds",
     requiresAuth: false,
-    apiKey: undefined, // Declared the apiKey variable
+    apiKey: undefined,
     fetchFunction: async () => {
       try {
         const dateTo = new Date()
@@ -101,142 +37,74 @@ export const API_TENDER_SOURCES: TenderAPISource[] = [
           signal: AbortSignal.timeout(30000),
         })
 
-        console.log(`[v0] eTender API status: ${response.status}`)
+        console.log(`[v0] eTender API Response Status: ${response.status}`)
 
         if (!response.ok) {
           const errorText = await response.text()
-          console.error(`[v0] eTender API error response: ${errorText.substring(0, 500)}`)
+          console.error(`[v0] eTender API Error: ${errorText.substring(0, 500)}`)
           return []
         }
 
         const data = await response.json()
 
-        console.log(`[v0] eTender API response type: ${typeof data}`)
+        console.log(`[v0] eTender API Response Type: ${typeof data}`)
+        console.log(`[v0] eTender API Has releases: ${data?.releases ? "Yes" : "No"}`)
 
         if (!data || !Array.isArray(data.releases)) {
-          console.log("[v0] No releases array in response")
+          console.log("[v0] ERROR: No releases array in response")
+          console.log(`[v0] Response keys: ${Object.keys(data || {}).join(", ")}`)
           return []
         }
 
         const releases = data.releases
-
-        console.log(`[v0] eTender API returned ${releases.length} releases`)
+        console.log(`[v0] eTender API Total Releases: ${releases.length}`)
 
         const tenders = releases
           .filter((release: any) => {
-            return release && release.tender && release.tender.id
+            const hasData = release && release.tender && release.tender.id
+            if (!hasData) {
+              console.log(`[v0] Skipping empty release`)
+            }
+            return hasData
           })
           .map((release: any) => {
-            const tender = release.tender
+            const t = release.tender
+            console.log(`[v0] Processing tender: ${t.id} - ${t.title}`)
 
             return {
-              tender_reference: tender.id,
-              title: tender.title || "Untitled Tender",
-              description: tender.description || "",
-              organization: tender.procuringEntity?.name || "Unknown",
-              estimated_value: tender.value?.amount ? `R ${tender.value.amount.toLocaleString()}` : null,
-              category: tender.category || "General",
-              close_date: tender.tenderPeriod?.endDate || null,
-              publish_date: tender.tenderPeriod?.startDate || release.date || new Date().toISOString(),
-              source_url: `https://www.etenders.gov.za/tender/${tender.id}`,
-              contact_email: tender.contactPerson?.email || null,
-              contact_phone: tender.contactPerson?.telephoneNumber || null,
-              contact_person: tender.contactPerson?.name || null,
-              document_urls: (tender.documents || []).map((doc: any) => doc.url).filter(Boolean),
-              source_province: tender.province || "National",
-              delivery_location: tender.deliveryLocation || null,
+              tender_reference: t.id,
+              title: t.title || "Untitled Tender",
+              description: t.description || "",
+              organization: t.procuringEntity?.name || "Unknown Organization",
+              estimated_value: t.value?.amount ? `R ${t.value.amount.toLocaleString()}` : null,
+              category: t.category || "General",
+              close_date: t.tenderPeriod?.endDate || null,
+              publish_date: t.tenderPeriod?.startDate || release.date || new Date().toISOString(),
+              source_url: `https://www.etenders.gov.za/tender/${t.id}`,
+              contact_email: t.contactPerson?.email || null,
+              contact_phone: t.contactPerson?.telephoneNumber || null,
+              contact_person: t.contactPerson?.name || null,
+              document_urls: (t.documents || []).map((doc: any) => doc.url).filter(Boolean),
+              source_province: t.province || "National",
+              delivery_location: t.deliveryLocation || null,
               raw_data: release,
             }
           })
 
-        console.log(`[v0] eTender API successfully mapped ${tenders.length} tenders`)
+        console.log(`[v0] eTender API Successfully Mapped: ${tenders.length} tenders`)
 
         if (tenders.length > 0) {
-          console.log(`[v0] Sample tender:`, JSON.stringify(tenders[0], null, 2).substring(0, 500))
+          console.log(`[v0] First tender sample:`, {
+            ref: tenders[0].tender_reference,
+            title: tenders[0].title,
+            org: tenders[0].organization,
+          })
         }
 
         return tenders
       } catch (error: any) {
-        console.error(`[v0] eTender API exception:`, error.message)
-        return []
-      }
-    },
-  },
-  {
-    name: "EasyTenders API",
-    baseUrl: "https://api.easytenders.co.za",
-    apiType: "rest",
-    requiresAuth: true,
-    fetchFunction: async () => {
-      try {
-        const apiKey = process.env.EASYTENDERS_API_KEY
-
-        if (!apiKey) {
-          console.log(`[v0] EasyTenders API key not configured, generating sample tenders`)
-          return generateRealisticSampleTenders(3)
-        }
-
-        const response = await fetch("https://api.easytenders.co.za/v1/tenders", {
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            Accept: "application/json",
-          },
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          console.log(`[v0] EasyTenders API success:`, data)
-
-          const tenders = data.tenders || data.data || []
-          return tenders.map((tender: any) => ({
-            tender_reference: tender.reference || tender.tender_id || `EASY-${Date.now()}`,
-            title: tender.title || tender.name,
-            description: tender.description || tender.details || "",
-            organization: tender.organization || tender.buyer || "Unknown",
-            estimated_value: tender.value || tender.estimated_value,
-            category: tender.category || tender.classification,
-            close_date: tender.closing_date || tender.deadline,
-            publish_date: tender.published_date || new Date().toISOString(),
-            source_url: tender.url || `https://easytenders.co.za/tender/${tender.reference}`,
-            contact_email: tender.contact_email,
-            contact_phone: tender.contact_phone,
-            contact_person: tender.contact_person,
-            document_urls: tender.documents || [],
-            raw_data: tender,
-          }))
-        } else {
-          console.log(`[v0] EasyTenders API failed: ${response.status}`)
-          return []
-        }
-      } catch (error) {
-        console.log(`[v0] EasyTenders API error:`, error)
-        return []
-      }
-    },
-  },
-  {
-    name: "Municipal Money API",
-    baseUrl: "https://municipaldata.treasury.gov.za/api",
-    apiType: "rest",
-    requiresAuth: false,
-    fetchFunction: async () => {
-      try {
-        const response = await fetch("https://municipaldata.treasury.gov.za/api/v2/cubes", {
-          headers: {
-            Accept: "application/json",
-          },
-        })
-
-        if (response.ok) {
-          console.log(
-            `[v0] Municipal Money API connected but doesn't provide tender data directly, generating sample tenders`,
-          )
-          return generateRealisticSampleTenders(2)
-        }
-
-        return []
-      } catch (error) {
-        console.log(`[v0] Municipal Money API error:`, error)
+        console.error(`[v0] eTender API Exception:`, error.message)
+        console.error(`[v0] Stack:`, error.stack)
         return []
       }
     },
@@ -264,19 +132,19 @@ export async function fetchFromAllAPISources(): Promise<{
   const supabase = createAdminClient()
 
   for (const source of API_TENDER_SOURCES) {
-    console.log(`[v0] Fetching from ${source.name}...`)
+    console.log(`[v0] === Fetching from ${source.name} ===`)
 
     try {
       const tenders = await source.fetchFunction()
 
-      console.log(`[v0] ${source.name} returned ${tenders.length} tenders`)
+      console.log(`[v0] ${source.name} Returned: ${tenders.length} tenders`)
 
       if (tenders.length === 0) {
         results.sources.push({
           name: source.name,
           fetched: 0,
           saved: 0,
-          error: "No tenders returned",
+          error: "No tenders returned from API",
         })
         continue
       }
@@ -290,7 +158,7 @@ export async function fetchFromAllAPISources(): Promise<{
         .maybeSingle()
 
       if (selectError) {
-        console.error(`[v0] Error checking existing source:`, selectError)
+        console.error(`[v0] Database Error checking source:`, selectError)
         results.sources.push({
           name: source.name,
           fetched: tenders.length,
@@ -302,8 +170,9 @@ export async function fetchFromAllAPISources(): Promise<{
 
       if (existingSource) {
         sourceId = existingSource.id
-        console.log(`[v0] Using existing source ID: ${sourceId} for ${source.name}`)
+        console.log(`[v0] Using Existing Source ID: ${sourceId}`)
       } else {
+        console.log(`[v0] Creating New Source...`)
         const { data: newSource, error: insertError } = await supabase
           .from("tender_sources")
           .insert({
@@ -321,27 +190,27 @@ export async function fetchFromAllAPISources(): Promise<{
           .single()
 
         if (insertError || !newSource) {
-          console.error(`[v0] Failed to create source ${source.name}:`, insertError)
+          console.error(`[v0] Failed to Create Source:`, insertError)
           results.sources.push({
             name: source.name,
             fetched: tenders.length,
             saved: 0,
-            error: `Failed to create source: ${insertError?.message || "Unknown error"}`,
+            error: `Failed to create source: ${insertError?.message || "Unknown"}`,
           })
           continue
         }
 
         sourceId = newSource.id
-        console.log(`[v0] Created new source ID: ${sourceId} for ${source.name}`)
+        console.log(`[v0] Created New Source ID: ${sourceId}`)
       }
 
       if (!sourceId) {
-        console.error(`[v0] No source ID available for ${source.name}`)
+        console.error(`[v0] ERROR: No Source ID Available`)
         results.sources.push({
           name: source.name,
           fetched: tenders.length,
           saved: 0,
-          error: "Failed to get source ID from database",
+          error: "No source ID",
         })
         continue
       }
@@ -372,20 +241,18 @@ export async function fetchFromAllAPISources(): Promise<{
             scraped_at: new Date().toISOString(),
           }
 
-          console.log(`[v0] Saving tender: ${tenderData.tender_reference}`)
-
           const { error } = await supabase
             .from("scraped_tenders")
             .upsert(tenderData, { onConflict: "source_id,tender_reference" })
 
           if (!error) {
             savedCount++
-            console.log(`[v0] Successfully saved tender: ${tenderData.tender_reference}`)
+            console.log(`[v0] ✓ Saved: ${tenderData.tender_reference}`)
           } else {
-            console.error(`[v0] Error saving tender ${tenderData.tender_reference}:`, error.message)
+            console.error(`[v0] ✗ Error saving ${tenderData.tender_reference}:`, error.message)
           }
         } catch (err: any) {
-          console.error(`[v0] Exception saving tender:`, err)
+          console.error(`[v0] Exception saving tender:`, err.message)
         }
       }
 
@@ -397,9 +264,9 @@ export async function fetchFromAllAPISources(): Promise<{
         saved: savedCount,
       })
 
-      console.log(`[v0] ${source.name}: Saved ${savedCount}/${tenders.length} tenders`)
+      console.log(`[v0] === ${source.name} Complete: Saved ${savedCount}/${tenders.length} ===`)
     } catch (error: any) {
-      console.error(`[v0] Error fetching from ${source.name}:`, error)
+      console.error(`[v0] ERROR fetching from ${source.name}:`, error.message)
       results.sources.push({
         name: source.name,
         fetched: 0,
