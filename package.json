@@ -87,7 +87,6 @@
     "unpdf": "1.4.0",
     "vaul": "^0.9.9",
     "ws": "latest",
-    "your-icon-library": "latest",
     "zod": "3.25.76"
   },
   "devDependencies": {
