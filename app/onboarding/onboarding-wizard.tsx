@@ -351,6 +351,7 @@ export function OnboardingWizard({ userId, userEmail, mode = "initial", onComple
         if (onComplete) {
           onComplete()
         }
+        router.push("/dashboard/companies")
         return
       }
 
@@ -506,17 +507,27 @@ export function OnboardingWizard({ userId, userEmail, mode = "initial", onComple
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/20">
       {/* Header */}
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-sm">B</span>
             </div>
-            <span className="font-semibold text-lg">BidMate AI</span>
+            <div>
+              <span className="font-semibold text-lg">BidMate AI</span>
+              {mode === "add-company" && <span className="text-sm text-muted-foreground ml-2">- Add New Company</span>}
+            </div>
           </div>
-          <span className="text-sm text-muted-foreground">{userEmail}</span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">{userEmail}</span>
+            {mode === "add-company" && (
+              <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard/companies")}>
+                Cancel
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 

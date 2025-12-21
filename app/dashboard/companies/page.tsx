@@ -4,12 +4,10 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
-import { Building2, Plus, Loader2, Star, Archive, Edit, X } from "lucide-react"
+import { Building2, Plus, Loader2, Star, Archive, Edit } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { OnboardingWizard } from "@/app/onboarding/onboarding-wizard"
 
 export default function CompaniesPage() {
   const supabase = createClient()
@@ -17,7 +15,6 @@ export default function CompaniesPage() {
   const [loading, setLoading] = useState(true)
   const [companies, setCompanies] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
-  const [showAddCompanyDialog, setShowAddCompanyDialog] = useState(false)
 
   useEffect(() => {
     const checkUser = async () => {
@@ -83,11 +80,6 @@ export default function CompaniesPage() {
     }
   }
 
-  const handleCompanyAdded = () => {
-    setShowAddCompanyDialog(false)
-    if (user) loadCompanies(user)
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -103,7 +95,7 @@ export default function CompaniesPage() {
           <h1 className="text-3xl font-bold text-foreground">Company Profiles</h1>
           <p className="text-muted-foreground mt-2">Manage multiple companies and their compliance information</p>
         </div>
-        <Button onClick={() => setShowAddCompanyDialog(true)}>
+        <Button onClick={() => router.push("/dashboard/companies/new")}>
           <Plus className="h-4 w-4 mr-2" />
           Add Company
         </Button>
@@ -184,30 +176,6 @@ export default function CompaniesPage() {
           ))}
         </div>
       )}
-
-      <Dialog open={showAddCompanyDialog} onOpenChange={setShowAddCompanyDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add New Company</DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-4 top-4"
-              onClick={() => setShowAddCompanyDialog(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </DialogHeader>
-          {user && (
-            <OnboardingWizard
-              userId={user.id}
-              userEmail={user.email || ""}
-              mode="add-company"
-              onComplete={handleCompanyAdded}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
