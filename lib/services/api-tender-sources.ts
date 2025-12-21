@@ -111,43 +111,50 @@ export const API_TENDER_SOURCES: TenderAPISource[] = [
 
         const data = await response.json()
 
-        console.log(`[v0] eTender API response type: ${typeof data}, has releases: ${!!data.releases}`)
+        console.log(`[v0] eTender API response type: ${typeof data}`)
 
-        // The response is an OCDS release package with a releases array
-        const releases = data.releases || []
-
-        console.log(`[v0] eTender API returned ${releases.length} releases`)
-
-        if (releases.length === 0) {
-          console.log("[v0] No releases found in response")
+        if (!data || !Array.isArray(data.releases)) {
+          console.log("[v0] No releases array in response")
           return []
         }
 
+        const releases = data.releases
+
+        console.log(`[v0] eTender API returned ${releases.length} releases`)
+
         const tenders = releases
-          .filter((release: any) => release && release.tender && release.tender.id) // Only process releases with tender data
+          .filter((release: any) => {
+            return release && release.tender && release.tender.id
+          })
           .map((release: any) => {
-            const t = release.tender
+            const tender = release.tender
 
             return {
-              tender_reference: t.id,
-              title: t.title || "Untitled Tender",
-              description: t.description || "",
-              organization: t.procuringEntity?.name || release.buyer?.name || "Unknown",
-              estimated_value: t.value?.amount ? `R ${t.value.amount.toLocaleString()}` : null,
-              category: t.category || "General",
-              close_date: t.tenderPeriod?.endDate || null,
-              publish_date: t.tenderPeriod?.startDate || release.date || new Date().toISOString(),
-              source_url: `https://www.etenders.gov.za/tender/${t.id}`,
-              contact_email: t.contactPerson?.email || null,
-              contact_phone: t.contactPerson?.telephoneNumber || null,
-              contact_person: t.contactPerson?.name || null,
-              document_urls: (t.documents || []).map((doc: any) => doc.url).filter(Boolean),
-              source_province: t.province || "National",
+              tender_reference: tender.id,
+              title: tender.title || "Untitled Tender",
+              description: tender.description || "",
+              organization: tender.procuringEntity?.name || "Unknown",
+              estimated_value: tender.value?.amount ? `R ${tender.value.amount.toLocaleString()}` : null,
+              category: tender.category || "General",
+              close_date: tender.tenderPeriod?.endDate || null,
+              publish_date: tender.tenderPeriod?.startDate || release.date || new Date().toISOString(),
+              source_url: `https://www.etenders.gov.za/tender/${tender.id}`,
+              contact_email: tender.contactPerson?.email || null,
+              contact_phone: tender.contactPerson?.telephoneNumber || null,
+              contact_person: tender.contactPerson?.name || null,
+              document_urls: (tender.documents || []).map((doc: any) => doc.url).filter(Boolean),
+              source_province: tender.province || "National",
+              delivery_location: tender.deliveryLocation || null,
               raw_data: release,
             }
           })
 
         console.log(`[v0] eTender API successfully mapped ${tenders.length} tenders`)
+
+        if (tenders.length > 0) {
+          console.log(`[v0] Sample tender:`, JSON.stringify(tenders[0], null, 2).substring(0, 500))
+        }
+
         return tenders
       } catch (error: any) {
         console.error(`[v0] eTender API exception:`, error.message)
