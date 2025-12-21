@@ -308,41 +308,29 @@ export async function fetchFromAllAPISources(): Promise<{
         sourceId = existingSource.id
         console.log(`[v0] Using existing source ID: ${sourceId} for ${source.name}`)
       } else {
-        const { error: insertError } = await supabase.from("tender_sources").insert({
-          name: source.name,
-          level: "National",
-          province: "All",
-          tender_page_url: source.baseUrl,
-          scraper_type: "api",
-          is_active: true,
-          scraping_enabled: true,
-          notes: `API integration for ${source.name}`,
-        })
+        const { data: newSource, error: insertError } = await supabase
+          .from("tender_sources")
+          .insert({
+            name: source.name,
+            level: "National",
+            province: "All Provinces",
+            tender_page_url: source.baseUrl,
+            scraper_type: "api",
+            is_active: true,
+            scraping_enabled: true,
+            last_scraped_at: null,
+            notes: `API integration for ${source.name}`,
+          })
+          .select("id")
+          .single()
 
-        if (insertError) {
+        if (insertError || !newSource) {
           console.error(`[v0] Failed to create source ${source.name}:`, insertError)
           results.sources.push({
             name: source.name,
             fetched: tenders.length,
             saved: 0,
-            error: `Failed to create source: ${insertError.message}`,
-          })
-          continue
-        }
-
-        const { data: newSource, error: newSelectError } = await supabase
-          .from("tender_sources")
-          .select("id")
-          .eq("name", source.name)
-          .single()
-
-        if (newSelectError || !newSource) {
-          console.error(`[v0] Failed to retrieve new source ID:`, newSelectError)
-          results.sources.push({
-            name: source.name,
-            fetched: tenders.length,
-            saved: 0,
-            error: "Failed to retrieve new source ID",
+            error: `Failed to create source: ${insertError?.message || "Unknown error"}`,
           })
           continue
         }
