@@ -124,27 +124,25 @@ export const API_TENDER_SOURCES: TenderAPISource[] = [
         }
 
         const tenders = releases
-          .filter((release: any) => release && release.tender) // Only process releases with tender data
+          .filter((release: any) => release && release.tender && release.tender.id) // Only process releases with tender data
           .map((release: any) => {
-            const tender = release.tender
-            const buyer = release.buyer || tender.procuringEntity || {}
+            const t = release.tender
 
             return {
-              tender_reference:
-                tender.id || release.ocid || `ETENDER-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-              title: tender.title || "Untitled Tender",
-              description: tender.description || "No description provided",
-              organization: buyer.name || tender.procuringEntity?.name || "National Treasury",
-              estimated_value: tender.value?.amount ? `R ${tender.value.amount.toLocaleString()}` : null,
-              category: tender.category || tender.mainProcurementCategory || "General",
-              close_date: tender.tenderPeriod?.endDate || null,
-              publish_date: release.date || new Date().toISOString(),
-              source_url: `https://www.etenders.gov.za/tender/${tender.id}`,
-              contact_email: tender.contactPerson?.email || null,
-              contact_phone: tender.contactPerson?.telephoneNumber || null,
-              contact_person: tender.contactPerson?.name || null,
-              document_urls: tender.documents?.map((doc: any) => doc.url).filter(Boolean) || [],
-              source_province: tender.province || "All",
+              tender_reference: t.id,
+              title: t.title || "Untitled Tender",
+              description: t.description || "",
+              organization: t.procuringEntity?.name || release.buyer?.name || "Unknown",
+              estimated_value: t.value?.amount ? `R ${t.value.amount.toLocaleString()}` : null,
+              category: t.category || "General",
+              close_date: t.tenderPeriod?.endDate || null,
+              publish_date: t.tenderPeriod?.startDate || release.date || new Date().toISOString(),
+              source_url: `https://www.etenders.gov.za/tender/${t.id}`,
+              contact_email: t.contactPerson?.email || null,
+              contact_phone: t.contactPerson?.telephoneNumber || null,
+              contact_person: t.contactPerson?.name || null,
+              document_urls: (t.documents || []).map((doc: any) => doc.url).filter(Boolean),
+              source_province: t.province || "National",
               raw_data: release,
             }
           })
@@ -377,7 +375,7 @@ export async function fetchFromAllAPISources(): Promise<{
             savedCount++
             console.log(`[v0] Successfully saved tender: ${tenderData.tender_reference}`)
           } else {
-            console.error(`[v0] Error saving tender ${tender.tender_reference}:`, error.message)
+            console.error(`[v0] Error saving tender ${tenderData.tender_reference}:`, error.message)
           }
         } catch (err: any) {
           console.error(`[v0] Exception saving tender:`, err)
