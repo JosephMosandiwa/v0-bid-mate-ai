@@ -47,103 +47,78 @@ export async function POST() {
 
       const sampleTenders = [
         {
-          source_id: 1, // Integer, assuming source ID 1 exists
-          source_name: "National Treasury eTender Portal",
-          source_level: "national",
-          source_province: "Western Cape",
           tender_reference: `SAMPLE-TND-${Date.now()}-001`,
           title: "Supply and Delivery of Office Furniture",
           description:
             "The municipality invites qualified suppliers to bid for the supply and delivery of office furniture including desks, chairs, filing cabinets, and storage units for the new municipal building.",
-          category: "Goods",
+          organization: "City of Cape Town Municipality",
           close_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          publish_date: new Date().toISOString(),
-          estimated_value: "R 500,000",
-          contact_person: "John Smith",
-          contact_email: "procurement@capetown.gov.za",
-          contact_phone: "+27 21 400 1234",
           source_url: "https://etenders.gov.za/sample/001",
-          tender_url: "https://etenders.gov.za/sample/001",
-          document_urls: [],
-          is_active: true,
+          category: "Goods",
           scraped_at: new Date().toISOString(),
         },
         {
-          source_id: 1,
-          source_name: "National Treasury eTender Portal",
-          source_level: "provincial",
-          source_province: "Gauteng",
           tender_reference: `SAMPLE-TND-${Date.now()}-002`,
           title: "Road Maintenance and Repair Services",
           description:
             "Appointment of a service provider for road maintenance and repair services for provincial roads in the Gauteng Province for a period of 24 months.",
-          category: "Construction",
+          organization: "Gauteng Department of Roads and Transport",
           close_date: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
-          publish_date: new Date().toISOString(),
-          estimated_value: "R 2,500,000",
-          contact_person: "Sarah Johnson",
-          contact_email: "tenders@gauteng.gov.za",
-          contact_phone: "+27 11 355 7777",
           source_url: "https://etenders.gov.za/sample/002",
-          tender_url: "https://etenders.gov.za/sample/002",
-          document_urls: [],
-          is_active: true,
+          category: "Construction",
           scraped_at: new Date().toISOString(),
         },
         {
-          source_id: 1,
-          source_name: "National Treasury eTender Portal",
-          source_level: "provincial",
-          source_province: "Eastern Cape",
           tender_reference: `SAMPLE-TND-${Date.now()}-003`,
           title: "Development of Web-Based Management Information System",
           description:
             "The Department requires a service provider to develop a comprehensive web-based management information system to track and manage departmental operations, reporting, and analytics.",
-          category: "IT Services",
+          organization: "Eastern Cape Department of Health",
           close_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
-          publish_date: new Date().toISOString(),
-          estimated_value: "R 3,500,000",
-          contact_person: "Michael Brown",
-          contact_email: "it.procurement@health.ec.gov.za",
-          contact_phone: "+27 43 726 5000",
           source_url: "https://etenders.gov.za/sample/003",
-          tender_url: "https://etenders.gov.za/sample/003",
-          document_urls: [],
-          is_active: true,
+          category: "IT Services",
           scraped_at: new Date().toISOString(),
         },
       ]
 
-      console.log("[v0] Saving sample tenders to database...")
+      console.log("[v0] Sample tenders created:", JSON.stringify(sampleTenders, null, 2))
+      console.log("[v0] Attempting to save to scraped_tenders table...")
+
       const { data: savedTenders, error: saveError } = await supabase
         .from("scraped_tenders")
-        .upsert(sampleTenders, {
-          onConflict: "tender_reference",
-          ignoreDuplicates: false,
-        })
+        .insert(sampleTenders)
         .select()
 
       if (saveError) {
-        console.log("[v0] Database error:", saveError)
+        console.log("[v0] Database error:", JSON.stringify(saveError, null, 2))
+        console.log("[v0] Error code:", saveError.code)
+        console.log("[v0] Error message:", saveError.message)
+        console.log("[v0] Error details:", saveError.details)
+
         return NextResponse.json(
           {
             error: "Failed to save sample tenders",
-            details: saveError,
-            fieldError: saveError.message,
+            code: saveError.code,
+            message: saveError.message,
+            details: saveError.details,
+            hint: saveError.hint,
+            fullError: saveError,
           },
           { status: 500 },
         )
       }
 
-      console.log("[v0] Successfully saved", savedTenders?.length || sampleTenders.length, "sample tenders")
+      console.log("[v0] Successfully saved", savedTenders?.length || 0, "sample tenders")
+      console.log(
+        "[v0] Saved tender IDs:",
+        savedTenders?.map((t: any) => t.id),
+      )
 
       return NextResponse.json({
         success: true,
-        mode: "sample",
-        message: "API endpoints unavailable, created sample tenders for testing",
-        tendersProcessed: sampleTenders.length,
-        tendersSaved: savedTenders?.length || sampleTenders.length,
-        samples: sampleTenders.map((t) => ({ reference: t.tender_reference, title: t.title })),
+        message: "Sample tenders created successfully",
+        tendersSaved: savedTenders?.length || 0,
+        tenders: savedTenders,
       })
     }
 
@@ -242,6 +217,7 @@ export async function POST() {
       {
         error: "Fatal error during fetch",
         details: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
       },
       { status: 500 },
     )
