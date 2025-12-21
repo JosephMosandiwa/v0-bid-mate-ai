@@ -288,31 +288,39 @@ export async function fetchFromAllAPISources(): Promise<{
 
       let sourceId: number | null = null
 
-      const { data: existingSource } = await supabase
+      // First try to find existing source
+      const { data: existingSource, error: selectError } = await supabase
         .from("tender_sources")
         .select("id")
         .eq("name", source.name)
-        .single()
+        .maybeSingle()
+
+      if (selectError) {
+        console.error(`[v0] Error checking existing source:`, selectError)
+        results.sources.push({
+          name: source.name,
+          fetched: tenders.length,
+          saved: 0,
+          error: `Database error: ${selectError.message}`,
+        })
+        continue
+      }
 
       if (existingSource) {
         sourceId = existingSource.id
         console.log(`[v0] Using existing source ID: ${sourceId} for ${source.name}`)
       } else {
-        // Create new source
-        const { data: newSource, error: insertError } = await supabase
-          .from("tender_sources")
-          .insert({
-            name: source.name,
-            level: "National",
-            province: "All",
-            tender_page_url: source.baseUrl,
-            scraper_type: "api",
-            is_active: true,
-            scraping_enabled: true,
-            notes: `API integration for ${source.name}`,
-          })
-          .select("id")
-          .single()
+        // Create new source - use insert without select, then query back
+        const { error: insertError } = await supabase.from("tender_sources").insert({
+          name: source.name,
+          level: "National",
+          province: "All",
+          tender_page_url: source.baseUrl,
+          scraper_type: "api",
+          is_active: true,
+          scraping_enabled: true,
+          notes: `API integration for ${source.name}`,
+        })
 
         if (insertError) {
           console.error(`[v0] Failed to create source ${source.name}:`, insertError)
@@ -325,7 +333,25 @@ export async function fetchFromAllAPISources(): Promise<{
           continue
         }
 
-        sourceId = newSource?.id
+        // Query back the newly created source
+        const { data: newSource, error: newSelectError } = await supabase
+          .from("tender_sources")
+          .select("id")
+          .eq("name", source.name)
+          .single()
+
+        if (newSelectError || !newSource) {
+          console.error(`[v0] Failed to retrieve new source ID:`, newSelectError)
+          results.sources.push({
+            name: source.name,
+            fetched: tenders.length,
+            saved: 0,
+            error: `Failed to retrieve new source ID`,
+          })
+          continue
+        }
+
+        sourceId = newSource.id
         console.log(`[v0] Created new source ID: ${sourceId} for ${source.name}`)
       }
 
