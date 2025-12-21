@@ -12,35 +12,45 @@ export default function ETenderFetchPage() {
   const [error, setError] = useState<string | null>(null)
   const [testLoading, setTestLoading] = useState(false)
   const [testResult, setTestResult] = useState<any>(null)
+  const [progress, setProgress] = useState<string[]>([])
 
   const handleFetch = async () => {
     setLoading(true)
     setError(null)
     setResult(null)
+    setProgress(["🚀 Starting API fetch..."])
 
     try {
-      console.log("[v0] Calling multi-source API tenders fetch...")
+      setProgress((prev) => [...prev, "📡 Calling /api/fetch-all-api-tenders..."])
+
       const response = await fetch("/api/fetch-all-api-tenders", {
         method: "POST",
       })
 
-      const data = await response.json()
-      console.log("[v0] Response:", data)
+      setProgress((prev) => [...prev, `✅ API responded with status: ${response.status}`])
 
-      if (!response.ok || !data.success) {
+      const data = await response.json()
+      setProgress((prev) => [...prev, `📦 Received data: ${JSON.stringify(data).substring(0, 200)}...`])
+
+      if (!response.ok || (!data.success && data.totalSaved === 0)) {
         setError(data.error || "Failed to fetch tenders")
         if (data.sources && data.sources.length > 0) {
           setResult(data)
         }
+        setProgress((prev) => [...prev, `❌ Fetch failed: ${data.error}`])
         return
       }
 
+      setProgress((prev) => [...prev, `✅ Success! Fetched ${data.totalFetched}, Saved ${data.totalSaved}`])
       setResult(data)
     } catch (err) {
       console.error("[v0] Error:", err)
-      setError(err instanceof Error ? err.message : "Unknown error")
+      const errorMsg = err instanceof Error ? err.message : "Unknown error"
+      setError(errorMsg)
+      setProgress((prev) => [...prev, `❌ Exception: ${errorMsg}`])
     } finally {
       setLoading(false)
+      setProgress((prev) => [...prev, "🏁 Fetch complete"])
     }
   }
 
@@ -184,6 +194,19 @@ export default function ETenderFetchPage() {
               </>
             )}
           </Button>
+
+          {progress.length > 0 && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+              <h4 className="font-semibold mb-2 text-sm">Live Progress:</h4>
+              <div className="space-y-1 text-sm font-mono max-h-60 overflow-y-auto">
+                {progress.map((msg, i) => (
+                  <div key={i} className="text-gray-700">
+                    {msg}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -213,11 +236,23 @@ export default function ETenderFetchPage() {
               )}
             </CardTitle>
             <CardDescription>
-              Total: {result.totalFetched} fetched, {result.totalSaved} saved to database
+              Database had {result.beforeCount} tenders before fetch. After fetching {result.totalFetched} tenders from
+              APIs and saving {result.totalSaved}, database now has {result.afterCount} tenders ({result.newTenders}{" "}
+              new, {result.totalSaved - result.newTenders} updated).
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              {result.newTenders === 0 && result.totalSaved > 0 && (
+                <Alert className="border-blue-500 bg-blue-50">
+                  <AlertDescription className="text-blue-900">
+                    <strong>Note:</strong> All {result.totalSaved} tenders from the API already existed in the database
+                    and were updated. No genuinely new tenders were added. This means the system is working correctly
+                    and preventing duplicates.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <div>
                 <h3 className="font-semibold mb-3">Results by Source</h3>
                 <div className="space-y-3">
