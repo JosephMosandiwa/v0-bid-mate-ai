@@ -1,9 +1,24 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { Building2, MapPin, FileText, Settings, Check, ChevronRight, ChevronLeft, Loader2 } from "lucide-react"
+import {
+  Building2,
+  MapPin,
+  FileText,
+  Settings,
+  Check,
+  ChevronRight,
+  ChevronLeft,
+  Loader2,
+  Upload,
+  X,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,7 +31,7 @@ import { toast } from "sonner"
 const STEPS = [
   { id: 1, title: "Company Info", icon: Building2, description: "Basic company details" },
   { id: 2, title: "Location & Industry", icon: MapPin, description: "Where you operate" },
-  { id: 3, title: "Compliance Docs", icon: FileText, description: "Your certifications" },
+  { id: 3, title: "Compliance Docs", icon: FileText, description: "Upload certifications" },
   { id: 4, title: "Preferences", icon: Settings, description: "Tender preferences" },
 ]
 
@@ -52,15 +67,40 @@ const INDUSTRIES = [
 const CIDB_GRADES = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
 const BBBEE_LEVELS = ["1", "2", "3", "4", "5", "6", "7", "8", "Non-Compliant", "EME", "QSE"]
 
+const DOCUMENT_TYPES = [
+  { value: "tax_clearance", label: "Tax Clearance Certificate" },
+  { value: "coida", label: "COIDA / Letter of Good Standing" },
+  { value: "cidb", label: "CIDB Certificate" },
+  { value: "bbbee", label: "B-BBEE Certificate" },
+  { value: "company_profile", label: "Company Profile" },
+  { value: "bank_details", label: "Banking Details" },
+  { value: "insurance", label: "Insurance Certificate" },
+  { value: "company_registration", label: "Company Registration (CK/CIPC)" },
+  { value: "other", label: "Other" },
+]
+
 interface OnboardingWizardProps {
   userId: string
   userEmail: string
+}
+
+interface UploadedDocument {
+  id: string
+  name: string
+  type: string
+  size: number
+  documentType: string
+  uploading: boolean
+  uploaded: boolean
+  blobUrl?: string
 }
 
 export function OnboardingWizard({ userId, userEmail }: OnboardingWizardProps) {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([])
+  const [processingDocs, setProcessingDocs] = useState(false)
 
   // Step 1: Company Info
   const [companyName, setCompanyName] = useState("")
@@ -110,11 +150,126 @@ export function OnboardingWizard({ userId, userEmail }: OnboardingWizardProps) {
     }
   }
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, documentType: string) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    const file = files[0]
+
+    // Add to uploaded documents with uploading state
+    const tempId = `temp-${Date.now()}`
+    const newDoc: UploadedDocument = {
+      id: tempId,
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      documentType,
+      uploading: true,
+      uploaded: false,
+    }
+
+    setUploadedDocuments((prev) => [...prev, newDoc])
+
+    try {
+      // Upload to Vercel Blob
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const uploadResponse = await fetch("/api/upload-to-blob", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!uploadResponse.ok) throw new Error("Failed to upload file")
+
+      const { url } = await uploadResponse.json()
+
+      // Save to onboarding_compliance_documents table
+      const supabase = createBrowserClient()
+      const { data, error } = await supabase
+        .from("onboarding_compliance_documents")
+        .insert({
+          user_id: userId,
+          document_type: documentType,
+          document_name: file.name,
+          blob_url: url,
+          storage_path: url,
+          file_size: file.size,
+          file_type: file.type,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Update document state
+      setUploadedDocuments((prev) =>
+        prev.map((doc) =>
+          doc.id === tempId ? { ...doc, id: data.id, uploading: false, uploaded: true, blobUrl: url } : doc,
+        ),
+      )
+
+      toast.success(`${file.name} uploaded successfully`)
+    } catch (error) {
+      console.error("Upload error:", error)
+      toast.error(`Failed to upload ${file.name}`)
+      setUploadedDocuments((prev) => prev.filter((doc) => doc.id !== tempId))
+    }
+  }
+
+  const removeDocument = async (docId: string) => {
+    try {
+      const supabase = createBrowserClient()
+      const { error } = await supabase.from("onboarding_compliance_documents").delete().eq("id", docId)
+
+      if (error) throw error
+
+      setUploadedDocuments((prev) => prev.filter((doc) => doc.id !== docId))
+      toast.success("Document removed")
+    } catch (error) {
+      console.error("Remove error:", error)
+      toast.error("Failed to remove document")
+    }
+  }
+
+  const processDocuments = async () => {
+    if (uploadedDocuments.length === 0) return
+
+    setProcessingDocs(true)
+    toast.info("Processing documents with AI...")
+
+    try {
+      // Process each document through Documind for data extraction
+      for (const doc of uploadedDocuments.filter((d) => d.uploaded)) {
+        await fetch("/api/v1/documind/process-upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileUrl: doc.blobUrl,
+            fileName: doc.name,
+            userId,
+            documentType: doc.documentType,
+          }),
+        })
+      }
+
+      toast.success("Documents processed and added to your knowledge base")
+    } catch (error) {
+      console.error("Processing error:", error)
+      toast.error("Some documents failed to process")
+    } finally {
+      setProcessingDocs(false)
+    }
+  }
+
   const handleSubmit = async () => {
     setIsSubmitting(true)
     const supabase = createBrowserClient()
 
     try {
+      // Process documents before finalizing
+      await processDocuments()
+
       // 1. Update profile with basic info (only fields that exist in profiles table)
       const { error: profileError } = await supabase
         .from("profiles")
@@ -183,7 +338,71 @@ export function OnboardingWizard({ userId, userEmail }: OnboardingWizardProps) {
         throw prefsError
       }
 
-      toast.success("Profile setup complete!")
+      const knowledgeBaseEntries = [
+        { category: "company_info", field_name: "company_name", field_value: companyName, source: "onboarding" },
+        {
+          category: "company_info",
+          field_name: "registration_number",
+          field_value: registrationNumber,
+          source: "onboarding",
+        },
+        { category: "company_info", field_name: "vat_number", field_value: vatNumber, source: "onboarding" },
+        { category: "company_info", field_name: "contact_phone", field_value: contactPhone, source: "onboarding" },
+        { category: "company_info", field_name: "province", field_value: province, source: "onboarding" },
+        { category: "company_info", field_name: "city", field_value: city, source: "onboarding" },
+        { category: "certifications", field_name: "cidb_grade", field_value: cidbGrade, source: "onboarding" },
+        { category: "certifications", field_name: "bbbee_level", field_value: bbbeeLevel, source: "onboarding" },
+        {
+          category: "certifications",
+          field_name: "has_tax_clearance",
+          field_value: hasTaxClearance ? "yes" : "no",
+          source: "onboarding",
+        },
+        {
+          category: "certifications",
+          field_name: "has_coida",
+          field_value: hasCoida ? "yes" : "no",
+          source: "onboarding",
+        },
+        { category: "certifications", field_name: "has_csd", field_value: hasCsd ? "yes" : "no", source: "onboarding" },
+        { category: "capabilities", field_name: "industries", field_data: { industries }, source: "onboarding" },
+        {
+          category: "capabilities",
+          field_name: "preferred_provinces",
+          field_data: { provinces: preferredProvinces },
+          source: "onboarding",
+        },
+      ].filter((entry) => entry.field_value || entry.field_data)
+
+      // Insert into knowledge base
+      for (const entry of knowledgeBaseEntries) {
+        await supabase.from("company_knowledge_base").upsert(
+          {
+            user_id: userId,
+            ...entry,
+            confidence_score: 1.0,
+            verified: true,
+          },
+          {
+            onConflict: "user_id,category,field_name",
+          },
+        )
+      }
+
+      await supabase
+        .from("profiles")
+        .update({
+          onboarding_completed: true,
+          onboarding_completed_at: new Date().toISOString(),
+          onboarding_progress: {
+            step: 4,
+            completed_steps: [1, 2, 3, 4],
+            documents_uploaded: uploadedDocuments.length,
+          },
+        })
+        .eq("id", userId)
+
+      toast.success("Profile setup complete! Your knowledge base is ready.")
       router.push("/dashboard")
     } catch (error) {
       console.error("Onboarding error:", error)
@@ -394,8 +613,9 @@ export function OnboardingWizard({ userId, userEmail }: OnboardingWizardProps) {
                         </Select>
                       </div>
                     </div>
+
                     <div>
-                      <Label className="mb-3 block">Compliance Documents</Label>
+                      <Label className="mb-3 block">Compliance Checkboxes</Label>
                       <div className="space-y-3">
                         <div className="flex items-center space-x-3">
                           <Checkbox
@@ -420,6 +640,72 @@ export function OnboardingWizard({ userId, userEmail }: OnboardingWizardProps) {
                           </Label>
                         </div>
                       </div>
+                    </div>
+
+                    <div className="border-t pt-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <Label className="text-base font-semibold">Upload Compliance Documents</Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Upload your certificates for AI-powered autofill
+                          </p>
+                        </div>
+                        <Upload className="h-5 w-5 text-muted-foreground" />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {DOCUMENT_TYPES.map((docType) => (
+                          <div key={docType.value} className="space-y-2">
+                            <Label htmlFor={`upload-${docType.value}`} className="text-sm">
+                              {docType.label}
+                            </Label>
+                            <div className="relative">
+                              <Input
+                                id={`upload-${docType.value}`}
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                onChange={(e) => handleFileUpload(e, docType.value)}
+                                className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {uploadedDocuments.length > 0 && (
+                        <div className="mt-6 space-y-3">
+                          <Label className="text-sm font-semibold">Uploaded Documents</Label>
+                          {uploadedDocuments.map((doc) => (
+                            <div key={doc.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                {doc.uploading ? (
+                                  <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+                                ) : doc.uploaded ? (
+                                  <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                ) : (
+                                  <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-medium truncate">{doc.name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {DOCUMENT_TYPES.find((t) => t.value === doc.documentType)?.label}
+                                  </p>
+                                </div>
+                              </div>
+                              {doc.uploaded && !doc.uploading && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeDocument(doc.id)}
+                                  className="flex-shrink-0"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
