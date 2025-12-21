@@ -81,119 +81,89 @@ export const API_TENDER_SOURCES: TenderAPISource[] = [
     requiresAuth: false,
     apiKey: undefined, // Declared the apiKey variable
     fetchFunction: async () => {
-      const endpoints = [
-        "https://ocds-api.etenders.gov.za/api/v1/releases",
-        "https://ocds-api.etenders.gov.za/api/releases",
-        "https://data.etenders.gov.za/api/v1/releases",
-      ]
+      try {
+        // Calculate date range (last 30 days)
+        const dateTo = new Date()
+        const dateFrom = new Date()
+        dateFrom.setDate(dateFrom.getDate() - 30)
 
-      console.log(`[v0] Starting eTender API fetch...`)
+        const dateToStr = dateTo.toISOString().split("T")[0]
+        const dateFromStr = dateFrom.toISOString().split("T")[0]
 
-      for (const baseEndpoint of endpoints) {
-        try {
-          const url = `${baseEndpoint}?limit=50`
+        const url = `https://ocds-api.etenders.gov.za/api/OCDSReleases?PageNumber=1&PageSize=100&dateFrom=${dateFromStr}&dateTo=${dateToStr}`
 
-          console.log(`[v0] Attempting eTender API call: ${url}`)
+        console.log(`[v0] Fetching eTender API: ${url}`)
 
-          const response = await fetch(url, {
-            headers: {
-              Accept: "application/json",
-              "User-Agent": "BidMateAI/1.0",
-            },
-            signal: AbortSignal.timeout(30000),
-          })
+        const response = await fetch(url, {
+          headers: {
+            Accept: "application/json",
+            "User-Agent": "BidMateAI/1.0",
+          },
+          signal: AbortSignal.timeout(30000),
+        })
 
-          console.log(`[v0] eTender API response status: ${response.status} from ${baseEndpoint}`)
-          console.log(`[v0] Response headers:`, Object.fromEntries(response.headers.entries()))
+        console.log(`[v0] eTender API response status: ${response.status}`)
 
-          if (!response.ok) {
-            const errorText = await response.text()
-            console.log(`[v0] eTender API error (${response.status}): ${errorText.substring(0, 200)}`)
-            continue // Try next endpoint
-          }
-
-          const contentType = response.headers.get("content-type")
-          console.log(`[v0] Content-Type: ${contentType}`)
-
-          const data = await response.json()
-          console.log(`[v0] eTender API response structure:`, {
-            type: typeof data,
-            isArray: Array.isArray(data),
-            keys: typeof data === "object" ? Object.keys(data) : [],
-            sampleKeys: data?.releases ? Object.keys(data.releases[0] || {}) : [],
-            releasesCount: data?.releases?.length || 0,
-            dataCount: data?.data?.length || 0,
-            itemsCount: data?.items?.length || 0,
-          })
-
-          let releases: any[] = []
-
-          if (data.releases && Array.isArray(data.releases)) {
-            releases = data.releases
-            console.log(`[v0] Found releases in data.releases`)
-          } else if (Array.isArray(data)) {
-            releases = data
-            console.log(`[v0] Data is array of releases`)
-          } else if (data.data && Array.isArray(data.data)) {
-            releases = data.data
-            console.log(`[v0] Found releases in data.data`)
-          } else if (data.items && Array.isArray(data.items)) {
-            releases = data.items
-            console.log(`[v0] Found releases in data.items`)
-          }
-
-          console.log(`[v0] Parsed ${releases.length} releases from eTender API`)
-
-          if (releases.length > 0) {
-            console.log(`[v0] Sample release structure:`, {
-              keys: Object.keys(releases[0]),
-              ocid: releases[0].ocid,
-              id: releases[0].id,
-              hasTender: !!releases[0].tender,
-              tenderKeys: releases[0].tender ? Object.keys(releases[0].tender) : [],
-            })
-
-            return releases.map((release: any) => {
-              const tender = release.tender || {}
-              const buyer = release.buyer || release.parties?.find((p: any) => p.roles?.includes("buyer")) || {}
-
-              return {
-                tender_reference: release.ocid || release.id || `ETENDER-${Date.now()}`,
-                title: tender.title || release.title || "Untitled Tender",
-                description: tender.description || release.description || "",
-                organization: buyer.name || tender.procuringEntity?.name || "National Treasury",
-                estimated_value: tender.value?.amount ? `R ${tender.value.amount.toLocaleString()}` : null,
-                category:
-                  tender.mainProcurementCategory ||
-                  tender.items?.[0]?.classification?.description ||
-                  tender.classification?.description ||
-                  "General Procurement",
-                close_date: tender.tenderPeriod?.endDate || null,
-                publish_date: release.date || tender.tenderPeriod?.startDate || new Date().toISOString(),
-                source_url: `https://www.etenders.gov.za/tender/${release.ocid}`,
-                contact_email: buyer.contactPoint?.email || tender.contactPoint?.email || null,
-                contact_phone: buyer.contactPoint?.telephone || tender.contactPoint?.telephone || null,
-                contact_person: buyer.contactPoint?.name || tender.contactPoint?.name || null,
-                document_urls: tender.documents?.map((doc: any) => doc.url).filter(Boolean) || [],
-                source_province: buyer.address?.region || "All",
-                raw_data: release,
-              }
-            })
-          }
-
-          console.log(`[v0] No releases found in response from ${baseEndpoint}`)
-        } catch (error: any) {
-          console.error(`[v0] eTender API error for ${baseEndpoint}:`, {
-            message: error.message,
-            name: error.name,
-            cause: error.cause,
-          })
-          // Continue to next endpoint
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.log(`[v0] eTender API error: ${errorText.substring(0, 500)}`)
+          return []
         }
-      }
 
-      console.log(`[v0] All eTender API endpoints failed, returning empty array`)
-      return []
+        const data = await response.json()
+        console.log(`[v0] eTender API response structure:`, {
+          type: typeof data,
+          isArray: Array.isArray(data),
+          keys: typeof data === "object" ? Object.keys(data) : [],
+          length: Array.isArray(data) ? data.length : "N/A",
+          firstItemKeys: Array.isArray(data) && data.length > 0 ? Object.keys(data[0]) : [],
+        })
+
+        // The API returns an array of OCDS releases
+        const releases = Array.isArray(data) ? data : []
+
+        console.log(`[v0] Parsed ${releases.length} releases from eTender API`)
+
+        if (releases.length > 0) {
+          console.log(`[v0] Sample release:`, JSON.stringify(releases[0]).substring(0, 500))
+
+          return releases.map((release: any) => {
+            const tender = release.tender || {}
+            const buyer = release.buyer || release.parties?.find((p: any) => p.roles?.includes("buyer")) || {}
+
+            return {
+              tender_reference: release.ocid || release.id || `ETENDER-${Date.now()}`,
+              title: tender.title || release.title || "Untitled Tender",
+              description: tender.description || release.description || "",
+              organization: buyer.name || tender.procuringEntity?.name || "National Treasury",
+              estimated_value: tender.value?.amount ? `R ${tender.value.amount.toLocaleString()}` : null,
+              category:
+                tender.mainProcurementCategory ||
+                tender.items?.[0]?.classification?.description ||
+                tender.classification?.description ||
+                "General Procurement",
+              close_date: tender.tenderPeriod?.endDate || null,
+              publish_date: release.date || tender.tenderPeriod?.startDate || new Date().toISOString(),
+              source_url: `https://www.etenders.gov.za/tender/${release.ocid}`,
+              contact_email: buyer.contactPoint?.email || tender.contactPoint?.email || null,
+              contact_phone: buyer.contactPoint?.telephone || tender.contactPoint?.telephone || null,
+              contact_person: buyer.contactPoint?.name || tender.contactPoint?.name || null,
+              document_urls: tender.documents?.map((doc: any) => doc.url).filter(Boolean) || [],
+              source_province: buyer.address?.region || "All",
+              raw_data: release,
+            }
+          })
+        }
+
+        console.log(`[v0] No releases found in response`)
+        return []
+      } catch (error: any) {
+        console.error(`[v0] eTender API error:`, {
+          message: error.message,
+          name: error.name,
+        })
+        return []
+      }
     },
   },
   {
