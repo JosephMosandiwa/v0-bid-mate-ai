@@ -1,11 +1,11 @@
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { NextResponse } from "next/server"
 
 export async function POST() {
   try {
     console.log("[v0] Starting direct eTender data fetch")
 
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     // Try multiple eTender API endpoints
     const endpoints = [
