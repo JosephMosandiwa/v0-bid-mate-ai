@@ -1,4 +1,4 @@
-import { Home, Search, FileText, Upload, Target, Building2, User } from "your-icon-library" // Import icons here
+import { Home, Search, FileText, Upload, Target, Building2, User } from "lucide-react" // Import icons here
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
