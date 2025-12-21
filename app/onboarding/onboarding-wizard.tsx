@@ -82,6 +82,8 @@ const DOCUMENT_TYPES = [
 interface OnboardingWizardProps {
   userId: string
   userEmail: string
+  mode?: "initial" | "add-company"
+  onComplete?: () => void
 }
 
 interface UploadedDocument {
@@ -95,7 +97,7 @@ interface UploadedDocument {
   blobUrl?: string
 }
 
-export function OnboardingWizard({ userId, userEmail }: OnboardingWizardProps) {
+export function OnboardingWizard({ userId, userEmail, mode = "initial", onComplete }: OnboardingWizardProps) {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -270,6 +272,88 @@ export function OnboardingWizard({ userId, userEmail }: OnboardingWizardProps) {
       // Process documents before finalizing
       await processDocuments()
 
+      if (mode === "add-company") {
+        // Just insert a new company without onConflict
+        const { data: newCompany, error: companyError } = await supabase
+          .from("companies")
+          .insert({
+            user_id: userId,
+            company_name: companyName,
+            registration_number: registrationNumber || null,
+            vat_number: vatNumber || null,
+            contact_phone: contactPhone || null,
+            province,
+            city: city || null,
+            industry: industries[0] || null,
+            industries: industries,
+            bee_status: bbbeeLevel || null,
+            cidb_grade: cidbGrade && cidbGrade !== "none" ? cidbGrade : null,
+            is_primary: false, // New companies are not primary by default
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single()
+
+        if (companyError) {
+          console.error("Company insert error:", companyError)
+          throw companyError
+        }
+
+        // Create knowledge base entries for the new company
+        const knowledgeBaseEntries = [
+          { category: "company_info", field_name: "company_name", field_value: companyName, source: "onboarding" },
+          {
+            category: "company_info",
+            field_name: "registration_number",
+            field_value: registrationNumber,
+            source: "onboarding",
+          },
+          { category: "company_info", field_name: "vat_number", field_value: vatNumber, source: "onboarding" },
+          { category: "company_info", field_name: "contact_phone", field_value: contactPhone, source: "onboarding" },
+          { category: "company_info", field_name: "province", field_value: province, source: "onboarding" },
+          { category: "company_info", field_name: "city", field_value: city, source: "onboarding" },
+          { category: "certifications", field_name: "cidb_grade", field_value: cidbGrade, source: "onboarding" },
+          { category: "certifications", field_name: "bbbee_level", field_value: bbbeeLevel, source: "onboarding" },
+          {
+            category: "certifications",
+            field_name: "has_tax_clearance",
+            field_value: hasTaxClearance ? "yes" : "no",
+            source: "onboarding",
+          },
+          {
+            category: "certifications",
+            field_name: "has_coida",
+            field_value: hasCoida ? "yes" : "no",
+            source: "onboarding",
+          },
+          {
+            category: "certifications",
+            field_name: "has_csd",
+            field_value: hasCsd ? "yes" : "no",
+            source: "onboarding",
+          },
+          { category: "capabilities", field_name: "industries", field_data: { industries }, source: "onboarding" },
+        ].filter((entry) => entry.field_value || entry.field_data)
+
+        // Insert into knowledge base with company_id
+        for (const entry of knowledgeBaseEntries) {
+          await supabase.from("company_knowledge_base").insert({
+            user_id: userId,
+            company_id: newCompany.id,
+            ...entry,
+            confidence_score: 1.0,
+            verified: true,
+          })
+        }
+
+        toast.success("New company added successfully!")
+        if (onComplete) {
+          onComplete()
+        }
+        return
+      }
+
       // 1. Update profile with basic info (only fields that exist in profiles table)
       const { error: profileError } = await supabase
         .from("profiles")
@@ -284,26 +368,31 @@ export function OnboardingWizard({ userId, userEmail }: OnboardingWizardProps) {
         throw profileError
       }
 
-      // 2. Upsert company info to companies table
-      const { error: companyError } = await supabase.from("companies").upsert(
-        {
-          user_id: userId,
-          company_name: companyName,
-          registration_number: registrationNumber || null,
-          vat_number: vatNumber || null,
-          contact_phone: contactPhone || null, // Added phone mapping
-          province,
-          city: city || null,
-          industry: industries[0] || null, // Primary industry
-          industries: industries, // Store full array
-          bee_status: bbbeeLevel || null,
-          cidb_grade: cidbGrade && cidbGrade !== "none" ? cidbGrade : null, // Added CIDB mapping
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "user_id",
-        },
-      )
+      // 2. Upsert company info to companies table (first company is primary)
+      const { data: primaryCompany, error: companyError } = await supabase
+        .from("companies")
+        .upsert(
+          {
+            user_id: userId,
+            company_name: companyName,
+            registration_number: registrationNumber || null,
+            vat_number: vatNumber || null,
+            contact_phone: contactPhone || null,
+            province,
+            city: city || null,
+            industry: industries[0] || null,
+            industries: industries,
+            bee_status: bbbeeLevel || null,
+            cidb_grade: cidbGrade && cidbGrade !== "none" ? cidbGrade : null,
+            is_primary: true, // First company is primary
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "user_id",
+          },
+        )
+        .select()
+        .single()
 
       if (companyError) {
         console.error("Company upsert error:", companyError)
@@ -377,11 +466,12 @@ export function OnboardingWizard({ userId, userEmail }: OnboardingWizardProps) {
         },
       ].filter((entry) => entry.field_value || entry.field_data)
 
-      // Insert into knowledge base
+      // Insert into knowledge base with company_id
       for (const entry of knowledgeBaseEntries) {
         await supabase.from("company_knowledge_base").upsert(
           {
             user_id: userId,
+            company_id: primaryCompany.id,
             ...entry,
             confidence_score: 1.0,
             verified: true,
