@@ -268,85 +268,140 @@ export async function fetchFromAllAPISources(): Promise<{
 
   const supabase = createAdminClient()
 
-  console.log(`[v0] Generating sample tenders since live APIs require authentication...`)
-  const sampleTenders = generateRealisticSampleTenders(10)
+  for (const source of API_TENDER_SOURCES) {
+    console.log(`[v0] Fetching from ${source.name}...`)
 
-  try {
-    let sourceId: number | null = null
-    const sourceName = "Sample South African Tenders"
+    try {
+      const tenders = await source.fetchFunction()
 
-    const { data: existingSource } = await supabase.from("tender_sources").select("id").eq("name", sourceName).single()
+      console.log(`[v0] ${source.name} returned ${tenders.length} tenders`)
 
-    if (existingSource) {
-      sourceId = existingSource.id
-    } else {
-      const { data: newSource } = await supabase
+      if (tenders.length === 0) {
+        results.sources.push({
+          name: source.name,
+          fetched: 0,
+          saved: 0,
+          error: "No tenders returned",
+        })
+        continue
+      }
+
+      // Get or create tender source in database
+      let sourceId: number | null = null
+
+      const { data: existingSource, error: sourceError } = await supabase
         .from("tender_sources")
-        .upsert(
-          {
-            name: sourceName,
+        .select("id")
+        .eq("name", source.name)
+        .single()
+
+      if (existingSource) {
+        sourceId = existingSource.id
+        console.log(`[v0] Using existing source ID: ${sourceId} for ${source.name}`)
+      } else {
+        console.log(`[v0] Creating new source for ${source.name}`)
+        const { data: newSource, error: insertError } = await supabase
+          .from("tender_sources")
+          .insert({
+            name: source.name,
             level: "National",
             province: "All",
-            tender_page_url: "https://bidmateai.vercel.app",
+            tender_page_url: source.baseUrl,
             scraper_type: "api",
             is_active: true,
             scraping_enabled: true,
-            notes: "Sample tender data for testing",
-          },
-          { onConflict: "name" },
-        )
-        .select()
-        .single()
+            notes: `API integration for ${source.name}`,
+          })
+          .select("id")
+          .single()
 
-      sourceId = newSource?.id
-    }
+        if (insertError) {
+          console.error(`[v0] Failed to create source ${source.name}:`, insertError)
+          results.sources.push({
+            name: source.name,
+            fetched: tenders.length,
+            saved: 0,
+            error: `Failed to create source: ${insertError.message}`,
+          })
+          continue
+        }
 
-    if (sourceId) {
-      let savedCount = 0
-      for (const tender of sampleTenders) {
-        const { error } = await supabase.from("scraped_tenders").upsert(
-          {
-            source_id: sourceId,
-            tender_reference: tender.tender_reference,
-            title: tender.title,
-            description: tender.description,
-            source_name: tender.organization,
-            category: tender.category,
-            estimated_value: tender.estimated_value,
-            close_date: tender.close_date,
-            publish_date: tender.publish_date,
-            source_url: tender.source_url,
-            tender_url: tender.source_url,
-            contact_email: tender.contact_email,
-            contact_phone: tender.contact_phone,
-            contact_person: tender.contact_person,
-            document_urls: tender.document_urls,
-            raw_data: tender.raw_data,
-            source_level: "National",
-            source_province: tender.source_province || "All",
-            is_active: true,
-            scraped_at: new Date().toISOString(),
-          },
-          { onConflict: "source_id,tender_reference" },
-        )
-
-        if (!error) savedCount++
+        sourceId = newSource?.id
+        console.log(`[v0] Created new source ID: ${sourceId} for ${source.name}`)
       }
 
-      results.totalFetched = sampleTenders.length
-      results.totalSaved = savedCount
-      results.success = savedCount > 0
+      if (!sourceId) {
+        console.error(`[v0] No source ID for ${source.name}`)
+        results.sources.push({
+          name: source.name,
+          fetched: tenders.length,
+          saved: 0,
+          error: "Failed to get source ID",
+        })
+        continue
+      }
+
+      // Save tenders to database
+      let savedCount = 0
+      for (const tender of tenders) {
+        try {
+          const { error } = await supabase.from("scraped_tenders").upsert(
+            {
+              source_id: sourceId,
+              tender_reference: tender.tender_reference,
+              title: tender.title,
+              description: tender.description,
+              source_name: tender.organization,
+              category: tender.category,
+              estimated_value: tender.estimated_value,
+              close_date: tender.close_date,
+              publish_date: tender.publish_date,
+              source_url: tender.source_url,
+              tender_url: tender.source_url,
+              contact_email: tender.contact_email,
+              contact_phone: tender.contact_phone,
+              contact_person: tender.contact_person,
+              document_urls: tender.document_urls || [],
+              raw_data: tender.raw_data || {},
+              source_level: "National",
+              source_province: tender.source_province || "All",
+              is_active: true,
+              scraped_at: new Date().toISOString(),
+            },
+            { onConflict: "source_id,tender_reference" },
+          )
+
+          if (!error) {
+            savedCount++
+          } else {
+            console.error(`[v0] Error saving tender ${tender.tender_reference}:`, error.message)
+          }
+        } catch (err: any) {
+          console.error(`[v0] Exception saving tender:`, err)
+        }
+      }
+
+      results.totalFetched += tenders.length
+      results.totalSaved += savedCount
       results.sources.push({
-        name: sourceName,
-        fetched: sampleTenders.length,
+        name: source.name,
+        fetched: tenders.length,
         saved: savedCount,
       })
 
-      console.log(`[v0] Saved ${savedCount}/${sampleTenders.length} sample tenders`)
+      console.log(`[v0] ${source.name}: Saved ${savedCount}/${tenders.length} tenders`)
+    } catch (error: any) {
+      console.error(`[v0] Error fetching from ${source.name}:`, error)
+      results.sources.push({
+        name: source.name,
+        fetched: 0,
+        saved: 0,
+        error: error.message || "Unknown error",
+      })
     }
-  } catch (error: any) {
-    console.error(`[v0] Error saving sample tenders:`, error)
   }
+
+  results.success = results.totalSaved > 0
 
   return results
 }
