@@ -16,7 +16,7 @@ import {
   MessageSquare,
   HelpCircle,
   ChevronDown,
-  CreditCard,
+  Building2,
 } from "lucide-react"
 import { useState } from "react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -59,8 +59,8 @@ export function DashboardNav() {
   ]
 
   const settingsNavItems = [
-    { href: "/dashboard/profile", label: "Profile", icon: User },
-    { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
+    { href: "/dashboard/account", label: "Account Settings", icon: User },
+    { href: "/dashboard/companies", label: "My Companies", icon: Building2 },
   ]
 
   const isActive = (href: string) => {
@@ -148,6 +148,10 @@ export function DashboardNav() {
 
       {/* Settings */}
       <NavSection title="Account" items={settingsNavItems} />
+      <NavSection
+        title="Companies"
+        items={[{ href: "/dashboard/companies", label: "My Companies", icon: Building2 }]}
+      />
     </div>
   )
 

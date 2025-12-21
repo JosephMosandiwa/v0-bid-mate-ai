@@ -25,7 +25,10 @@ export default function CompanyDetailPage() {
     tax_number: "",
     bee_status: "",
     vat_number: "",
+    contact_phone: "", // Added phone field
+    cidb_grade: "", // Added CIDB field
     industry: "",
+    industries: [] as string[], // Added industries array
     company_size: "",
     address_line1: "",
     address_line2: "",
@@ -72,7 +75,10 @@ export default function CompanyDetailPage() {
           tax_number: data.tax_number || "",
           bee_status: data.bee_status || "",
           vat_number: data.vat_number || "",
+          contact_phone: data.contact_phone || "", // Map phone
+          cidb_grade: data.cidb_grade || "", // Map CIDB
           industry: data.industry || "",
+          industries: data.industries || [], // Map industries array
           company_size: data.company_size || "",
           address_line1: data.address_line1 || "",
           address_line2: data.address_line2 || "",
@@ -207,7 +213,128 @@ export default function CompanyDetailPage() {
                 </div>
               </div>
 
-              {/* ... rest of the form fields from the original profile page company tab ... */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="vat_number">VAT Number</Label>
+                  <Input
+                    id="vat_number"
+                    value={company.vat_number}
+                    onChange={(e) => setCompany({ ...company, vat_number: e.target.value })}
+                    placeholder="4123456789"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact_phone">Contact Phone</Label>
+                  <Input
+                    id="contact_phone"
+                    value={company.contact_phone}
+                    onChange={(e) => setCompany({ ...company, contact_phone: e.target.value })}
+                    placeholder="+27 12 345 6789"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="bee_status">B-BBEE Level</Label>
+                  <Input
+                    id="bee_status"
+                    value={company.bee_status}
+                    onChange={(e) => setCompany({ ...company, bee_status: e.target.value })}
+                    placeholder="Level 1-8 or EME"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cidb_grade">CIDB Grade</Label>
+                  <Input
+                    id="cidb_grade"
+                    value={company.cidb_grade}
+                    onChange={(e) => setCompany({ ...company, cidb_grade: e.target.value })}
+                    placeholder="1-9 or GB"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="industry">Primary Industry</Label>
+                  <Input
+                    id="industry"
+                    value={company.industry}
+                    onChange={(e) => setCompany({ ...company, industry: e.target.value })}
+                    placeholder="Construction, IT Services, etc."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="company_size">Company Size</Label>
+                  <Input
+                    id="company_size"
+                    value={company.company_size}
+                    onChange={(e) => setCompany({ ...company, company_size: e.target.value })}
+                    placeholder="1-10, 11-50, 51-200, etc."
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address_line1">Address Line 1</Label>
+                <Input
+                  id="address_line1"
+                  value={company.address_line1}
+                  onChange={(e) => setCompany({ ...company, address_line1: e.target.value })}
+                  placeholder="123 Main Street"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address_line2">Address Line 2</Label>
+                <Input
+                  id="address_line2"
+                  value={company.address_line2}
+                  onChange={(e) => setCompany({ ...company, address_line2: e.target.value })}
+                  placeholder="Suite 456"
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    value={company.city}
+                    onChange={(e) => setCompany({ ...company, city: e.target.value })}
+                    placeholder="Johannesburg"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="province">Province</Label>
+                  <Input
+                    id="province"
+                    value={company.province}
+                    onChange={(e) => setCompany({ ...company, province: e.target.value })}
+                    placeholder="Gauteng"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="postal_code">Postal Code</Label>
+                  <Input
+                    id="postal_code"
+                    value={company.postal_code}
+                    onChange={(e) => setCompany({ ...company, postal_code: e.target.value })}
+                    placeholder="2000"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="website">Website</Label>
+                <Input
+                  id="website"
+                  value={company.website}
+                  onChange={(e) => setCompany({ ...company, website: e.target.value })}
+                  placeholder="https://www.example.com"
+                />
+              </div>
 
               <div className="flex justify-end pt-4">
                 <Button onClick={saveCompany} disabled={saving || !company.company_name}>

@@ -291,10 +291,13 @@ export function OnboardingWizard({ userId, userEmail }: OnboardingWizardProps) {
           company_name: companyName,
           registration_number: registrationNumber || null,
           vat_number: vatNumber || null,
+          contact_phone: contactPhone || null, // Added phone mapping
           province,
           city: city || null,
           industry: industries[0] || null, // Primary industry
+          industries: industries, // Store full array
           bee_status: bbbeeLevel || null,
+          cidb_grade: cidbGrade && cidbGrade !== "none" ? cidbGrade : null, // Added CIDB mapping
           updated_at: new Date().toISOString(),
         },
         {
