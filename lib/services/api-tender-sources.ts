@@ -151,51 +151,56 @@ export async function fetchFromAllAPISources(): Promise<{
 
       let sourceId: number | null = null
 
-      const { data: existingSource, error: selectError } = await supabase
+      // First, try to find existing source
+      const { data: existingSource } = await supabase
         .from("tender_sources")
         .select("id")
         .eq("name", source.name)
         .maybeSingle()
 
-      if (selectError) {
-        console.error(`[v0] Database Error checking source:`, selectError)
-        results.sources.push({
-          name: source.name,
-          fetched: tenders.length,
-          saved: 0,
-          error: `Database error: ${selectError.message}`,
-        })
-        continue
-      }
-
       if (existingSource) {
         sourceId = existingSource.id
         console.log(`[v0] Using Existing Source ID: ${sourceId}`)
       } else {
+        // Create new source without chaining .select()
         console.log(`[v0] Creating New Source...`)
-        const { data: newSource, error: insertError } = await supabase
-          .from("tender_sources")
-          .insert({
-            name: source.name,
-            level: "National",
-            province: "All Provinces",
-            tender_page_url: source.baseUrl,
-            scraper_type: "api",
-            is_active: true,
-            scraping_enabled: true,
-            last_scraped_at: null,
-            notes: `API integration for ${source.name}`,
-          })
-          .select("id")
-          .single()
+        const { error: insertError } = await supabase.from("tender_sources").insert({
+          name: source.name,
+          level: "National",
+          province: "All Provinces",
+          tender_page_url: source.baseUrl,
+          scraper_type: "api",
+          is_active: true,
+          scraping_enabled: true,
+          last_scraped_at: null,
+          notes: `API integration for ${source.name}`,
+        })
 
-        if (insertError || !newSource) {
-          console.error(`[v0] Failed to Create Source:`, insertError)
+        if (insertError) {
+          console.error(`[v0] Failed to Insert Source:`, insertError)
           results.sources.push({
             name: source.name,
             fetched: tenders.length,
             saved: 0,
-            error: `Failed to create source: ${insertError?.message || "Unknown"}`,
+            error: `Failed to create source: ${insertError.message}`,
+          })
+          continue
+        }
+
+        // Now select it back to get the ID
+        const { data: newSource, error: selectError } = await supabase
+          .from("tender_sources")
+          .select("id")
+          .eq("name", source.name)
+          .single()
+
+        if (selectError || !newSource) {
+          console.error(`[v0] Failed to Retrieve New Source:`, selectError)
+          results.sources.push({
+            name: source.name,
+            fetched: tenders.length,
+            saved: 0,
+            error: `Failed to retrieve source ID: ${selectError?.message || "Unknown"}`,
           })
           continue
         }
