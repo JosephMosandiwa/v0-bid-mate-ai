@@ -299,37 +299,65 @@ export async function fetchFromAllAPISources(): Promise<{
         continue
       }
 
-      // Get or create tender source in database
-      let { data: dbSource } = await supabase.from("tender_sources").select("id").eq("name", source.name).single()
+      let sourceId: number | null = null
 
-      if (!dbSource) {
+      const { data: existingSource, error: selectError } = await supabase
+        .from("tender_sources")
+        .select("id")
+        .eq("name", source.name)
+        .single()
+
+      if (existingSource) {
+        sourceId = existingSource.id
+        console.log(`[v0] Using existing source ID: ${sourceId}`)
+      } else {
+        console.log(`[v0] Creating new source: ${source.name}`)
+
+        // Use upsert instead of insert to handle race conditions
         const { data: newSource, error: sourceError } = await supabase
           .from("tender_sources")
-          .insert({
-            name: source.name,
-            level: "National",
-            province: "All",
-            tender_page_url: source.baseUrl,
-            scraper_type: "api",
-            is_active: true,
-            scraping_enabled: true,
-            notes: `API-based tender source - ${source.apiType.toUpperCase()}`,
-          })
-          .select("id")
+          .upsert(
+            {
+              name: source.name,
+              level: "National",
+              province: "All",
+              tender_page_url: source.baseUrl,
+              scraper_type: "api",
+              is_active: true,
+              scraping_enabled: true,
+              notes: `API-based tender source - ${source.apiType.toUpperCase()}`,
+            },
+            {
+              onConflict: "name",
+              ignoreDuplicates: false,
+            },
+          )
+          .select()
           .single()
 
-        if (sourceError) {
+        if (sourceError || !newSource) {
           console.error(`[v0] Error creating source:`, sourceError)
           results.sources.push({
             name: source.name,
             fetched: tenders.length,
             saved: 0,
-            error: `Failed to create source: ${sourceError.message}`,
+            error: `Failed to create source: ${sourceError?.message || "No data returned"}`,
           })
           continue
         }
 
-        dbSource = newSource
+        sourceId = newSource.id
+        console.log(`[v0] Created new source with ID: ${sourceId}`)
+      }
+
+      if (!sourceId) {
+        results.sources.push({
+          name: source.name,
+          fetched: tenders.length,
+          saved: 0,
+          error: "Failed to get source ID",
+        })
+        continue
       }
 
       // Save tenders to database
@@ -338,7 +366,7 @@ export async function fetchFromAllAPISources(): Promise<{
         try {
           const { error: insertError } = await supabase.from("scraped_tenders").upsert(
             {
-              source_id: dbSource!.id,
+              source_id: sourceId,
               tender_reference: tender.tender_reference,
               title: tender.title,
               description: tender.description,
