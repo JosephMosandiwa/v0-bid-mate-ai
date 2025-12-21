@@ -151,7 +151,6 @@ export async function fetchFromAllAPISources(): Promise<{
 
       let sourceId: number | null = null
 
-      // First, try to find existing source
       const { data: existingSource } = await supabase
         .from("tender_sources")
         .select("id")
@@ -162,51 +161,52 @@ export async function fetchFromAllAPISources(): Promise<{
         sourceId = existingSource.id
         console.log(`[v0] Using Existing Source ID: ${sourceId}`)
       } else {
-        // Create new source without chaining .select()
-        console.log(`[v0] Creating New Source...`)
-        const { error: insertError } = await supabase.from("tender_sources").insert({
-          name: source.name,
-          level: "National",
-          province: "All Provinces",
-          tender_page_url: source.baseUrl,
-          scraper_type: "api",
-          is_active: true,
-          scraping_enabled: true,
-          last_scraped_at: null,
-          notes: `API integration for ${source.name}`,
+        // Create new source using raw SQL INSERT...RETURNING
+        console.log(`[v0] Creating New Source with SQL...`)
+        const { data: newSourceData, error: sqlError } = await supabase.rpc("create_tender_source", {
+          p_name: source.name,
+          p_level: "National",
+          p_province: "All Provinces",
+          p_url: source.baseUrl,
+          p_type: "api",
         })
 
-        if (insertError) {
-          console.error(`[v0] Failed to Insert Source:`, insertError)
-          results.sources.push({
-            name: source.name,
-            fetched: tenders.length,
-            saved: 0,
-            error: `Failed to create source: ${insertError.message}`,
-          })
-          continue
+        if (sqlError) {
+          // Fallback: Try direct insert with returning
+          console.log(`[v0] RPC failed, trying direct insert...`)
+          const insertResult = await supabase
+            .from("tender_sources")
+            .insert({
+              name: source.name,
+              level: "National",
+              province: "All Provinces",
+              tender_page_url: source.baseUrl,
+              scraper_type: "api",
+              is_active: true,
+              scraping_enabled: true,
+              last_scraped_at: null,
+              notes: `API integration for ${source.name}`,
+            })
+            .select("id")
+            .single()
+
+          if (insertResult.error || !insertResult.data) {
+            console.error(`[v0] Failed to Insert Source:`, insertResult.error)
+            results.sources.push({
+              name: source.name,
+              fetched: tenders.length,
+              saved: 0,
+              error: `Failed to create source: ${insertResult.error?.message || "No ID returned"}`,
+            })
+            continue
+          }
+
+          sourceId = insertResult.data.id
+          console.log(`[v0] Created Source via Insert ID: ${sourceId}`)
+        } else {
+          sourceId = newSourceData
+          console.log(`[v0] Created Source via RPC ID: ${sourceId}`)
         }
-
-        // Now select it back to get the ID
-        const { data: newSource, error: selectError } = await supabase
-          .from("tender_sources")
-          .select("id")
-          .eq("name", source.name)
-          .single()
-
-        if (selectError || !newSource) {
-          console.error(`[v0] Failed to Retrieve New Source:`, selectError)
-          results.sources.push({
-            name: source.name,
-            fetched: tenders.length,
-            saved: 0,
-            error: `Failed to retrieve source ID: ${selectError?.message || "Unknown"}`,
-          })
-          continue
-        }
-
-        sourceId = newSource.id
-        console.log(`[v0] Created New Source ID: ${sourceId}`)
       }
 
       if (!sourceId) {
@@ -215,7 +215,7 @@ export async function fetchFromAllAPISources(): Promise<{
           name: source.name,
           fetched: tenders.length,
           saved: 0,
-          error: "No source ID",
+          error: "No source ID after creation",
         })
         continue
       }
