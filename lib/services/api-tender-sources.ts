@@ -81,90 +81,119 @@ export const API_TENDER_SOURCES: TenderAPISource[] = [
     requiresAuth: false,
     apiKey: undefined, // Declared the apiKey variable
     fetchFunction: async () => {
-      const baseEndpoint = "https://ocds-api.etenders.gov.za/api/v1/releases"
+      const endpoints = [
+        "https://ocds-api.etenders.gov.za/api/v1/releases",
+        "https://ocds-api.etenders.gov.za/api/releases",
+        "https://data.etenders.gov.za/api/v1/releases",
+      ]
 
-      try {
-        const thirtyDaysAgo = new Date()
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-        const releaseDate = thirtyDaysAgo.toISOString().split("T")[0]
+      console.log(`[v0] Starting eTender API fetch...`)
 
-        const url = `${baseEndpoint}?releaseDate=${releaseDate}&limit=100&offset=0`
+      for (const baseEndpoint of endpoints) {
+        try {
+          const url = `${baseEndpoint}?limit=50`
 
-        console.log(`[v0] Calling eTender API: ${url}`)
+          console.log(`[v0] Attempting eTender API call: ${url}`)
 
-        const response = await fetch(url, {
-          headers: {
-            Accept: "application/json",
-            "User-Agent": "BidMateAI/1.0",
-          },
-          signal: AbortSignal.timeout(30000), // 30 second timeout for API
-        })
+          const response = await fetch(url, {
+            headers: {
+              Accept: "application/json",
+              "User-Agent": "BidMateAI/1.0",
+            },
+            signal: AbortSignal.timeout(30000),
+          })
 
-        console.log(`[v0] eTender API response status: ${response.status}`)
+          console.log(`[v0] eTender API response status: ${response.status} from ${baseEndpoint}`)
+          console.log(`[v0] Response headers:`, Object.fromEntries(response.headers.entries()))
 
-        if (!response.ok) {
-          const errorText = await response.text()
-          console.log(`[v0] eTender API error response: ${errorText}`)
-          return []
-        }
-
-        const data = await response.json()
-        console.log(`[v0] eTender API response structure:`, {
-          keys: Object.keys(data),
-          hasReleases: !!data.releases,
-          isArray: Array.isArray(data),
-          count: data.releases?.length || (Array.isArray(data) ? data.length : 0),
-        })
-
-        let releases: any[] = []
-
-        if (data.releases && Array.isArray(data.releases)) {
-          releases = data.releases
-        } else if (Array.isArray(data)) {
-          releases = data
-        } else if (data.data && Array.isArray(data.data)) {
-          releases = data.data
-        }
-
-        console.log(`[v0] Found ${releases.length} OCDS releases from eTender API`)
-
-        if (releases.length === 0) {
-          console.log(
-            `[v0] No tenders returned from eTender API, possible reasons: date range too narrow, no active tenders, or API authentication required`,
-          )
-          return []
-        }
-
-        return releases.map((release: any) => {
-          const tender = release.tender || {}
-          const buyer = release.buyer || release.parties?.find((p: any) => p.roles?.includes("buyer")) || {}
-
-          return {
-            tender_reference: release.ocid || release.id || `ETENDER-${Date.now()}`,
-            title: tender.title || release.title || "Untitled Tender",
-            description: tender.description || release.description || "",
-            organization: buyer.name || tender.procuringEntity?.name || "National Treasury",
-            estimated_value: tender.value?.amount ? `R ${tender.value.amount.toLocaleString()}` : null,
-            category:
-              tender.mainProcurementCategory ||
-              tender.items?.[0]?.classification?.description ||
-              tender.classification?.description ||
-              "General Procurement",
-            close_date: tender.tenderPeriod?.endDate || null,
-            publish_date: release.date || tender.tenderPeriod?.startDate || new Date().toISOString(),
-            source_url: `https://www.etenders.gov.za/tender/${release.ocid}`,
-            contact_email: buyer.contactPoint?.email || tender.contactPoint?.email || null,
-            contact_phone: buyer.contactPoint?.telephone || tender.contactPoint?.telephone || null,
-            contact_person: buyer.contactPoint?.name || tender.contactPoint?.name || null,
-            document_urls: tender.documents?.map((doc: any) => doc.url).filter(Boolean) || [],
-            source_province: buyer.address?.region || "All",
-            raw_data: release,
+          if (!response.ok) {
+            const errorText = await response.text()
+            console.log(`[v0] eTender API error (${response.status}): ${errorText.substring(0, 200)}`)
+            continue // Try next endpoint
           }
-        })
-      } catch (error) {
-        console.error(`[v0] eTender API error:`, error)
-        return []
+
+          const contentType = response.headers.get("content-type")
+          console.log(`[v0] Content-Type: ${contentType}`)
+
+          const data = await response.json()
+          console.log(`[v0] eTender API response structure:`, {
+            type: typeof data,
+            isArray: Array.isArray(data),
+            keys: typeof data === "object" ? Object.keys(data) : [],
+            sampleKeys: data?.releases ? Object.keys(data.releases[0] || {}) : [],
+            releasesCount: data?.releases?.length || 0,
+            dataCount: data?.data?.length || 0,
+            itemsCount: data?.items?.length || 0,
+          })
+
+          let releases: any[] = []
+
+          if (data.releases && Array.isArray(data.releases)) {
+            releases = data.releases
+            console.log(`[v0] Found releases in data.releases`)
+          } else if (Array.isArray(data)) {
+            releases = data
+            console.log(`[v0] Data is array of releases`)
+          } else if (data.data && Array.isArray(data.data)) {
+            releases = data.data
+            console.log(`[v0] Found releases in data.data`)
+          } else if (data.items && Array.isArray(data.items)) {
+            releases = data.items
+            console.log(`[v0] Found releases in data.items`)
+          }
+
+          console.log(`[v0] Parsed ${releases.length} releases from eTender API`)
+
+          if (releases.length > 0) {
+            console.log(`[v0] Sample release structure:`, {
+              keys: Object.keys(releases[0]),
+              ocid: releases[0].ocid,
+              id: releases[0].id,
+              hasTender: !!releases[0].tender,
+              tenderKeys: releases[0].tender ? Object.keys(releases[0].tender) : [],
+            })
+
+            return releases.map((release: any) => {
+              const tender = release.tender || {}
+              const buyer = release.buyer || release.parties?.find((p: any) => p.roles?.includes("buyer")) || {}
+
+              return {
+                tender_reference: release.ocid || release.id || `ETENDER-${Date.now()}`,
+                title: tender.title || release.title || "Untitled Tender",
+                description: tender.description || release.description || "",
+                organization: buyer.name || tender.procuringEntity?.name || "National Treasury",
+                estimated_value: tender.value?.amount ? `R ${tender.value.amount.toLocaleString()}` : null,
+                category:
+                  tender.mainProcurementCategory ||
+                  tender.items?.[0]?.classification?.description ||
+                  tender.classification?.description ||
+                  "General Procurement",
+                close_date: tender.tenderPeriod?.endDate || null,
+                publish_date: release.date || tender.tenderPeriod?.startDate || new Date().toISOString(),
+                source_url: `https://www.etenders.gov.za/tender/${release.ocid}`,
+                contact_email: buyer.contactPoint?.email || tender.contactPoint?.email || null,
+                contact_phone: buyer.contactPoint?.telephone || tender.contactPoint?.telephone || null,
+                contact_person: buyer.contactPoint?.name || tender.contactPoint?.name || null,
+                document_urls: tender.documents?.map((doc: any) => doc.url).filter(Boolean) || [],
+                source_province: buyer.address?.region || "All",
+                raw_data: release,
+              }
+            })
+          }
+
+          console.log(`[v0] No releases found in response from ${baseEndpoint}`)
+        } catch (error: any) {
+          console.error(`[v0] eTender API error for ${baseEndpoint}:`, {
+            message: error.message,
+            name: error.name,
+            cause: error.cause,
+          })
+          // Continue to next endpoint
+        }
       }
+
+      console.log(`[v0] All eTender API endpoints failed, returning empty array`)
+      return []
     },
   },
   {
@@ -288,7 +317,6 @@ export async function fetchFromAllAPISources(): Promise<{
 
       let sourceId: number | null = null
 
-      // First try to find existing source
       const { data: existingSource, error: selectError } = await supabase
         .from("tender_sources")
         .select("id")
@@ -310,7 +338,6 @@ export async function fetchFromAllAPISources(): Promise<{
         sourceId = existingSource.id
         console.log(`[v0] Using existing source ID: ${sourceId} for ${source.name}`)
       } else {
-        // Create new source - use insert without select, then query back
         const { error: insertError } = await supabase.from("tender_sources").insert({
           name: source.name,
           level: "National",
@@ -333,7 +360,6 @@ export async function fetchFromAllAPISources(): Promise<{
           continue
         }
 
-        // Query back the newly created source
         const { data: newSource, error: newSelectError } = await supabase
           .from("tender_sources")
           .select("id")
@@ -346,7 +372,7 @@ export async function fetchFromAllAPISources(): Promise<{
             name: source.name,
             fetched: tenders.length,
             saved: 0,
-            error: `Failed to retrieve new source ID`,
+            error: "Failed to retrieve new source ID",
           })
           continue
         }
