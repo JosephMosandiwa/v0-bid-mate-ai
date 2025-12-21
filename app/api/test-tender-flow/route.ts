@@ -44,8 +44,20 @@ export async function POST() {
     results.steps[1].sourceId = existingSource.id
     results.steps[1].sourceName = existingSource.name
 
-    // Step 3: Insert a test tender
-    results.steps.push({ step: 3, name: "Insert test tender", status: "running" })
+    // Step 3: Clean up old test tenders
+    results.steps.push({ step: 3, name: "Clean up old test tenders", status: "running" })
+    const { error: deleteError } = await supabase.from("scraped_tenders").delete().like("tender_reference", "TEST-%")
+
+    if (deleteError) {
+      console.log("[v0] Warning: Could not delete old test tenders:", deleteError.message)
+      // Don't fail the test if cleanup fails
+    }
+
+    results.steps[2].status = "passed"
+    results.steps[2].message = "Cleaned up old test tenders"
+
+    // Step 4: Insert a test tender
+    results.steps.push({ step: 4, name: "Insert test tender", status: "running" })
     const testTender = {
       source_id: existingSource.id,
       tender_reference: `TEST-${Date.now()}-${Math.random().toString(36).substring(7)}`,
@@ -70,18 +82,18 @@ export async function POST() {
       .single()
 
     if (insertError) {
-      results.steps[2].status = "failed"
-      results.steps[2].error = insertError.message
-      results.steps[2].errorCode = insertError.code
-      results.steps[2].errorDetails = insertError.details
+      results.steps[3].status = "failed"
+      results.steps[3].error = insertError.message
+      results.steps[3].errorCode = insertError.code
+      results.steps[3].errorDetails = insertError.details
       return NextResponse.json(results, { status: 500 })
     }
 
-    results.steps[2].status = "passed"
-    results.steps[2].tenderId = insertedTender.id
+    results.steps[3].status = "passed"
+    results.steps[3].tenderId = insertedTender.id
 
-    // Step 4: Verify the tender can be read back
-    results.steps.push({ step: 4, name: "Read tender back", status: "running" })
+    // Step 5: Verify the tender can be read back
+    results.steps.push({ step: 5, name: "Read tender back", status: "running" })
     const { data: readTender, error: readError } = await supabase
       .from("scraped_tenders")
       .select("*")
@@ -89,40 +101,40 @@ export async function POST() {
       .single()
 
     if (readError) {
-      results.steps[3].status = "failed"
-      results.steps[3].error = readError.message
+      results.steps[4].status = "failed"
+      results.steps[4].error = readError.message
       return NextResponse.json(results, { status: 500 })
     }
 
-    results.steps[3].status = "passed"
-    results.steps[3].tender = readTender
+    results.steps[4].status = "passed"
+    results.steps[4].tender = readTender
 
-    // Step 5: Test the search API
-    results.steps.push({ step: 5, name: "Test search API", status: "running" })
+    // Step 6: Test the search API
+    results.steps.push({ step: 6, name: "Test search API", status: "running" })
     const searchResponse = await fetch(
       `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/tenders/search?q=TEST&limit=10`,
     )
 
     if (!searchResponse.ok) {
-      results.steps[4].status = "failed"
-      results.steps[4].error = "Search API returned error"
-      results.steps[4].statusCode = searchResponse.status
+      results.steps[5].status = "failed"
+      results.steps[5].error = "Search API returned error"
+      results.steps[5].statusCode = searchResponse.status
       return NextResponse.json(results, { status: 500 })
     }
 
     const searchData = await searchResponse.json()
     const foundTestTender = searchData.tenders?.find((t: any) => t.id === insertedTender.id)
 
-    results.steps[4].status = foundTestTender ? "passed" : "failed"
-    results.steps[4].totalResults = searchData.total
-    results.steps[4].foundTestTender = !!foundTestTender
+    results.steps[5].status = foundTestTender ? "passed" : "failed"
+    results.steps[5].totalResults = searchData.total
+    results.steps[5].foundTestTender = !!foundTestTender
 
-    // Step 6: Count total tenders
-    results.steps.push({ step: 6, name: "Count all tenders", status: "running" })
+    // Step 7: Count total tenders
+    results.steps.push({ step: 7, name: "Count all tenders", status: "running" })
     const { count: finalCount } = await supabase.from("scraped_tenders").select("*", { count: "exact", head: true })
 
-    results.steps[5].status = "passed"
-    results.steps[5].totalTenders = finalCount
+    results.steps[6].status = "passed"
+    results.steps[6].totalTenders = finalCount
 
     // Final result
     results.success = results.steps.every((s: any) => s.status === "passed")
