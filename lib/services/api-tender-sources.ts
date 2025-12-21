@@ -353,34 +353,38 @@ export async function fetchFromAllAPISources(): Promise<{
       let savedCount = 0
       for (const tender of tenders) {
         try {
-          const { error } = await supabase.from("scraped_tenders").upsert(
-            {
-              source_id: sourceId,
-              tender_reference: tender.tender_reference,
-              title: tender.title,
-              description: tender.description,
-              source_name: tender.organization,
-              category: tender.category,
-              estimated_value: tender.estimated_value,
-              close_date: tender.close_date,
-              publish_date: tender.publish_date,
-              source_url: tender.source_url,
-              tender_url: tender.source_url,
-              contact_email: tender.contact_email,
-              contact_phone: tender.contact_phone,
-              contact_person: tender.contact_person,
-              document_urls: tender.document_urls || [],
-              raw_data: tender.raw_data || {},
-              source_level: "National",
-              source_province: tender.source_province || "All",
-              is_active: true,
-              scraped_at: new Date().toISOString(),
-            },
-            { onConflict: "source_id,tender_reference" },
-          )
+          const tenderData = {
+            source_id: sourceId,
+            tender_reference: tender.tender_reference,
+            title: tender.title,
+            description: tender.description || "",
+            source_name: tender.organization,
+            category: tender.category,
+            estimated_value: tender.estimated_value,
+            close_date: tender.close_date,
+            publish_date: tender.publish_date,
+            source_url: tender.source_url,
+            tender_url: tender.source_url,
+            contact_email: tender.contact_email || null,
+            contact_phone: tender.contact_phone || null,
+            contact_person: tender.contact_person || null,
+            document_urls: tender.document_urls || [],
+            raw_data: tender.raw_data || tender,
+            source_level: "National",
+            source_province: tender.source_province || "All",
+            is_active: true,
+            scraped_at: new Date().toISOString(),
+          }
+
+          console.log(`[v0] Saving tender: ${tenderData.tender_reference}`)
+
+          const { error } = await supabase
+            .from("scraped_tenders")
+            .upsert(tenderData, { onConflict: "source_id,tender_reference" })
 
           if (!error) {
             savedCount++
+            console.log(`[v0] Successfully saved tender: ${tenderData.tender_reference}`)
           } else {
             console.error(`[v0] Error saving tender ${tender.tender_reference}:`, error.message)
           }
