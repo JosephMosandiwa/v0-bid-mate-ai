@@ -25,45 +25,29 @@ export async function POST() {
     results.steps[0].status = "passed"
     results.steps[0].currentCount = tableCount
 
-    // Step 2: Get or create a test tender source
-    results.steps.push({ step: 2, name: "Get/create test source", status: "running" })
+    results.steps.push({ step: 2, name: "Get existing source", status: "running" })
 
-    let testSource = await supabase
+    const { data: existingSource, error: sourceError } = await supabase
       .from("tender_sources")
-      .select("id")
-      .eq("name", "Test Source for Diagnostics")
+      .select("id, name")
+      .limit(1)
       .single()
 
-    if (!testSource.data) {
-      const { data: newSource, error: sourceError } = await supabase
-        .from("tender_sources")
-        .insert({
-          name: "Test Source for Diagnostics",
-          level: "municipal",
-          province: "Gauteng",
-          tender_page_url: "https://test.example.com",
-          scraper_type: "generic",
-          is_active: false,
-          scraping_enabled: false,
-        })
-        .select("id")
-        .single()
-
-      if (sourceError) {
-        results.steps[1].status = "failed"
-        results.steps[1].error = sourceError.message
-        return NextResponse.json(results, { status: 500 })
-      }
-      testSource = { data: newSource }
+    if (sourceError || !existingSource) {
+      results.steps[1].status = "failed"
+      results.steps[1].error =
+        sourceError?.message || "No tender sources found in database. Please add at least one tender source."
+      return NextResponse.json(results, { status: 500 })
     }
 
     results.steps[1].status = "passed"
-    results.steps[1].sourceId = testSource.data.id
+    results.steps[1].sourceId = existingSource.id
+    results.steps[1].sourceName = existingSource.name
 
     // Step 3: Insert a test tender
     results.steps.push({ step: 3, name: "Insert test tender", status: "running" })
     const testTender = {
-      source_id: testSource.data.id, // Use the test source ID
+      source_id: existingSource.id, // Use the existing source ID
       tender_reference: `TEST-${Date.now()}`,
       title: "TEST: Website Development Services",
       description: "This is a test tender to verify the scraping and display pipeline is working correctly.",
