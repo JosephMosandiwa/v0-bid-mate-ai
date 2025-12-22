@@ -62,11 +62,10 @@ export async function GET() {
           title: tender.title || "Untitled",
           description: tender.description || "",
           category: tender.category || "Uncategorized",
-          published_date: release.date || new Date().toISOString(),
+          publish_date: release.date || new Date().toISOString(),
           close_date: tender.tenderPeriod?.endDate || null,
-          value: tender.value?.amount || 0,
-          province: tender.province || null,
-          organization_name: tender.procuringEntity?.name || "Unknown",
+          estimated_value: tender.value?.amount?.toString() || null,
+          source_province: tender.province || null,
           contact_person: tender.contactPerson?.name || null,
           contact_email: tender.contactPerson?.email || null,
           contact_phone: tender.contactPerson?.telephoneNumber || null,
@@ -75,6 +74,7 @@ export async function GET() {
           source_id: sourceId,
           scraped_at: new Date().toISOString(),
           is_active: true,
+          raw_data: { release, tender },
         }
       })
 
