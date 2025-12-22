@@ -66,17 +66,16 @@ interface OCDSTender {
       format?: string
       language?: string
     }>
-  }
-  awards?: Array<{
-    id: string
-    title: string
-    status: string
-    date: string
-    value?: {
-      amount: number
-      currency: string
+    category?: string
+    province?: string
+    deliveryLocation?: string
+    specialConditions?: string
+    contactPerson?: {
+      name?: string
+      email?: string
+      telephoneNumber?: string
     }
-  }>
+  }
 }
 
 /**
@@ -203,7 +202,7 @@ export class ETenderApiScraper extends BaseScraper {
 
   /**
    * Convert OCDS format to our tender format
-   * Maps from the actual eTender API structure
+   * Maps from the ACTUAL eTender API structure shown in sample data
    */
   private normalizeOCDSToTender(ocds: OCDSTender): ScrapedTender | null {
     try {
@@ -214,122 +213,144 @@ export class ETenderApiScraper extends BaseScraper {
         return null
       }
 
-      // Find procuring entity (buyer)
-      const procuringEntity = ocds.parties?.find((p) => p.roles.includes("procuringEntity")) || ocds.parties?.[0]
-      const buyerName = procuringEntity?.name || ocds.buyer?.name || "Unknown Organization"
+      const {
+        id: tenderId,
+        title,
+        description,
+        category, // Direct field in API response
+        province, // Direct field in API response
+        deliveryLocation, // Direct field in API response
+        specialConditions,
+        status,
+        value,
+        tenderPeriod,
+        procurementMethod,
+        procurementMethodDetails,
+        procuringEntity,
+        contactPerson, // Direct nested object in API response
+        documents,
+        mainProcurementCategory,
+      } = tender
 
-      // Extract contact information
-      const contactPoint = procuringEntity?.contactPoint
-      const address = procuringEntity?.address
+      // Build location from deliveryLocation (actual field) and province
+      const location = deliveryLocation || province || "South Africa"
 
-      // Build location - prefer region/province for South African context
-      const province = address?.region || ""
-      const locality = address?.locality || ""
-      const location = [locality, province].filter(Boolean).join(", ") || "South Africa"
+      // Extract contact information directly from contactPerson object
+      const contactName = contactPerson?.name
+      const contactEmail = contactPerson?.email
+      const contactPhone = contactPerson?.telephoneNumber
 
-      // Extract category - use both mainProcurementCategory and items classification
-      const mainCategory = tender.mainProcurementCategory || ""
-      const itemCategory = tender.items?.[0]?.classification?.description || ""
-      const category = mainCategory || itemCategory || "General Procurement"
+      // Extract organization name from procuringEntity
+      const organizationName = procuringEntity?.name || ocds.buyer?.name || "Unknown Organization"
 
-      // Extract documents with proper structure
-      const documents =
-        tender.documents?.map((doc) => ({
-          title: doc.title || doc.documentType || "Document",
-          url: doc.url,
-          type: doc.documentType,
-        })) || []
+      // Format estimated value
+      const estimatedValue = value?.amount ? `R ${value.amount.toLocaleString()} ${value.currency}` : undefined
 
-      // Extract value and format properly
-      const tenderValue = tender.value
-      const estimatedValue = tenderValue
-        ? `R ${tenderValue.amount.toLocaleString()} ${tenderValue.currency}`
-        : undefined
+      // Format documents array
+      const documentUrls = documents?.map((doc) => ({
+        title: doc.title,
+        url: doc.url,
+        type: doc.documentType,
+        format: doc.format,
+      }))
 
-      // Build comprehensive description
-      const description = tender.description || `Tender for ${tender.title}`
+      // Build comprehensive description using all available fields
+      const fullDescription = [
+        description,
+        deliveryLocation ? `Delivery Location: ${deliveryLocation}` : null,
+        specialConditions && specialConditions !== "N/A" ? `Special Conditions: ${specialConditions}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n\n")
 
-      // Build normalized tender object with ALL possible fields populated
+      // Build normalized tender object with ALL fields properly mapped
       const normalized: ScrapedTender = {
-        // Core required fields
-        tender_reference: tender.id || ocds.ocid,
-        title: this.cleanText(tender.title),
-        description: this.cleanText(description),
-        organization: this.cleanText(buyerName),
-        category: this.cleanText(category),
+        // Core required fields - all from actual API response
+        tender_reference: tenderId,
+        title: this.cleanText(title),
+        description: this.cleanText(fullDescription || title),
+        organization: this.cleanText(organizationName),
+        category: this.cleanText(category || mainProcurementCategory || "General"),
 
-        // Dates - required for validation
-        publish_date: tender.tenderPeriod?.startDate || tender.enquiryPeriod?.startDate || ocds.date,
-        close_date: tender.tenderPeriod?.endDate,
+        // Dates from tenderPeriod
+        publish_date: tenderPeriod?.startDate || ocds.date,
+        close_date: tenderPeriod?.endDate,
 
         // Value
         estimated_value: estimatedValue,
 
-        // Contact information - important for quality score
-        contact_person: contactPoint?.name,
-        contact_email: contactPoint?.email,
-        contact_phone: contactPoint?.telephone,
+        // Contact information - directly from API
+        contact_person: contactName,
+        contact_email: contactEmail,
+        contact_phone: contactPhone,
 
-        // Location - important for matching
+        // Location - using actual deliveryLocation field
         location: this.cleanText(location),
 
+        // Province - direct field from API
+        province: province,
+
         // URLs
-        tender_url: `https://etenders.gov.za/tender/${tender.id}`,
+        tender_url: `https://etenders.gov.za/tender/${tenderId}`,
 
-        // Documents
-        document_urls: documents.length > 0 ? documents : undefined,
+        // Documents - all available from API
+        document_urls: documentUrls && documentUrls.length > 0 ? documentUrls : undefined,
 
-        // Additional enrichment fields
-        tender_type: tender.procurementMethodDetails || tender.procurementMethod || "Open Tender",
-        procurement_category: mainCategory || undefined,
+        // Additional enrichment fields from actual API
+        tender_type: procurementMethodDetails || procurementMethod || "Open Tender",
+        procurement_category: mainProcurementCategory,
+        procurement_method: procurementMethod,
+        status: status,
 
-        // Add province explicitly for better matching
-        province: province || undefined,
+        // Store special conditions if available
+        special_conditions: specialConditions && specialConditions !== "N/A" ? specialConditions : undefined,
 
-        // Add procurement method for better categorization
-        procurement_method: tender.procurementMethod,
-
-        // Add status
-        status: tender.status,
+        // Store delivery location separately
+        delivery_location: deliveryLocation,
 
         // Raw OCDS data for full traceability
         raw_data: {
           ocid: ocds.ocid,
           release_date: ocds.date,
-          release_tag: ocds.tag,
-          procurement_method: tender.procurementMethod,
-          tender_status: tender.status,
-          buyer_id: ocds.buyer?.id || procuringEntity?.id,
+          tender_id: tenderId,
+          procurement_method: procurementMethod,
+          procurement_method_details: procurementMethodDetails,
+          tender_status: status,
+          category: category,
+          province: province,
+          buyer_id: procuringEntity?.id || ocds.buyer?.id,
+          buyer_name: organizationName,
+          special_conditions: specialConditions,
+          delivery_location: deliveryLocation,
           source: "eTender API (OCDS)",
           api_version: "v1",
-          items_count: tender.items?.length || 0,
-          documents_count: tender.documents?.length || 0,
+          documents_count: documents?.length || 0,
         },
       }
 
-      console.log("[v0] [ETenderApiScraper] Normalized tender fields:", {
+      console.log("[v0] [ETenderApiScraper] Normalized tender with ALL fields:", {
         reference: normalized.tender_reference,
-        hasTitle: !!normalized.title,
-        hasDescription: !!normalized.description,
-        hasOrganization: !!normalized.organization,
-        hasCategory: !!normalized.category,
+        title: normalized.title?.substring(0, 50),
+        hasDescription: !!normalized.description && normalized.description.length > 50,
+        organization: normalized.organization,
+        category: normalized.category,
+        province: normalized.province,
         hasPublishDate: !!normalized.publish_date,
         hasCloseDate: !!normalized.close_date,
         hasValue: !!normalized.estimated_value,
-        hasContact: !!normalized.contact_email || !!normalized.contact_phone,
-        hasLocation: !!normalized.location,
+        hasContactPerson: !!normalized.contact_person,
+        hasContactEmail: !!normalized.contact_email,
+        hasContactPhone: !!normalized.contact_phone,
+        location: normalized.location,
         hasDocuments: !!normalized.document_urls && normalized.document_urls.length > 0,
+        documentsCount: normalized.document_urls?.length || 0,
+        totalFieldsPopulated: Object.keys(normalized).filter(
+          (k) => normalized[k] !== undefined && normalized[k] !== null && normalized[k] !== "",
+        ).length,
       })
 
       // Normalize through TenderEngine for final validation
       const finalTender = this.normalizeTenderData(normalized)
-
-      console.log("[v0] [ETenderApiScraper] Final tender after normalization:", {
-        reference: finalTender.tender_reference,
-        fieldsCount: Object.keys(finalTender).filter(
-          (k) => finalTender[k] !== undefined && finalTender[k] !== null && finalTender[k] !== "",
-        ).length,
-      })
 
       return finalTender
     } catch (error) {

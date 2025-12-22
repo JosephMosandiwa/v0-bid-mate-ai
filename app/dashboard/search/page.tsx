@@ -50,6 +50,9 @@ interface Tender {
     format?: string
     description?: string
   }>
+  tender_type?: string
+  location?: string
+  document_urls?: string[]
 }
 
 export default function TendersPage() {
@@ -496,6 +499,8 @@ export default function TendersPage() {
                   const closeDate = tender.closeDate || tender.close_date
                   const value = tender.value || tender.estimated_value
                   const url = tender.url || tender.tender_url
+                  const tenderType = tender.tender_type
+                  const location = tender.location || tender.source_province
 
                   return (
                     <Card key={tender.id} className="border-border hover:border-primary transition-colors">
@@ -513,14 +518,19 @@ export default function TendersPage() {
                               <Badge className="bg-primary/10 text-primary text-xs">
                                 {tender.category || "General"}
                               </Badge>
+                              {tenderType && (
+                                <Badge variant="outline" className="text-xs">
+                                  {tenderType}
+                                </Badge>
+                              )}
                               {tender.source_level && (
                                 <Badge variant="outline" className="text-xs">
                                   {tender.source_level}
                                 </Badge>
                               )}
-                              {tender.source_province && (
+                              {location && (
                                 <Badge variant="secondary" className="text-xs">
-                                  {tender.source_province}
+                                  {location}
                                 </Badge>
                               )}
                             </div>
@@ -547,8 +557,10 @@ export default function TendersPage() {
                               <div className="flex items-center gap-2">
                                 <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                 <span className="text-xs md:text-sm text-muted-foreground">
-                                  {tender.document_count ?? 0}{" "}
-                                  {(tender.document_count ?? 0) === 1 ? "document" : "documents"}
+                                  {tender.document_count ?? tender.document_urls?.length ?? 0}{" "}
+                                  {(tender.document_count ?? tender.document_urls?.length ?? 0) === 1
+                                    ? "document"
+                                    : "documents"}
                                 </span>
                               </div>
                             </CardDescription>

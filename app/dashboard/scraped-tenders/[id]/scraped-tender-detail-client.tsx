@@ -49,6 +49,17 @@ interface ScrapedTender {
   estimated_value?: string
   category?: string
   requirements?: string[]
+  tender_type?: string
+  procurement_category?: string
+  submission_method?: string
+  contract_duration?: string
+  payment_terms?: string
+  validity_period?: string
+  compulsory_briefing?: string
+  contact_person?: string
+  contact_email?: string
+  contact_phone?: string
+  location?: string
 }
 
 interface TenderDocument {
@@ -317,13 +328,110 @@ function ScrapedTenderDetailClient({ id }: { id: string }) {
               <div className="flex items-center gap-3">
                 <MapPin className="h-5 w-5 text-muted-foreground" />
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Province</p>
-                  <p className="text-sm font-medium">{tender.source_province}</p>
+                  <p className="text-xs text-muted-foreground">Location</p>
+                  <p className="text-sm font-medium">{tender.location || tender.source_province || "N/A"}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {(tender.tender_type ||
+          tender.procurement_category ||
+          tender.submission_method ||
+          tender.contract_duration) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Procurement Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-2 gap-4 text-sm">
+                {tender.tender_type && (
+                  <>
+                    <dt className="text-muted-foreground">Tender Type:</dt>
+                    <dd className="font-medium">{tender.tender_type}</dd>
+                  </>
+                )}
+                {tender.procurement_category && (
+                  <>
+                    <dt className="text-muted-foreground">Procurement Category:</dt>
+                    <dd className="font-medium">{tender.procurement_category}</dd>
+                  </>
+                )}
+                {tender.submission_method && (
+                  <>
+                    <dt className="text-muted-foreground">Submission Method:</dt>
+                    <dd className="font-medium">{tender.submission_method}</dd>
+                  </>
+                )}
+                {tender.contract_duration && (
+                  <>
+                    <dt className="text-muted-foreground">Contract Duration:</dt>
+                    <dd className="font-medium">{tender.contract_duration}</dd>
+                  </>
+                )}
+                {tender.payment_terms && (
+                  <>
+                    <dt className="text-muted-foreground">Payment Terms:</dt>
+                    <dd className="font-medium">{tender.payment_terms}</dd>
+                  </>
+                )}
+                {tender.validity_period && (
+                  <>
+                    <dt className="text-muted-foreground">Validity Period:</dt>
+                    <dd className="font-medium">{tender.validity_period}</dd>
+                  </>
+                )}
+              </dl>
+            </CardContent>
+          </Card>
+        )}
+
+        {tender.compulsory_briefing && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Compulsory Briefing</AlertTitle>
+            <AlertDescription>{tender.compulsory_briefing}</AlertDescription>
+          </Alert>
+        )}
+
+        {(tender.contact_person || tender.contact_email || tender.contact_phone) && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Contact Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="space-y-2 text-sm">
+                {tender.contact_person && (
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Contact Person:</dt>
+                    <dd className="font-medium">{tender.contact_person}</dd>
+                  </div>
+                )}
+                {tender.contact_email && (
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Email:</dt>
+                    <dd className="font-medium">
+                      <a href={`mailto:${tender.contact_email}`} className="text-primary hover:underline">
+                        {tender.contact_email}
+                      </a>
+                    </dd>
+                  </div>
+                )}
+                {tender.contact_phone && (
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Phone:</dt>
+                    <dd className="font-medium">
+                      <a href={`tel:${tender.contact_phone}`} className="text-primary hover:underline">
+                        {tender.contact_phone}
+                      </a>
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <div className="flex flex-1 overflow-hidden">

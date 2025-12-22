@@ -74,19 +74,29 @@ export class EngineOrchestrator {
 
       const DEBUG_MODE = true // Set to false to re-enable validation
 
+      console.log("[v0] Orchestrator: Validation result:", {
+        completeness: validation.completeness,
+        grade: validation.grade,
+        threshold: 0.15,
+        wouldPassThreshold: validation.completeness >= 0.15,
+        missingFields: validation.missing_critical_fields,
+        qualityScore: validation.quality_score,
+      })
+
       if (!DEBUG_MODE && validation.completeness < 0.15) {
         console.warn(`[v0] Orchestrator: Tender quality too low (${validation.completeness * 100}%)`)
         return {
           success: false,
           validation,
-          error: `Tender quality too low: ${validation.grade} (${validation.completeness * 100}% complete)`,
+          error: `Tender quality too low: ${validation.grade} (${validation.completeness * 100}% complete). Missing: ${validation.missing_critical_fields?.join(", ")}`,
         }
       }
 
-      if (DEBUG_MODE && validation.completeness < 0.15) {
+      if (DEBUG_MODE) {
         console.log(
-          `[v0] Orchestrator: DEBUG MODE - Accepting low-quality tender (${validation.completeness * 100}%) to diagnose issues`,
+          `[v0] Orchestrator: DEBUG MODE - Processing tender regardless of quality score (${validation.completeness * 100}%)`,
         )
+        console.log("[v0] Orchestrator: This allows us to save tenders and see actual validation data")
       }
 
       const normalizedTender = normalizeTenderData(tender)
