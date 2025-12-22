@@ -88,24 +88,40 @@ export class ETenderApiScraper extends BaseScraper {
   private readonly API_BASE_URL = "https://ocds-api.etenders.gov.za/api"
 
   async scrape(): Promise<ScraperResult> {
-    console.log("[v0] ETenderApiScraper: Starting API-based scraping for", this.sourceName)
+    console.log("[v0] [ETenderApiScraper] Starting API-based scraping for", this.sourceName)
+    console.log("[v0] [ETenderApiScraper] Source ID:", this.sourceId)
+    console.log("[v0] [ETenderApiScraper] API Base URL:", this.API_BASE_URL)
 
     try {
+      console.log("[v0] [ETenderApiScraper] Fetching recent tenders from API...")
       const tenders = await this.fetchRecentTenders()
 
-      console.log(`[v0] ETenderApiScraper: Found ${tenders.length} tenders from API`)
+      console.log(`[v0] [ETenderApiScraper] Found ${tenders.length} tenders from API`)
+
+      if (tenders.length === 0) {
+        console.log("[v0] [ETenderApiScraper] No tenders returned from API")
+        return {
+          success: true,
+          tenders: [],
+          scrapedCount: 0,
+        }
+      }
 
       const results: ScrapedTender[] = []
 
       for (const ocdsRelease of tenders) {
+        console.log("[v0] [ETenderApiScraper] Processing OCDS release:", ocdsRelease.ocid || ocdsRelease.id)
         const normalized = this.normalizeOCDSToTender(ocdsRelease)
 
         if (normalized) {
+          console.log("[v0] [ETenderApiScraper] Successfully normalized tender:", normalized.tender_reference)
           results.push(normalized)
+        } else {
+          console.log("[v0] [ETenderApiScraper] Skipped release (no valid tender data)")
         }
       }
 
-      console.log(`[v0] ETenderApiScraper: Converted ${results.length} OCDS releases to tender format`)
+      console.log(`[v0] [ETenderApiScraper] Converted ${results.length} OCDS releases to tender format`)
 
       return {
         success: true,
@@ -113,7 +129,10 @@ export class ETenderApiScraper extends BaseScraper {
         scrapedCount: results.length,
       }
     } catch (error) {
-      console.error("[v0] ETenderApiScraper: Error scraping eTender API:", error)
+      console.error("[v0] [ETenderApiScraper] Error scraping eTender API:", error)
+      if (error instanceof Error) {
+        console.error("[v0] [ETenderApiScraper] Error stack:", error.stack)
+      }
       return {
         success: false,
         tenders: [],
@@ -123,10 +142,6 @@ export class ETenderApiScraper extends BaseScraper {
     }
   }
 
-  /**
-   * Fetch recent tenders from eTender API
-   * Uses the OCDSReleases endpoint (not /releases)
-   */
   private async fetchRecentTenders(): Promise<OCDSTender[]> {
     try {
       const endDate = new Date()
@@ -136,40 +151,52 @@ export class ETenderApiScraper extends BaseScraper {
       const startDateStr = startDate.toISOString().split("T")[0]
       const endDateStr = endDate.toISOString().split("T")[0]
 
-      // Official endpoint from Swagger docs
       const url = `${this.API_BASE_URL}/OCDSReleases?PageNumber=1&PageSize=100&dateFrom=${startDateStr}&dateTo=${endDateStr}`
 
-      console.log("[ETenderApiScraper] Fetching from:", url)
+      console.log("[v0] [ETenderApiScraper] Fetching from:", url)
+      console.log("[v0] [ETenderApiScraper] Date range:", startDateStr, "to", endDateStr)
 
       const response = await fetch(url, {
         headers: {
           Accept: "application/json",
           "User-Agent": "BidMateAI/1.0",
         },
-        signal: AbortSignal.timeout(30000), // 30 second timeout
+        signal: AbortSignal.timeout(30000),
       })
 
+      console.log("[v0] [ETenderApiScraper] Response status:", response.status, response.statusText)
+
       if (!response.ok) {
-        console.error("[ETenderApiScraper] API returned", response.status, response.statusText)
+        console.error("[v0] [ETenderApiScraper] API returned error status:", response.status)
+        const errorText = await response.text()
+        console.error("[v0] [ETenderApiScraper] Error response:", errorText)
         return []
       }
 
       const data = await response.json()
-      console.log("[ETenderApiScraper] Response keys:", Object.keys(data || {}))
+      console.log("[v0] [ETenderApiScraper] Response received, parsing...")
+      console.log("[v0] [ETenderApiScraper] Response structure:", {
+        hasReleases: "releases" in (data || {}),
+        dataType: typeof data,
+        keys: Object.keys(data || {}),
+      })
 
-      // Response is an object with a "releases" array property
       if (data && Array.isArray(data.releases)) {
-        console.log("[ETenderApiScraper] Found", data.releases.length, "releases")
-        // Filter out empty releases
+        console.log("[v0] [ETenderApiScraper] Found", data.releases.length, "releases in response")
         const validReleases = data.releases.filter((r: any) => r && r.tender && r.tender.id)
-        console.log("[ETenderApiScraper] Valid releases with tender data:", validReleases.length)
+        console.log("[v0] [ETenderApiScraper] Valid releases with tender data:", validReleases.length)
         return validReleases
       }
 
-      console.log("[ETenderApiScraper] No releases array in response")
+      console.log("[v0] [ETenderApiScraper] No releases array in response")
       return []
     } catch (error) {
-      console.error("[ETenderApiScraper] Error fetching from API:", error)
+      console.error("[v0] [ETenderApiScraper] Error fetching from API:", error)
+      if (error instanceof Error) {
+        console.error("[v0] [ETenderApiScraper] Error name:", error.name)
+        console.error("[v0] [ETenderApiScraper] Error message:", error.message)
+        console.error("[v0] [ETenderApiScraper] Error stack:", error.stack)
+      }
       return []
     }
   }
@@ -183,7 +210,7 @@ export class ETenderApiScraper extends BaseScraper {
       const tender = ocds.tender
 
       if (!tender || !tender.title) {
-        console.log("[ETenderApiScraper] Skipping release without tender or title")
+        console.log("[v0] [ETenderApiScraper] Skipping release without tender or title")
         return null
       }
 
@@ -258,7 +285,7 @@ export class ETenderApiScraper extends BaseScraper {
       // Validate and normalize through TenderEngine
       return this.normalizeTenderData(normalized)
     } catch (error) {
-      console.error("[ETenderApiScraper] Error normalizing OCDS release:", error)
+      console.error("[v0] [ETenderApiScraper] Error normalizing OCDS release:", error)
       return null
     }
   }
