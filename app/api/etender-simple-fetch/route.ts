@@ -89,13 +89,7 @@ export async function GET() {
       })
     }
 
-    const { data: savedTenders, error: saveError } = await supabase
-      .from("scraped_tenders")
-      .upsert(tenders, {
-        onConflict: "source_id,tender_reference",
-        ignoreDuplicates: false,
-      })
-      .select("id")
+    const { data: savedTenders, error: saveError } = await supabase.from("scraped_tenders").insert(tenders).select("id")
 
     if (saveError) {
       console.error("[v0] Save error:", saveError)
