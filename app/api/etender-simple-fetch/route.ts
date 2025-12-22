@@ -85,7 +85,7 @@ export async function GET() {
         .from("tender_sources")
         .insert({
           name: "National Treasury eTender (OCDS)",
-          url: "https://ocds-api.etenders.gov.za/",
+          tender_page_url: "https://ocds-api.etenders.gov.za/",
           is_active: true,
         })
         .select("id")
