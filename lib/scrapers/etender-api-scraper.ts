@@ -216,49 +216,62 @@ export class ETenderApiScraper extends BaseScraper {
 
       // Find procuring entity (buyer)
       const procuringEntity = ocds.parties?.find((p) => p.roles.includes("procuringEntity")) || ocds.parties?.[0]
-      const buyerName = procuringEntity?.name || "Unknown Organization"
+      const buyerName = procuringEntity?.name || ocds.buyer?.name || "Unknown Organization"
 
       // Extract contact information
       const contactPoint = procuringEntity?.contactPoint
       const address = procuringEntity?.address
 
-      // Build location from address fields
-      const location = address
-        ? [address.locality, address.region || address.countryName].filter(Boolean).join(", ")
-        : "South Africa"
+      // Build location - prefer region/province for South African context
+      const province = address?.region || ""
+      const locality = address?.locality || ""
+      const location = [locality, province].filter(Boolean).join(", ") || "South Africa"
 
-      // Extract category from items or mainProcurementCategory
-      const category = tender.mainProcurementCategory || tender.items?.[0]?.classification?.description || "General"
+      // Extract category - use both mainProcurementCategory and items classification
+      const mainCategory = tender.mainProcurementCategory || ""
+      const itemCategory = tender.items?.[0]?.classification?.description || ""
+      const category = mainCategory || itemCategory || "General Procurement"
 
-      // Extract documents
+      // Extract documents with proper structure
       const documents =
         tender.documents?.map((doc) => ({
-          title: doc.title || doc.documentType,
+          title: doc.title || doc.documentType || "Document",
           url: doc.url,
+          type: doc.documentType,
         })) || []
 
-      // Build normalized tender object using TenderEngine field hints
+      // Extract value and format properly
+      const tenderValue = tender.value
+      const estimatedValue = tenderValue
+        ? `R ${tenderValue.amount.toLocaleString()} ${tenderValue.currency}`
+        : undefined
+
+      // Build comprehensive description
+      const description = tender.description || `Tender for ${tender.title}`
+
+      // Build normalized tender object with ALL possible fields populated
       const normalized: ScrapedTender = {
+        // Core required fields
         tender_reference: tender.id || ocds.ocid,
         title: this.cleanText(tender.title),
-        description: this.cleanText(tender.description || ""),
+        description: this.cleanText(description),
         organization: this.cleanText(buyerName),
-        category,
+        category: this.cleanText(category),
 
-        // Dates
-        publish_date: tender.tenderPeriod?.startDate || ocds.date || undefined,
-        close_date: tender.tenderPeriod?.endDate || undefined,
+        // Dates - required for validation
+        publish_date: tender.tenderPeriod?.startDate || tender.enquiryPeriod?.startDate || ocds.date,
+        close_date: tender.tenderPeriod?.endDate,
 
         // Value
-        estimated_value: tender.value ? `R ${tender.value.amount.toLocaleString()}` : undefined,
+        estimated_value: estimatedValue,
 
-        // Contact information
-        contact_person: contactPoint?.name || undefined,
-        contact_email: contactPoint?.email || undefined,
-        contact_phone: contactPoint?.telephone || undefined,
+        // Contact information - important for quality score
+        contact_person: contactPoint?.name,
+        contact_email: contactPoint?.email,
+        contact_phone: contactPoint?.telephone,
 
-        // Location
-        location,
+        // Location - important for matching
+        location: this.cleanText(location),
 
         // URLs
         tender_url: `https://etenders.gov.za/tender/${tender.id}`,
@@ -266,24 +279,59 @@ export class ETenderApiScraper extends BaseScraper {
         // Documents
         document_urls: documents.length > 0 ? documents : undefined,
 
-        // Additional fields
-        tender_type: tender.procurementMethod || "Open",
-        procurement_category: tender.mainProcurementCategory || undefined,
+        // Additional enrichment fields
+        tender_type: tender.procurementMethodDetails || tender.procurementMethod || "Open Tender",
+        procurement_category: mainCategory || undefined,
 
-        // Raw OCDS data for debugging and compliance
+        // Add province explicitly for better matching
+        province: province || undefined,
+
+        // Add procurement method for better categorization
+        procurement_method: tender.procurementMethod,
+
+        // Add status
+        status: tender.status,
+
+        // Raw OCDS data for full traceability
         raw_data: {
           ocid: ocds.ocid,
           release_date: ocds.date,
+          release_tag: ocds.tag,
           procurement_method: tender.procurementMethod,
-          status: tender.status,
-          tag: ocds.tag,
+          tender_status: tender.status,
+          buyer_id: ocds.buyer?.id || procuringEntity?.id,
           source: "eTender API (OCDS)",
           api_version: "v1",
+          items_count: tender.items?.length || 0,
+          documents_count: tender.documents?.length || 0,
         },
       }
 
-      // Validate and normalize through TenderEngine
-      return this.normalizeTenderData(normalized)
+      console.log("[v0] [ETenderApiScraper] Normalized tender fields:", {
+        reference: normalized.tender_reference,
+        hasTitle: !!normalized.title,
+        hasDescription: !!normalized.description,
+        hasOrganization: !!normalized.organization,
+        hasCategory: !!normalized.category,
+        hasPublishDate: !!normalized.publish_date,
+        hasCloseDate: !!normalized.close_date,
+        hasValue: !!normalized.estimated_value,
+        hasContact: !!normalized.contact_email || !!normalized.contact_phone,
+        hasLocation: !!normalized.location,
+        hasDocuments: !!normalized.document_urls && normalized.document_urls.length > 0,
+      })
+
+      // Normalize through TenderEngine for final validation
+      const finalTender = this.normalizeTenderData(normalized)
+
+      console.log("[v0] [ETenderApiScraper] Final tender after normalization:", {
+        reference: finalTender.tender_reference,
+        fieldsCount: Object.keys(finalTender).filter(
+          (k) => finalTender[k] !== undefined && finalTender[k] !== null && finalTender[k] !== "",
+        ).length,
+      })
+
+      return finalTender
     } catch (error) {
       console.error("[v0] [ETenderApiScraper] Error normalizing OCDS release:", error)
       return null
