@@ -13,6 +13,8 @@ export default function ETenderFetchPage() {
   const [testLoading, setTestLoading] = useState(false)
   const [testResult, setTestResult] = useState<any>(null)
   const [progress, setProgress] = useState<string[]>([])
+  const [simpleLoading, setSimpleLoading] = useState(false)
+  const [simpleResult, setSimpleResult] = useState<any>(null)
 
   const handleFetch = async () => {
     setLoading(true)
@@ -76,6 +78,29 @@ export default function ETenderFetchPage() {
       })
     } finally {
       setTestLoading(false)
+    }
+  }
+
+  const handleSimpleFetch = async () => {
+    setSimpleLoading(true)
+    setSimpleResult(null)
+    setError(null)
+
+    try {
+      const response = await fetch("/api/etender-simple-fetch")
+      const data = await response.json()
+
+      setSimpleResult(data)
+      if (!data.success) {
+        setError(data.error || "Simple fetch failed")
+      }
+    } catch (err) {
+      console.error("[v0] Simple fetch error:", err)
+      const errorMsg = err instanceof Error ? err.message : "Unknown error"
+      setError(errorMsg)
+      setSimpleResult({ success: false, error: errorMsg })
+    } finally {
+      setSimpleLoading(false)
     }
   }
 
@@ -166,6 +191,80 @@ export default function ETenderFetchPage() {
               {testResult.message && (
                 <Alert className={testResult.success ? "border-green-500" : "border-red-500"}>
                   <AlertDescription>{testResult.message}</AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Simple eTender Fetch (Direct)</CardTitle>
+          <CardDescription>Direct simplified fetch from eTenders API only - bypasses complex logic</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={handleSimpleFetch} disabled={simpleLoading} size="lg" className="w-full">
+            {simpleLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Fetching from eTenders...
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Simple eTender Fetch
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {simpleResult && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {simpleResult.success ? (
+                <>
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  Simple Fetch Success
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-5 w-5 text-red-500" />
+                  Simple Fetch Failed
+                </>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {simpleResult.message && (
+                <Alert className={simpleResult.success ? "border-green-500" : "border-red-500"}>
+                  <AlertDescription>{simpleResult.message}</AlertDescription>
+                </Alert>
+              )}
+              {simpleResult.fetched !== undefined && (
+                <div className="text-sm">
+                  <strong>Fetched:</strong> {simpleResult.fetched} tenders
+                </div>
+              )}
+              {simpleResult.saved !== undefined && (
+                <div className="text-sm">
+                  <strong>Saved:</strong> {simpleResult.saved} tenders
+                </div>
+              )}
+              {simpleResult.sampleTender && (
+                <details className="text-xs">
+                  <summary className="cursor-pointer font-semibold">Sample Tender Data</summary>
+                  <pre className="mt-2 p-2 bg-gray-100 rounded overflow-auto max-h-60">
+                    {JSON.stringify(simpleResult.sampleTender, null, 2)}
+                  </pre>
+                </details>
+              )}
+              {simpleResult.error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{simpleResult.error}</AlertDescription>
                 </Alert>
               )}
             </div>

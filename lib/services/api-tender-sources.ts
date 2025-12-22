@@ -136,7 +136,6 @@ export async function fetchFromAllAPISources(): Promise<{
 
     try {
       const tenders = await source.fetchFunction()
-
       console.log(`[v0] ${source.name} Returned: ${tenders.length} tenders`)
 
       if (tenders.length === 0) {
@@ -151,71 +150,80 @@ export async function fetchFromAllAPISources(): Promise<{
 
       let sourceId: number | null = null
 
-      const { data: existingSource } = await supabase
+      const { data: existingSource, error: checkError } = await supabase
         .from("tender_sources")
         .select("id")
         .eq("name", source.name)
+        .limit(1)
         .maybeSingle()
 
-      if (existingSource) {
-        sourceId = existingSource.id
-        console.log(`[v0] Using Existing Source ID: ${sourceId}`)
-      } else {
-        // Create new source using raw SQL INSERT...RETURNING
-        console.log(`[v0] Creating New Source with SQL...`)
-        const { data: newSourceData, error: sqlError } = await supabase.rpc("create_tender_source", {
-          p_name: source.name,
-          p_level: "National",
-          p_province: "All Provinces",
-          p_url: source.baseUrl,
-          p_type: "api",
-        })
-
-        if (sqlError) {
-          // Fallback: Try direct insert with returning
-          console.log(`[v0] RPC failed, trying direct insert...`)
-          const insertResult = await supabase
-            .from("tender_sources")
-            .insert({
-              name: source.name,
-              level: "National",
-              province: "All Provinces",
-              tender_page_url: source.baseUrl,
-              scraper_type: "api",
-              is_active: true,
-              scraping_enabled: true,
-              last_scraped_at: null,
-              notes: `API integration for ${source.name}`,
-            })
-            .select("id")
-            .single()
-
-          if (insertResult.error || !insertResult.data) {
-            console.error(`[v0] Failed to Insert Source:`, insertResult.error)
-            results.sources.push({
-              name: source.name,
-              fetched: tenders.length,
-              saved: 0,
-              error: `Failed to create source: ${insertResult.error?.message || "No ID returned"}`,
-            })
-            continue
-          }
-
-          sourceId = insertResult.data.id
-          console.log(`[v0] Created Source via Insert ID: ${sourceId}`)
-        } else {
-          sourceId = newSourceData
-          console.log(`[v0] Created Source via RPC ID: ${sourceId}`)
-        }
-      }
-
-      if (!sourceId) {
-        console.error(`[v0] ERROR: No Source ID Available`)
+      if (checkError) {
+        console.error(`[v0] Error checking source:`, checkError)
         results.sources.push({
           name: source.name,
           fetched: tenders.length,
           saved: 0,
-          error: "No source ID after creation",
+          error: `Database error: ${checkError.message}`,
+        })
+        continue
+      }
+
+      if (existingSource) {
+        sourceId = existingSource.id
+        console.log(`[v0] Found Existing Source ID: ${sourceId}`)
+      } else {
+        console.log(`[v0] Creating new source...`)
+        const { error: insertError } = await supabase.from("tender_sources").insert({
+          name: source.name,
+          level: "National",
+          province: "All Provinces",
+          tender_page_url: source.baseUrl,
+          scraper_type: "api",
+          is_active: true,
+          scraping_enabled: true,
+          last_scraped_at: null,
+          notes: `API integration for ${source.name}`,
+        })
+
+        if (insertError) {
+          console.error(`[v0] Insert Error:`, insertError)
+          results.sources.push({
+            name: source.name,
+            fetched: tenders.length,
+            saved: 0,
+            error: `Failed to create source: ${insertError.message}`,
+          })
+          continue
+        }
+
+        const { data: newSource, error: fetchError } = await supabase
+          .from("tender_sources")
+          .select("id")
+          .eq("name", source.name)
+          .limit(1)
+          .single()
+
+        if (fetchError || !newSource) {
+          console.error(`[v0] Fetch Error:`, fetchError)
+          results.sources.push({
+            name: source.name,
+            fetched: tenders.length,
+            saved: 0,
+            error: `Source created but couldn't retrieve ID`,
+          })
+          continue
+        }
+
+        sourceId = newSource.id
+        console.log(`[v0] Created New Source ID: ${sourceId}`)
+      }
+
+      if (!sourceId) {
+        results.sources.push({
+          name: source.name,
+          fetched: tenders.length,
+          saved: 0,
+          error: "Source ID is null",
         })
         continue
       }
@@ -282,6 +290,5 @@ export async function fetchFromAllAPISources(): Promise<{
   }
 
   results.success = results.totalSaved > 0
-
   return results
 }
