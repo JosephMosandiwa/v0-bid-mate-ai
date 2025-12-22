@@ -125,11 +125,10 @@ export class ETenderApiScraper extends BaseScraper {
 
   /**
    * Fetch recent tenders from eTender API
-   * Uses the OCDS releases endpoint
+   * Uses the OCDSReleases endpoint (not /releases)
    */
   private async fetchRecentTenders(): Promise<OCDSTender[]> {
     try {
-      // Calculate date range (last 30 days)
       const endDate = new Date()
       const startDate = new Date()
       startDate.setDate(startDate.getDate() - 30)
@@ -137,61 +136,72 @@ export class ETenderApiScraper extends BaseScraper {
       const startDateStr = startDate.toISOString().split("T")[0]
       const endDateStr = endDate.toISOString().split("T")[0]
 
-      // Fetch from API with date range
-      const url = `${this.API_BASE_URL}/releases?dateFrom=${startDateStr}&dateTo=${endDateStr}&limit=100`
+      // Official endpoint from Swagger docs
+      const url = `${this.API_BASE_URL}/OCDSReleases?PageNumber=1&PageSize=100&dateFrom=${startDateStr}&dateTo=${endDateStr}`
 
-      console.log("[v0] ETenderApiScraper: Fetching from", url)
+      console.log("[ETenderApiScraper] Fetching from:", url)
 
       const response = await fetch(url, {
         headers: {
           Accept: "application/json",
           "User-Agent": "BidMateAI/1.0",
         },
+        signal: AbortSignal.timeout(30000), // 30 second timeout
       })
 
       if (!response.ok) {
-        console.error("[v0] ETenderApiScraper: API returned", response.status, response.statusText)
+        console.error("[ETenderApiScraper] API returned", response.status, response.statusText)
         return []
       }
 
       const data = await response.json()
+      console.log("[ETenderApiScraper] Response keys:", Object.keys(data || {}))
 
-      // OCDS format returns releases array
-      if (data.releases && Array.isArray(data.releases)) {
-        console.log("[v0] ETenderApiScraper: Successfully fetched", data.releases.length, "releases")
-        return data.releases
+      // Response is an object with a "releases" array property
+      if (data && Array.isArray(data.releases)) {
+        console.log("[ETenderApiScraper] Found", data.releases.length, "releases")
+        // Filter out empty releases
+        const validReleases = data.releases.filter((r: any) => r && r.tender && r.tender.id)
+        console.log("[ETenderApiScraper] Valid releases with tender data:", validReleases.length)
+        return validReleases
       }
 
-      console.log("[v0] ETenderApiScraper: No releases found in API response")
+      console.log("[ETenderApiScraper] No releases array in response")
       return []
     } catch (error) {
-      console.error("[v0] ETenderApiScraper: Error fetching from API:", error)
+      console.error("[ETenderApiScraper] Error fetching from API:", error)
       return []
     }
   }
 
   /**
    * Convert OCDS format to our tender format
+   * Maps from the actual eTender API structure
    */
   private normalizeOCDSToTender(ocds: OCDSTender): ScrapedTender | null {
     try {
       const tender = ocds.tender
 
       if (!tender || !tender.title) {
+        console.log("[ETenderApiScraper] Skipping release without tender or title")
         return null
       }
 
-      // Find buyer/procuring entity
-      const buyer = ocds.buyer || ocds.parties?.find((p) => p.roles.includes("buyer"))
+      // Find procuring entity (buyer)
+      const procuringEntity = ocds.parties?.find((p) => p.roles.includes("procuringEntity")) || ocds.parties?.[0]
+      const buyerName = procuringEntity?.name || "Unknown Organization"
 
-      // Extract contact info
-      const contact = buyer?.contactPoint || ocds.parties?.find((p) => p.contactPoint)?.contactPoint
+      // Extract contact information
+      const contactPoint = procuringEntity?.contactPoint
+      const address = procuringEntity?.address
 
-      // Extract location from buyer address
-      const buyerParty = ocds.parties?.find((p) => p.id === buyer?.id)
-      const location = buyerParty?.address
-        ? [buyerParty.address.locality, buyerParty.address.region, "South Africa"].filter(Boolean).join(", ")
+      // Build location from address fields
+      const location = address
+        ? [address.locality, address.region || address.countryName].filter(Boolean).join(", ")
         : "South Africa"
+
+      // Extract category from items or mainProcurementCategory
+      const category = tender.mainProcurementCategory || tender.items?.[0]?.classification?.description || "General"
 
       // Extract documents
       const documents =
@@ -200,27 +210,25 @@ export class ETenderApiScraper extends BaseScraper {
           url: doc.url,
         })) || []
 
-      // Build tender object
+      // Build normalized tender object using TenderEngine field hints
       const normalized: ScrapedTender = {
+        tender_reference: tender.id || ocds.ocid,
         title: this.cleanText(tender.title),
         description: this.cleanText(tender.description || ""),
-        organization: this.cleanText(buyer?.name || "Unknown Organization"),
-        tender_reference: tender.id || ocds.ocid,
-        category: tender.mainProcurementCategory || tender.items?.[0]?.classification?.description || "General",
+        organization: this.cleanText(buyerName),
+        category,
 
         // Dates
-        publish_date: tender.tenderPeriod?.startDate || undefined,
+        publish_date: tender.tenderPeriod?.startDate || ocds.date || undefined,
         close_date: tender.tenderPeriod?.endDate || undefined,
 
         // Value
-        estimated_value: tender.value
-          ? `R ${tender.value.amount.toLocaleString()} ${tender.value.currency}`
-          : undefined,
+        estimated_value: tender.value ? `R ${tender.value.amount.toLocaleString()}` : undefined,
 
-        // Contact
-        contact_person: contact?.name || undefined,
-        contact_email: contact?.email || undefined,
-        contact_phone: contact?.telephone || undefined,
+        // Contact information
+        contact_person: contactPoint?.name || undefined,
+        contact_email: contactPoint?.email || undefined,
+        contact_phone: contactPoint?.telephone || undefined,
 
         // Location
         location,
@@ -229,25 +237,28 @@ export class ETenderApiScraper extends BaseScraper {
         tender_url: `https://etenders.gov.za/tender/${tender.id}`,
 
         // Documents
-        document_urls: documents,
+        document_urls: documents.length > 0 ? documents : undefined,
 
         // Additional fields
         tender_type: tender.procurementMethod || "Open",
         procurement_category: tender.mainProcurementCategory || undefined,
 
-        // Raw data for debugging
+        // Raw OCDS data for debugging and compliance
         raw_data: {
           ocid: ocds.ocid,
+          release_date: ocds.date,
           procurement_method: tender.procurementMethod,
           status: tender.status,
           tag: ocds.tag,
           source: "eTender API (OCDS)",
+          api_version: "v1",
         },
       }
 
-      return normalized
+      // Validate and normalize through TenderEngine
+      return this.normalizeTenderData(normalized)
     } catch (error) {
-      console.error("[v0] ETenderApiScraper: Error normalizing OCDS:", error)
+      console.error("[ETenderApiScraper] Error normalizing OCDS release:", error)
       return null
     }
   }
