@@ -15,6 +15,8 @@ export default function ETenderFetchPage() {
   const [progress, setProgress] = useState<string[]>([])
   const [simpleLoading, setSimpleLoading] = useState(false)
   const [simpleResult, setSimpleResult] = useState<any>(null)
+  const [engineLoading, setEngineLoading] = useState(false)
+  const [engineResult, setEngineResult] = useState<any>(null)
 
   const handleFetch = async () => {
     setLoading(true)
@@ -104,6 +106,32 @@ export default function ETenderFetchPage() {
     }
   }
 
+  const handleEngineScrape = async () => {
+    setEngineLoading(true)
+    setEngineResult(null)
+    setError(null)
+
+    try {
+      const response = await fetch("/api/admin/trigger-etender-api-scrape", {
+        method: "POST",
+      })
+
+      const data = await response.json()
+      setEngineResult(data)
+
+      if (!data.success) {
+        setError(data.error || "Engine scrape failed")
+      }
+    } catch (err) {
+      console.error("[v0] Engine scrape error:", err)
+      const errorMsg = err instanceof Error ? err.message : "Unknown error"
+      setError(errorMsg)
+      setEngineResult({ success: false, error: errorMsg })
+    } finally {
+      setEngineLoading(false)
+    }
+  }
+
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="mb-6">
@@ -112,6 +140,85 @@ export default function ETenderFetchPage() {
           Fetch tenders from all available South African tender APIs (eTender, EasyTenders, and more)
         </p>
       </div>
+
+      <Card className="mb-6 border-blue-500">
+        <CardHeader>
+          <CardTitle>Engine-Integrated eTender Scrape (Recommended)</CardTitle>
+          <CardDescription>
+            Fetch tenders through the full engine pipeline: eTender API → TenderEngine (validation) → Documind
+            (documents) → Strategist (opportunity matching) → User alerts
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={handleEngineScrape} disabled={engineLoading} size="lg" className="w-full">
+            {engineLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing through Engine Pipeline...
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Fetch via Engine Pipeline
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {engineResult && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {engineResult.success ? (
+                <>
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  Engine Pipeline Success
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-5 w-5 text-red-500" />
+                  Engine Pipeline Failed
+                </>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {engineResult.message && (
+                <Alert className={engineResult.success ? "border-green-500" : "border-red-500"}>
+                  <AlertDescription>{engineResult.message}</AlertDescription>
+                </Alert>
+              )}
+              {engineResult.data && (
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <strong>Source:</strong> {engineResult.data.sourceName}
+                  </div>
+                  <div>
+                    <strong>Scraped:</strong> {engineResult.data.scrapedCount} tenders
+                  </div>
+                  <div>
+                    <strong>Saved:</strong> {engineResult.data.savedCount} tenders
+                  </div>
+                </div>
+              )}
+              {engineResult.error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{engineResult.error}</AlertDescription>
+                </Alert>
+              )}
+              {engineResult.instructions && (
+                <Alert className="border-yellow-500 bg-yellow-50">
+                  <AlertDescription className="text-yellow-900">
+                    <strong>Setup Required:</strong> {engineResult.instructions}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="mb-6">
         <CardHeader>
