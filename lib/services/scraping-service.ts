@@ -335,23 +335,39 @@ export class ScrapingService {
 
     console.log(`[v0] ScrapingService: Saving ${validatedTenders.length} validated tenders to database`)
 
-    const { data, error } = await this.supabase
-      .from("scraped_tenders")
-      .upsert(validatedTenders, {
-        onConflict: "source_id,title",
-        ignoreDuplicates: false,
-      })
-      .select()
+    const savedTenders: any[] = []
 
-    if (error) {
-      console.error("[v0] ScrapingService: Error saving tenders:", error)
-      throw error
+    for (const tender of validatedTenders) {
+      const { data: existing } = await this.supabase
+        .from("scraped_tenders")
+        .select("id")
+        .eq("source_id", tender.source_id)
+        .eq("title", tender.title)
+        .maybeSingle()
+
+      if (existing) {
+        console.log(`[v0] ScrapingService: Tender already exists, skipping: ${tender.title}`)
+        savedTenders.push(existing)
+        continue
+      }
+
+      const { data, error } = await this.supabase.from("scraped_tenders").insert(tender).select().single()
+
+      if (error) {
+        console.error(`[v0] ScrapingService: Error saving tender "${tender.title}":`, error)
+        continue
+      }
+
+      if (data) {
+        console.log(`[v0] ScrapingService: ✓ Saved new tender: ${tender.title}`)
+        savedTenders.push(data)
+      }
     }
 
     console.log(
-      `[v0] ScrapingService: ✓ Successfully saved ${validatedTenders.length} tenders to scraped_tenders table`,
+      `[v0] ScrapingService: ✓ Successfully processed ${validatedTenders.length} tenders (${savedTenders.length} new, ${validatedTenders.length - savedTenders.length} duplicates)`,
     )
-    return data || []
+    return savedTenders
   }
 
   private async downloadTenderDocuments(tenders: any[]) {
@@ -364,7 +380,6 @@ export class ScrapingService {
         )
 
         try {
-          // Handle both formats: string[] and {title: string, url: string}[]
           const urls = tender.document_urls.map((doc: any) => (typeof doc === "string" ? doc : doc.url)).filter(Boolean)
 
           if (urls.length > 0) {
@@ -487,7 +502,6 @@ export class ScrapingService {
           .eq("id", progressId)
       }
 
-      // Add delay between scrapes to be respectful
       await new Promise((resolve) => setTimeout(resolve, 2000))
     }
 
