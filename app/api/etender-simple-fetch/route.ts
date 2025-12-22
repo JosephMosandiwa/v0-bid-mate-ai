@@ -5,6 +5,28 @@ export async function GET() {
   try {
     console.log("[v0] Starting simple eTender fetch...")
 
+    const supabase = createAdminClient()
+
+    const { data: source } = await supabase
+      .from("tender_sources")
+      .select("id")
+      .eq("name", "National Treasury eTender (OCDS)")
+      .maybeSingle()
+
+    if (!source) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Please create the 'National Treasury eTender (OCDS)' source first by running the SQL script at /scripts/ensure-etender-source-exists.sql",
+        },
+        { status: 400 },
+      )
+    }
+
+    const sourceId = source.id
+    console.log("[v0] Using existing source ID:", sourceId)
+
     // Step 1: Call eTenders API
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
@@ -31,7 +53,6 @@ export async function GET() {
     const data = await response.json()
     console.log("[v0] API response received. Releases count:", data.releases?.length)
 
-    // Step 2: Parse tenders from releases
     const tenders = data.releases
       .filter((release: any) => release && release.tender)
       .map((release: any) => {
@@ -51,7 +72,7 @@ export async function GET() {
           contact_phone: tender.contactPerson?.telephoneNumber || null,
           tender_url: `https://www.etenders.gov.za/`,
           source_name: "National Treasury eTender (OCDS)",
-          source_id: 1, // We'll use a fixed source ID
+          source_id: sourceId,
           scraped_at: new Date().toISOString(),
           is_active: true,
         }
@@ -68,46 +89,9 @@ export async function GET() {
       })
     }
 
-    // Step 3: Save to database
-    const supabase = createAdminClient()
-
-    // First ensure source exists
-    const { data: existingSource } = await supabase
-      .from("tender_sources")
-      .select("id")
-      .eq("name", "National Treasury eTender (OCDS)")
-      .single()
-
-    let sourceId = existingSource?.id
-
-    if (!sourceId) {
-      const { data: newSource, error: sourceError } = await supabase
-        .from("tender_sources")
-        .insert({
-          name: "National Treasury eTender (OCDS)",
-          tender_page_url: "https://ocds-api.etenders.gov.za/",
-          is_active: true,
-        })
-        .select("id")
-        .single()
-
-      if (sourceError) {
-        console.error("[v0] Source creation error:", sourceError)
-        throw new Error(`Failed to create source: ${sourceError.message}`)
-      }
-
-      sourceId = newSource.id
-    }
-
-    console.log("[v0] Using source ID:", sourceId)
-
-    // Update all tenders with the correct source_id
-    const tendersToSave = tenders.map((t) => ({ ...t, source_id: sourceId }))
-
-    // Save tenders using upsert
     const { data: savedTenders, error: saveError } = await supabase
       .from("scraped_tenders")
-      .upsert(tendersToSave, {
+      .upsert(tenders, {
         onConflict: "source_id,tender_reference",
         ignoreDuplicates: false,
       })
