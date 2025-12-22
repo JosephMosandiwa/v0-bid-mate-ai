@@ -92,3 +92,16 @@ export async function POST() {
     )
   }
 }
+
+export async function GET() {
+  return NextResponse.json(
+    {
+      success: false,
+      error: "This endpoint only accepts POST requests",
+      instructions: "Use the 'Engine-Integrated eTender Scrape' button on the admin page at /admin/etender-fetch",
+      endpoint: "/api/admin/trigger-etender-api-scrape",
+      method: "POST",
+    },
+    { status: 405 },
+  )
+}
