@@ -34,7 +34,7 @@ import {
 } from "@/app/actions/document-actions"
 import { DynamicTenderForm } from "@/components/dynamic-tender-form"
 import { useChat } from "@ai-sdk/react"
-import { DefaultChatTransport } from "ai"
+import { DefaultChatTransport } from "@/lib/providers"
 import { Input } from "@/components/ui/input"
 import { TenderContextStrategistPanel } from "@/components/strategist/tender-context-panel"
 

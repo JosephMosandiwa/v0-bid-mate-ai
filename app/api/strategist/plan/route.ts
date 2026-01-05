@@ -1,4 +1,4 @@
-import { generateText } from "ai"
+import generateTextViaProvider from "@/lib/providers"
 import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
@@ -202,7 +202,7 @@ Use realistic South African values (ZAR currency). Include at least:
 - 5 risks
 - 3 timeline phases`
 
-      const { text } = await generateText({
+      const { text } = await generateTextViaProvider({
         model: "openai/gpt-4o-mini",
         prompt: promptText,
       })

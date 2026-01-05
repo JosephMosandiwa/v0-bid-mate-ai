@@ -1,4 +1,4 @@
-import { generateText } from "ai"
+import generateTextViaProvider from "@/lib/providers"
 import { extractText } from "unpdf"
 import { PDFDocument } from "pdf-lib"
 import { getAnalysisPrompt } from "@/lib/prompts"
@@ -237,12 +237,12 @@ NOTE: This PDF does not have interactive form fields. Generate formFields based 
 `
     }
 
-    console.log("[v0] Step 3: Calling Vercel AI Gateway with generateText...")
+    console.log("[v0] Step 3: Calling configured AI provider via wrapper for analysis...")
 
     try {
       const startTime = Date.now()
 
-      const { text: aiResponse } = await generateText({
+      const { text: aiResponse } = await generateTextViaProvider({
         model: "openai/gpt-4o-mini",
         prompt: `${basePrompt}
 

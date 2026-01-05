@@ -1,4 +1,4 @@
-import { generateText } from "ai"
+import generateTextViaProvider from "@/lib/providers"
 
 export async function POST(request: Request) {
   try {
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
       },
     ]
 
-    const { text } = await generateText({
+    const { text } = await generateTextViaProvider({
       model: "openai/gpt-4-turbo",
       prompt: `You are an AI assistant helping users find relevant government tenders. 
 
@@ -109,9 +109,8 @@ Only include tenders that are truly relevant to the user's query. If no tenders 
       return Response.json(
         {
           error:
-            "OpenAI API key is missing or invalid. Please add your OPENAI_API_KEY environment variable in the Vercel dashboard.",
-          errorType: "api_key_required",
-          dashboardUrl: "https://vercel.com/dashboard/stores",
+            "OpenAI API key is missing or invalid. Please set `OPENAI_API_KEY` in your environment (e.g. .env.local) or configure your cloud provider's secret store.",
+              errorType: "api_key_required",
         },
         { status: 403 },
       )

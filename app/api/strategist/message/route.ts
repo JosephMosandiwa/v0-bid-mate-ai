@@ -2,7 +2,7 @@
 // AI STRATEGIST - CHAT MESSAGE ENDPOINT
 // ============================================
 
-import { streamText } from "ai"
+import { streamTextViaProvider } from "@/lib/providers"
 import { createClient } from "@/lib/supabase/server"
 import { StrategistService, buildStrategistPrompt } from "@/lib/engines/strategist"
 import type { ConversationContextType } from "@/lib/engines/strategist"
@@ -217,7 +217,7 @@ Your goal is to ensure the user is fully prepared with all requirements, certifi
     console.log("[Strategist] Calling AI with", aiMessages.length, "messages")
 
     // Stream response
-    const result = streamText({
+    const result = streamTextViaProvider({
       model: "openai/gpt-4o-mini",
       messages: aiMessages,
       temperature: 0.7,

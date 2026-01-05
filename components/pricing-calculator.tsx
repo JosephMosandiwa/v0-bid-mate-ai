@@ -195,7 +195,7 @@ export function PricingCalculator() {
                   <span>${supabaseProCost.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>AI Gateway ({aiAnalyses} analyses)</span>
+                  <span>AI provider ({aiAnalyses} analyses)</span>
                   <span>${aiCost.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">

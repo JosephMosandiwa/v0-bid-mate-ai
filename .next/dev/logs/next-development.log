@@ -1,0 +1,132 @@
+[00:00:03.107] Server  WARN     ⚠ Minimum recommended TypeScript version is v5.1.0, older versions can potentially be incompatible with Next.js. Detected: 5.0.2
+[00:00:03.243] Server  WARN     ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+[00:00:04.060] Server  LOG      ✓ Ready in 3.1s
+[00:12:09.558] Server  LOG      ○ Compiling / ...
+[00:12:25.365] Browser ERROR   A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <RootLayout>
+                        <html lang="en" suppressHydrationWarning={true}>
+                          <head>
+                          <body
+                            className="font-sans inter_b2991b2-module__9mH_6q__variable poppins_e1f1a0b-module__ez4LmG..."
+-                           data-new-gr-c-s-check-loaded="14.1267.0"
+-                           data-gr-ext-installed=""
+                          >
+                  ...
+
+[00:12:25.366] Browser LOG     [v0] Theme loaded from storage: null
+[00:12:25.734] Browser ERROR   uncaughtError: Error: Hydration failed because the server rendered text didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <InnerLayoutRouter url="/" tree={[...]} params={{}} cacheNode={{lazyData:null, ...}} segmentPath={[...]} ...>
+      <SegmentViewNode type="page" pagePath="page.tsx">
+        <SegmentTrieNode>
+        <LandingPage>
+          <div className="min-h-scre...">
+            <SiteHeader>
+            <section>
+            <section>
+            <section>
+            <section>
+            <section>
+            <section id="pricing" className="bg-card/30...">
+              <div className="container ...">
+                <div>
+                <PricingPlans>
+                  <div className="space-y-6">
+                    <div className="grid md:gr...">
+                      <Card className="relative b...">
+                        <div data-slot="card" className="bg-card te...">
+                          <CardHeader>
+                            <div data-slot="card-header" className="@container...">
+                              <CardTitle>
+                              <CardDescription>
+                              <div className="mt-4">
+                                <span className="text-4xl font-bold text-foreground">
++                                 R 499,00
+-                                 R 499.00
+                                ...
+                          ...
+                      ...
+                ...
+            ...
+      ...
+
+[00:12:25.734] Browser LOG     [v0] Applying theme: dark
+[00:12:33.529] Browser ERROR   unhandledRejection: i: Failed to connect to MetaMask
+[00:12:37.352] Server  LOG      ○ Compiling /dashboard ...
+[00:12:47.511] Server  LOG     [v0] Readiness check for THIS SPECIFIC tender: undefined "General" "user:" "ad699139-82ac-41b4-b9f2-442842048f47"
+[00:12:49.126] Server  ERROR   [Competitiveness] Error saving score: {}
+[00:13:22.337] Server  ERROR   [v0] Error fetching documents: {}
+[00:13:23.640] Server  LOG     [v0] Fetching scraped tender: "83849452-5404-429a-be2d-c00f98f4331e"
+[00:13:23.823] Server  ERROR   [v0] Error fetching documents: {}
+[00:13:24.736] Server  LOG     [v0] Found tender with 0 "documents" ""
+[00:13:24.826] Server  LOG     [v0] Fetching scraped tender: "83849452-5404-429a-be2d-c00f98f4331e"
+[00:13:25.561] Server  LOG     [v0] Readiness check for THIS SPECIFIC tender: "83849452-5404-429a-be2d-c00f98f4331e" "General" "user:" "ad699139-82ac-41b4-b9f2-442842048f47"
+[00:13:25.827] Server  LOG     [v0] Found tender with 0 "documents" ""
+[00:13:26.871] Server  ERROR   [Competitiveness] Error saving score: {}
+[00:13:27.540] Server  LOG     [v0] Readiness check for THIS SPECIFIC tender: "83849452-5404-429a-be2d-c00f98f4331e" "General" "user:" "ad699139-82ac-41b4-b9f2-442842048f47"
+[00:13:29.100] Server  ERROR   [Competitiveness] Error saving score: {}
+[00:28:43.497] Server  LOG     [v0] Plan generation started
+[00:28:43.583] Browser LOG     [v0] Generating project plan for tender: 83849452-5404-429a-be2d-c00f98f4331e
+[00:28:43.986] Server  LOG     [v0] User authenticated: "ad699139-82ac-41b4-b9f2-442842048f47"
+[00:28:43.991] Server  LOG     [v0] Request body: {}
+[00:28:43.992] Server  LOG     [v0] Generating project plan with AI...
+[00:28:44.076] Server  ERROR   C:\Repo\LogsOfN\v0-bid-mate-ai\.next\dev\server\chunks\643d2_ai_dist_index_mjs_02298bf9._.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:28:44.080] Server  ERROR   C:\Repo\LogsOfN\v0-bid-mate-ai\.next\dev\server\chunks\[root-of-the-server]__e978d59d._.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:28:44.166] Server  ERROR   C:\Repo\LogsOfN\v0-bid-mate-ai\node_modules\.pnpm\next@16.0.10_@opentelemetry_0d106b891cc3169ef6f583aee116eb12\node_modules\next\dist\compiled\next-server\app-route-turbo.runtime.dev.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:28:44.195] Server  ERROR   C:\Repo\LogsOfN\v0-bid-mate-ai\.next\dev\server\chunks\38113_next_37f75e38._.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:28:44.208] Server  ERROR   C:\Repo\LogsOfN\v0-bid-mate-ai\node_modules\.pnpm\next@16.0.10_@opentelemetry_0d106b891cc3169ef6f583aee116eb12\node_modules\next\dist\server\base-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:28:44.249] Server  ERROR   C:\Repo\LogsOfN\v0-bid-mate-ai\node_modules\.pnpm\next@16.0.10_@opentelemetry_0d106b891cc3169ef6f583aee116eb12\node_modules\next\dist\server\next-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:28:44.266] Server  ERROR   C:\Repo\LogsOfN\v0-bid-mate-ai\node_modules\.pnpm\next@16.0.10_@opentelemetry_0d106b891cc3169ef6f583aee116eb12\node_modules\next\dist\server\dev\next-dev-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:28:44.274] Server  ERROR   C:\Repo\LogsOfN\v0-bid-mate-ai\node_modules\.pnpm\next@16.0.10_@opentelemetry_0d106b891cc3169ef6f583aee116eb12\node_modules\next\dist\trace\trace.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:28:44.281] Server  ERROR   C:\Repo\LogsOfN\v0-bid-mate-ai\node_modules\.pnpm\next@16.0.10_@opentelemetry_0d106b891cc3169ef6f583aee116eb12\node_modules\next\dist\server\lib\router-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:28:44.287] Server  ERROR   C:\Repo\LogsOfN\v0-bid-mate-ai\node_modules\.pnpm\next@16.0.10_@opentelemetry_0d106b891cc3169ef6f583aee116eb12\node_modules\next\dist\server\lib\start-server.js: Invalid source map. Only conformant source maps can be used to find the original code. Cause: Error: sourceMapURL could not be parsed
+[00:28:44.303] Server  ERROR   [v0] Failed to generate or parse AI response: GatewayAuthenticationError: Unauthenticated request to AI Gateway.
+
+To authenticate, set the AI_GATEWAY_API_KEY environment variable with your API key.
+
+Alternatively, you can use a provider module instead of the AI Gateway.
+
+Learn more: https://ai-sdk.dev/unauthenticated-ai-gateway
+
+
+[00:28:44.593] Browser ERROR   [v0] Plan generation error: {}
+[01:52:04.953] Server  LOG      ✓ Compiled in 10.7s

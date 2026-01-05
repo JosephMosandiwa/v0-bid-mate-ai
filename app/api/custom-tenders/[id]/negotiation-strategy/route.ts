@@ -1,4 +1,4 @@
-import { generateText } from "ai"
+import generateTextViaProvider from "@/lib/providers"
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
@@ -110,7 +110,7 @@ Return ONLY the JSON object, no markdown formatting or additional text.`
 
     console.log("[v0] Generating negotiation strategy for tender:", id)
 
-    const { text } = await generateText({
+    const { text } = await generateTextViaProvider({
       model: "openai/gpt-4o",
       system: systemPrompt,
       prompt: userPrompt,
