@@ -10,7 +10,8 @@
     "dev": "next dev",
     "lint": "next lint",
     "ci:install": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"echo y | corepack enable; pnpm install --frozen-lockfile --no-interactive\"",
-    "start": "next start"
+    "start": "next start",
+    "test:orchestrator": "node scripts/test-orchestrator.mjs"
   },
   "dependencies": {
     "@ai-sdk/deepseek": "1.0.23",
