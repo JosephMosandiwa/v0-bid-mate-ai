@@ -12,7 +12,8 @@
     "ci:install": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"echo y | corepack enable; pnpm install --frozen-lockfile --no-interactive\"",
     "start": "next start",
     "test:orchestrator": "node scripts/test-orchestrator.mjs",
-    "test:e2e": "pnpm exec ts-node --esm scripts/test-e2e.ts"
+    "test:e2e": "pnpm exec ts-node --esm scripts/test-e2e.ts",
+    "test:supabase": "pnpm exec ts-node --esm scripts/test-supabase-persistence.ts"
   },
   "dependencies": {
     "@ai-sdk/deepseek": "1.0.23",
