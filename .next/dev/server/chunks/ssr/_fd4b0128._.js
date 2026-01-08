@@ -192,6 +192,8 @@ function useStrategistChat(options) {
             console.error("[useStrategistChat] Error:", error);
         }
     });
+    // Return a relaxed-any shape to satisfy various UI consumers expecting
+    // `messages`, `input`, `handleInputChange`, `handleSubmit`, `isLoading`, `setInput`, etc.
     return {
         ...chat,
         conversationId

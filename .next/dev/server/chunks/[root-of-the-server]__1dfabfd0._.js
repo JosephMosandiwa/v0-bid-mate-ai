@@ -2163,7 +2163,10 @@ async function POST(request) {
         }
         const { tender_id, force_recalculate } = await request.json();
         // Force recalculate
-        const score = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$services$2f$competitiveness$2d$service$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["CompetitivenessService"].calculateScore(user.id, tender_id);
+        const score = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$services$2f$competitiveness$2d$service$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["CompetitivenessService"].calculateScore({
+            userId: user.id,
+            tenderId: tender_id
+        });
         if (!score) {
             return Response.json({
                 error: "Failed to calculate readiness score"

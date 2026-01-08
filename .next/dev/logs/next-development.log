@@ -1,96 +1,11 @@
-[00:00:44.571] Server  LOG      ○ Compiling middleware ...
-[00:00:49.313] Server  WARN     ⚠ Minimum recommended TypeScript version is v5.1.0, older versions can potentially be incompatible with Next.js. Detected: 5.0.2
-[00:00:49.401] Server  WARN     ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
-[00:00:58.384] Server  LOG      ✓ Ready in 41.1s
-[00:01:05.875] Server  LOG      ○ Compiling /dashboard ...
-[00:02:19.741] Browser LOG     [v0] Theme loaded from storage: null
-[00:02:19.741] Browser LOG     [v0] Applying theme: dark
-[00:02:23.749] Server  LOG      ○ Compiling /api/strategist/readiness ...
-[00:02:25.677] Server  LOG     [v0] Readiness check for THIS SPECIFIC tender: undefined "General" "user:" "ad699139-82ac-41b4-b9f2-442842048f47"
-[00:02:27.026] Server  ERROR   [Competitiveness] Error saving score: {}
-[00:02:41.807] Browser LOG     [v0] ================================================
-[00:02:41.807] Browser LOG     [v0] STARTING CUSTOM TENDER UPLOAD PROCESS
-[00:02:41.807] Browser LOG     [v0] ================================================
-[00:02:41.808] Browser LOG     [v0] File name: WTE-0448 CS - Concrete Culverts and Storm Water Pipes for Theewaterskloof Dam.pdf
-[00:02:41.808] Browser LOG     [v0] File size: 0.83 MB
-[00:02:41.808] Browser LOG     [v0] Step 1: Uploading PDF to Supabase storage...
-[00:02:46.106] Browser LOG     [v0] ✓ File uploaded successfully
-[00:02:46.106] Browser LOG     [v0] URL: https://xqyecqkrtaydoesxnvlw.supabase.co/storage/v1/object/sign/tender-documents/temp/ad699139-82ac-41b4-b9f2-442842048f47/1767772103598.pdf?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hY2JjOTkxMy00Y2FkLTQ5Y2ItYTQ0Mi0xMTY5YzFjZDZhZjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0ZW5kZXItZG9jdW1lbnRzL3RlbXAvYWQ2OTkxMzktODJhYy00MWI0LWI5ZjItNDQyODQyMDQ4ZjQ3LzE3Njc3NzIxMDM1OTgucGRmIiwiaWF0IjoxNzY3NzcyMTAzLCJleHAiOjE3Njc3NzU3MDN9.qkGcItaSAZQGCoX6MmCVZdII3j9KwyDht6KJIH5OJz0
-[00:02:46.106] Browser LOG     [v0] Step 2: Sending PDF to AI for direct analysis...
-[00:02:46.106] Browser LOG     [v0] Requesting analysis via API...
-[00:02:49.055] Server  LOG      ○ Compiling /api/analyze-tender ...
-[00:02:59.477] Server  LOG     [v0] ========================================
-[00:02:59.481] Server  LOG     [v0] TENDER ANALYSIS REQUEST
-[00:02:59.482] Server  LOG     [v0] ========================================
-[00:02:59.484] Server  LOG     [v0] Document text length: 0 "characters"
-[00:02:59.486] Server  LOG     [v0] Document URL provided: "YES"
-[00:02:59.489] Server  LOG     [v0] PDF fields provided: 0
-[00:02:59.490] Server  LOG     [v0] Extracting PDF form fields from: "https://xqyecqkrtaydoesxnvlw.supabase.co/storage/v1/object/sign/tender-documents/temp/ad699139-82ac-41b4-b9f2-442842048f47/1767772103598.pdf?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hY2JjOTkxMy00Y2FkLTQ5Y2ItYTQ0Mi0xMTY5YzFjZDZhZjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0ZW5kZXItZG9jdW1lbnRzL3RlbXAvYWQ2OTkxMzktODJhYy00MWI0LWI5ZjItNDQyODQyMDQ4ZjQ3LzE3Njc3NzIxMDM1OTgucGRmIiwiaWF0IjoxNzY3NzcyMTAzLCJleHAiOjE3Njc3NzU3MDN9.qkGcItaSAZQGCoX6MmCVZdII3j9KwyDht6KJIH5OJz0"
-[00:03:01.400] Server  LOG     [v0] Found 0 "PDF form fields with positions"
-[00:03:01.401] Server  LOG     [v0] PDF has interactive form fields: false
-[00:03:01.402] Server  LOG     [v0] No text provided - extracting from PDF URL using unpdf...
-[00:03:01.403] Server  LOG     [v0] PDF URL: "https://xqyecqkrtaydoesxnvlw.supabase.co/storage/v1/object/sign/tender-documents/temp/ad699139-82ac-41b4-b9f2-442842048f47/1767772103598.pdf?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hY2JjOTkxMy00Y2FkLTQ5Y2ItYTQ0Mi0xMTY5YzFjZDZhZjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0ZW5kZXItZG9jdW1lbnRzL3RlbXAvYWQ2OTkxMzktODJhYy00MWI0LWI5ZjItNDQyODQyMDQ4ZjQ3LzE3Njc3NzIxMDM1OTgucGRmIiwiaWF0IjoxNzY3NzcyMTAzLCJleHAiOjE3Njc3NzU3MDN9.qkGcItaSAZQGCoX6MmCVZdII3j9KwyDht6KJIH5OJz0"
-[00:03:01.404] Server  LOG     [v0] Step 1: Fetching PDF from blob storage...
-[00:03:01.618] Server  LOG     [v0] PDF fetched successfully, size: "852.82" "KB"
-[00:03:01.619] Server  LOG     [v0] Step 2: Extracting text using unpdf library...
-[00:03:04.815] Server  LOG     [v0] ✓ Text extracted successfully using unpdf
-[00:03:04.816] Server  LOG     [v0] Total pages: 52
-[00:03:04.816] Server  LOG     [v0] Extracted text length: 85160 "characters"
-[00:03:04.818] Server  LOG     [v0] First 500 characters: "DEPARTMENT OF WATER AND SANITATION REPUBLIC OF SOUTH AFRICA DUE AT 11:00 ON CLOSING DATE: 22 JANUARY 2026 BID: WTE-0448 CS SUPPLY AND DELIVERY OF CONCRETE CULVERTS AND STORM WATER DRAINAGE PIPES FOR RIVIERSONDEREND GWS AT THEEWATERSKLOOF DAM: CONSTRUCTION SOUTH IN THE WESTERN CAPE FOR DWS CONSTRUCTION SOUTH. SUBMIT BID DOCUMENTS TO: POSTAL ADDRESS: OR TO BE DEPOSITED IN: DIRECTOR-GENERAL: THE BID BOX AT THE ENTRANCE WATER AND SANITATION OF 4-6 ALKMAAR STREET PRIVATE BAG X3042 DALJOSAPHAT PAARL P"
-[00:03:04.822] Server  LOG     [v0] Word count: 13688
-[00:03:04.822] Server  LOG     [v0] Average words per page: 263
-[00:03:04.823] Server  LOG     [v0] Using text for analysis, length: 85160 "characters"
-[00:03:04.824] Server  LOG     [v0] Using ORIGINAL analysis prompt
-[00:03:04.825] Server  LOG     [v0] Step 3: Calling configured AI provider via wrapper for analysis...
-[00:03:04.828] Server  LOG     [v0] Provider: Gemini (Model: gemini-1.5-flash-latest, API: v1beta)
-[00:03:04.829] Server  LOG     [v0] Gemini URL: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=KEY_HIDDEN
-[00:03:04.830] Server  LOG     [v0] Key format check: Starts with AIza: true
-[00:03:05.814] Server  ERROR   [v0] Gemini Error Body: {
-  "error": {
-    "code": 404,
-    "message": "models/gemini-1.5-flash-latest is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
-    "status": "NOT_FOUND"
-  }
-}
-
-[00:03:05.815] Server  ERROR   [v0] AI GENERATION ERROR
-[00:03:05.816] Server  ERROR   [v0] Error message: "Gemini API request failed: 404 {\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/gemini-1.5-flash-latest is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.\",\n    \"status\": \"NOT_FOUND\"\n  }\n}\n"
-[00:03:05.817] Server  ERROR   [v0] Error stack: "Error: Gemini API request failed: 404 {\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/gemini-1.5-flash-latest is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.\",\n    \"status\": \"NOT_FOUND\"\n  }\n}\n\n    at generateTextViaProvider (C:\\Repo\\LogsOfN\\v0-bid-mate-ai\\.next\\dev\\server\\chunks\\[root-of-the-server]__cedaba73._.js:131:19)\n    at process.processTicksAndRejections (node:internal/pr"
-[00:03:06.041] Browser LOG     [v0] Analyze API response status: 500
-[00:03:06.041] Browser ERROR   [v0] ❌ Analysis API error:
-[00:03:06.041] Browser ERROR   [v0] Status: 500
-[00:03:06.041] Browser ERROR   [v0] Error: {"details":"Gemini API request failed: 404 {\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/gemini-1.5-flash-latest is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.\",\n    \"status\": \"NOT_FOUND\"\n  }\n}\n","error":"AI generation failed","errorType":"ai_generation_error"}
-[00:03:06.041] Browser ERROR   [v0] ================================================
-[00:03:06.041] Browser ERROR   [v0] ❌ UPLOAD PROCESS FAILED
-[00:03:06.041] Browser ERROR   [v0] ================================================
-[00:03:06.041] Browser ERROR   [v0] Error: {}
-[00:03:06.041] Browser ERROR   [v0] Error message: AI generation failed
-[00:03:06.041] Browser ERROR   [v0] Error stack: Error: AI generation failed
-    at handleFileUpload (http://localhost:3000/_next/static/chunks/_deb733f5._.js:567:23)
-[00:41:15.082] Server  LOG      ✓ Compiled in 6s
-[00:41:57.684] Server  LOG      ✓ Compiled in 2.6s
-[00:42:49.181] Server  LOG      ✓ Compiled in 3.4s
-[00:42:54.356] Browser ERROR   ./app/dashboard/tenders/new/page.tsx:289:3
-Parsing ecmascript source code failed
-  287 |   )
-  288 | }
-> 289 | ```
-      |   ^
-> 290 | 
-      | ^
-
-Unterminated template
-
-Import traces:
-  Client Component Browser:
-    ./app/dashboard/tenders/new/page.tsx [Client Component Browser]
-    ./app/dashboard/tenders/new/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./app/dashboard/tenders/new/page.tsx [Client Component SSR]
-    ./app/dashboard/tenders/new/page.tsx [Server Component]
-[00:43:21.062] Server  LOG      ✓ Compiled in 3.5s
-[00:49:09.262] Browser ERROR   A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+[00:00:03.299] Server  WARN     ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+[00:00:04.923] Server  LOG      ✓ Ready in 4.1s
+[00:00:46.417] Server  LOG      ○ Compiling / ...
+[00:00:58.847] Server  WARN     ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+[00:01:00.012] Browser LOG     [v0] Theme loaded from storage: null
+[00:01:00.949] Browser LOG     [v0] Applying theme: dark
+[00:01:58.918] Browser ERROR   A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
 
 - A server/client branch `if (typeof window !== 'undefined')`.
 - Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
@@ -124,89 +39,16 @@ It can also happen if the client has a browser extension installed which messes 
                           <head>
                           <body
                             className="font-sans inter_b2991b2-module__9mH_6q__variable poppins_e1f1a0b-module__ez4LmG..."
--                           data-new-gr-c-s-check-loaded="14.1267.0"
+-                           data-new-gr-c-s-check-loaded="14.1268.0"
 -                           data-gr-ext-installed=""
                           >
                   ...
 
-[00:49:09.263] Browser LOG     [v0] Theme loaded from storage: null
-[00:49:09.263] Browser LOG     [v0] Applying theme: dark
-[00:49:14.126] Browser LOG     [v0] ================================================
-[00:49:14.127] Browser LOG     [v0] STARTING CUSTOM TENDER UPLOAD PROCESS
-[00:49:14.127] Browser LOG     [v0] ================================================
-[00:49:14.127] Browser LOG     [v0] File name: WTE-0448 CS - Concrete Culverts and Storm Water Pipes for Theewaterskloof Dam.pdf
-[00:49:14.127] Browser LOG     [v0] File size: 0.83 MB
-[00:49:14.127] Browser LOG     [v0] Step 1: Uploading PDF to Supabase storage...
-[00:49:18.303] Browser LOG     [v0] ✓ File uploaded successfully
-[00:49:18.304] Browser LOG     [v0] URL: https://xqyecqkrtaydoesxnvlw.supabase.co/storage/v1/object/sign/tender-documents/temp/ad699139-82ac-41b4-b9f2-442842048f47/1767774896122.pdf?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hY2JjOTkxMy00Y2FkLTQ5Y2ItYTQ0Mi0xMTY5YzFjZDZhZjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0ZW5kZXItZG9jdW1lbnRzL3RlbXAvYWQ2OTkxMzktODJhYy00MWI0LWI5ZjItNDQyODQyMDQ4ZjQ3LzE3Njc3NzQ4OTYxMjIucGRmIiwiaWF0IjoxNzY3Nzc0ODk1LCJleHAiOjE3Njc3Nzg0OTV9.-bn4BqLBhQy8VqkeKPWB9OX0hBYQ3rckzBUVx_GRbrY
-[00:49:18.304] Browser LOG     [v0] Step 2: Sending PDF to AI for direct analysis...
-[00:49:18.304] Browser LOG     [v0] Requesting analysis via API...
-[00:49:19.029] Server  LOG     [v0] ========================================
-[00:49:19.031] Server  LOG     [v0] TENDER ANALYSIS REQUEST
-[00:49:19.031] Server  LOG     [v0] ========================================
-[00:49:19.032] Server  LOG     [v0] Document text length: 0 "characters"
-[00:49:19.033] Server  LOG     [v0] Document URL provided: "YES"
-[00:49:19.033] Server  LOG     [v0] PDF fields provided: 0
-[00:49:19.034] Server  LOG     [v0] Extracting PDF form fields from: "https://xqyecqkrtaydoesxnvlw.supabase.co/storage/v1/object/sign/tender-documents/temp/ad699139-82ac-41b4-b9f2-442842048f47/1767774896122.pdf?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hY2JjOTkxMy00Y2FkLTQ5Y2ItYTQ0Mi0xMTY5YzFjZDZhZjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0ZW5kZXItZG9jdW1lbnRzL3RlbXAvYWQ2OTkxMzktODJhYy00MWI0LWI5ZjItNDQyODQyMDQ4ZjQ3LzE3Njc3NzQ4OTYxMjIucGRmIiwiaWF0IjoxNzY3Nzc0ODk1LCJleHAiOjE3Njc3Nzg0OTV9.-bn4BqLBhQy8VqkeKPWB9OX0hBYQ3rckzBUVx_GRbrY"
-[00:49:21.617] Server  LOG     [v0] Found 0 "PDF form fields with positions"
-[00:49:21.621] Server  LOG     [v0] PDF has interactive form fields: false
-[00:49:21.622] Server  LOG     [v0] No text provided - extracting from PDF URL using unpdf...
-[00:49:21.623] Server  LOG     [v0] PDF URL: "https://xqyecqkrtaydoesxnvlw.supabase.co/storage/v1/object/sign/tender-documents/temp/ad699139-82ac-41b4-b9f2-442842048f47/1767774896122.pdf?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hY2JjOTkxMy00Y2FkLTQ5Y2ItYTQ0Mi0xMTY5YzFjZDZhZjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0ZW5kZXItZG9jdW1lbnRzL3RlbXAvYWQ2OTkxMzktODJhYy00MWI0LWI5ZjItNDQyODQyMDQ4ZjQ3LzE3Njc3NzQ4OTYxMjIucGRmIiwiaWF0IjoxNzY3Nzc0ODk1LCJleHAiOjE3Njc3Nzg0OTV9.-bn4BqLBhQy8VqkeKPWB9OX0hBYQ3rckzBUVx_GRbrY"
-[00:49:21.626] Server  LOG     [v0] Step 1: Fetching PDF from blob storage...
-[00:49:22.642] Server  LOG     [v0] PDF fetched successfully, size: "852.82" "KB"
-[00:49:22.642] Server  LOG     [v0] Step 2: Extracting text using unpdf library...
-[00:49:24.996] Server  LOG     [v0] ✓ Text extracted successfully using unpdf
-[00:49:24.997] Server  LOG     [v0] Total pages: 52
-[00:49:24.998] Server  LOG     [v0] Extracted text length: 85160 "characters"
-[00:49:24.999] Server  LOG     [v0] First 500 characters: "DEPARTMENT OF WATER AND SANITATION REPUBLIC OF SOUTH AFRICA DUE AT 11:00 ON CLOSING DATE: 22 JANUARY 2026 BID: WTE-0448 CS SUPPLY AND DELIVERY OF CONCRETE CULVERTS AND STORM WATER DRAINAGE PIPES FOR RIVIERSONDEREND GWS AT THEEWATERSKLOOF DAM: CONSTRUCTION SOUTH IN THE WESTERN CAPE FOR DWS CONSTRUCTION SOUTH. SUBMIT BID DOCUMENTS TO: POSTAL ADDRESS: OR TO BE DEPOSITED IN: DIRECTOR-GENERAL: THE BID BOX AT THE ENTRANCE WATER AND SANITATION OF 4-6 ALKMAAR STREET PRIVATE BAG X3042 DALJOSAPHAT PAARL P"
-[00:49:25.009] Server  LOG     [v0] Word count: 13688
-[00:49:25.010] Server  LOG     [v0] Average words per page: 263
-[00:49:25.010] Server  LOG     [v0] Using text for analysis, length: 85160 "characters"
-[00:49:25.011] Server  LOG     [v0] Using ORIGINAL analysis prompt
-[00:49:25.012] Server  LOG     [v0] Step 3: Calling configured AI provider via wrapper for analysis...
-[00:49:25.013] Server  LOG     [v0] Provider: Gemini (Model: gemini-1.5-flash, API: v1) - attempt 1/3
-[00:49:25.874] Server  ERROR   [v0] Gemini Error (404): {
-  "error": {
-    "code": 404,
-    "message": "models/gemini-1.5-flash is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
-    "status": "NOT_FOUND"
-  }
-}
-
-[00:49:25.875] Server  ERROR   [v0] Provider attempt 1/3 failed: "Gemini API request failed: 404 {\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/gemini-1.5-flash is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.\",\n    \"status\": \"NOT_FOUND\"\n  }\n}\n"
-[00:49:25.876] Server  LOG     [v0] Retrying in 2000ms...
-[00:49:27.881] Server  LOG     [v0] Provider: Gemini (Model: gemini-1.5-flash, API: v1) - attempt 2/3
-[00:49:28.517] Server  ERROR   [v0] Gemini Error (404): {
-  "error": {
-    "code": 404,
-    "message": "models/gemini-1.5-flash is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
-    "status": "NOT_FOUND"
-  }
-}
-
-[00:49:28.518] Server  ERROR   [v0] Provider attempt 2/3 failed: "Gemini API request failed: 404 {\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/gemini-1.5-flash is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.\",\n    \"status\": \"NOT_FOUND\"\n  }\n}\n"
-[00:49:28.518] Server  LOG     [v0] Retrying in 4000ms...
-[00:49:32.529] Server  LOG     [v0] Provider: Gemini (Model: gemini-1.5-flash, API: v1) - attempt 3/3
-[00:49:33.159] Server  ERROR   [v0] Gemini Error (404): {
-  "error": {
-    "code": 404,
-    "message": "models/gemini-1.5-flash is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
-    "status": "NOT_FOUND"
-  }
-}
-
-[00:49:33.159] Server  ERROR   [v0] Provider attempt 3/3 failed: "Gemini API request failed: 404 {\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/gemini-1.5-flash is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.\",\n    \"status\": \"NOT_FOUND\"\n  }\n}\n"
-[00:49:33.160] Server  ERROR   [v0] AI GENERATION ERROR
-[00:49:33.161] Server  ERROR   [v0] Error message: "All AI providers failed after 3 attempts. Last error: Gemini API request failed: 404 {\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/gemini-1.5-flash is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.\",\n    \"status\": \"NOT_FOUND\"\n  }\n}\n"
-[00:49:33.161] Server  ERROR   [v0] Error stack: "ProviderError: All AI providers failed after 3 attempts. Last error: Gemini API request failed: 404 {\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/gemini-1.5-flash is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.\",\n    \"status\": \"NOT_FOUND\"\n  }\n}\n\n    at generateTextViaProvider (C:\\Repo\\LogsOfN\\v0-bid-mate-ai\\.next\\dev\\server\\chunks\\[root-of-the-server]__cedaba73._.js:197:11)\n    at "
-[00:49:33.278] Browser LOG     [v0] Analyze API response status: 500
-[00:49:33.278] Browser ERROR   [v0] ❌ Analysis API error:
-[00:49:33.278] Browser ERROR   [v0] Status: 500
-[00:49:33.278] Browser ERROR   [v0] Error: {"details":"All AI providers failed after 3 attempts. Last error: Gemini API request failed: 404 {\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"models/gemini-1.5-flash is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.\",\n    \"status\": \"NOT_FOUND\"\n  }\n}\n","error":"AI generation failed","errorType":"ai_generation_error"}
-[00:49:33.278] Browser ERROR   [v0] ================================================
-[00:49:33.278] Browser ERROR   [v0] ❌ UPLOAD PROCESS FAILED
-[00:49:33.278] Browser ERROR   [v0] ================================================
-[00:49:33.278] Browser ERROR   [v0] Error: {}
-[00:49:33.278] Browser ERROR   [v0] Error message: AI generation failed
-[00:49:33.278] Browser ERROR   [v0] Error stack: Error: AI generation failed
-    at handleFileUpload (http://localhost:3000/_next/static/chunks/_bc880bb0._.js:1233:23)
+[00:01:59.059] Browser LOG     [v0] Theme loaded from storage: null
+[00:02:02.947] Browser LOG     [v0] Applying theme: dark
+[00:02:55.402] Server  LOG      ○ Compiling /api/test/orchestrator ...
+[00:03:08.003] Server  LOG     [v0] Test Orchestrator: running smoke test
+[00:03:08.007] Server  LOG     [v0] Orchestrator: Processing scraped tender: "Test Tender for Orchestrator"
+[00:03:08.008] Server  LOG     [v0] Orchestrator: Step 1 - Validating tender data...
+[00:03:08.017] Server  LOG     [v0] Orchestrator: Validation result: {}
+[00:03:08.020] Server  LOG     [v0] Orchestrator: Processing tender - Score: 14

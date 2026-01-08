@@ -49,7 +49,7 @@ const stripe = new Proxy({}, {
                 throw new Error("STRIPE_SECRET_KEY is not set in environment variables");
             }
             stripeInstance = new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$stripe$40$19$2e$1$2e$0_$40$types$2b$node$40$22$2e$0$2e$0$2f$node_modules$2f$stripe$2f$esm$2f$stripe$2e$esm$2e$node$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"](process.env.STRIPE_SECRET_KEY, {
-                apiVersion: "2024-12-18.acacia",
+                apiVersion: "2025-09-30.clover",
                 typescript: true
             });
         }

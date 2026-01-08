@@ -193,7 +193,7 @@ __turbopack_context__.s([
     "reducer",
     ()=>reducer,
     "toast",
-    ()=>toast,
+    ()=>toastWithHelpers,
     "useToast",
     ()=>useToast
 ]);
@@ -334,13 +334,25 @@ function useToast() {
     ]);
     return {
         ...state,
-        toast,
+        toast: toastWithHelpers,
         dismiss: (toastId)=>dispatch({
                 type: 'DISMISS_TOAST',
                 toastId
             })
     };
 }
+;
+const toastWithHelpers = toast;
+toastWithHelpers.success = (title, props)=>toast({
+        title,
+        ...props ?? {},
+        variant: 'default'
+    });
+toastWithHelpers.error = (title, props)=>toast({
+        title,
+        ...props ?? {},
+        variant: 'destructive'
+    });
 ;
 }),
 "[project]/app/dashboard/tenders/page.tsx [app-ssr] (ecmascript)", ((__turbopack_context__) => {

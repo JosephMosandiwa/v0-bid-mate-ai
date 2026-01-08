@@ -222,6 +222,8 @@ function useStrategistChat(options) {
             }
         }["useStrategistChat.useAIChat[chat]"]
     });
+    // Return a relaxed-any shape to satisfy various UI consumers expecting
+    // `messages`, `input`, `handleInputChange`, `handleSubmit`, `isLoading`, `setInput`, etc.
     return {
         ...chat,
         conversationId
