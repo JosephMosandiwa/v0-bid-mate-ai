@@ -13,7 +13,8 @@
     "start": "next start",
     "test:orchestrator": "node scripts/test-orchestrator.mjs",
     "test:e2e": "pnpm exec ts-node --esm scripts/test-e2e.ts",
-    "test:supabase": "pnpm exec ts-node --esm scripts/test-supabase-persistence.ts"
+    "test:supabase": "pnpm exec ts-node --esm scripts/test-supabase-persistence.ts",
+    "test:api": "pnpm exec ts-node --esm scripts/test-api-integration.ts"
   },
   "dependencies": {
     "@ai-sdk/deepseek": "1.0.23",
