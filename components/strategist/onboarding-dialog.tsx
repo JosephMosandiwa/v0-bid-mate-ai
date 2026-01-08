@@ -53,7 +53,9 @@ export function StrategistOnboardingDialog({ open, onOpenChange }: StrategistOnb
   const handleComplete = async () => {
     setSaving(true)
     try {
-      await updatePreferences(formData)
+      // formData may contain raw strings; cast to any for now to satisfy the
+      // preferences updater until stricter typing/refinement is implemented.
+      await updatePreferences(formData as any)
       await completeOnboarding()
       onOpenChange(false)
     } catch (error) {

@@ -54,10 +54,12 @@ function findBestFieldMatch(
   return bestMatch && bestMatch.confidence >= 0.3 ? bestMatch : null
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, context: any) {
   try {
-    const { id } = params
+    const paramsObj = context?.params ? await context.params : context?.params ?? context
+    const { id } = paramsObj as { id?: string }
     const { documentId } = await request.json()
+
     const supabase = await createClient()
 
     console.log("[v0] ========================================")
@@ -135,7 +137,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     console.log("[v0] PDF FORM ANALYSIS")
     console.log("[v0] ========================================")
     console.log("[v0] PDF has", fields.length, "form fields")
-    const pdfFieldNames = fields.map((f) => f.getName())
+    const pdfFieldNames = fields.map((f: any) => f.getName())
     console.log("[v0] PDF field names:", pdfFieldNames)
     console.log("[v0] ========================================")
 
@@ -270,7 +272,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     const filledPdfBytes = await pdfDoc.save()
 
-    return new Response(filledPdfBytes, {
+    return new Response(filledPdfBytes as unknown as BodyInit, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="filled_${docData.file_name}"`,

@@ -4,66 +4,65 @@ import { setScraping, setScrapingProgress, pollProgress, loadData } from "./util
 
 const AdminScrapingPage = () => {
   const handleScrapeAll = async () => {
-    setScraping(-1)
-    setScrapingProgress({ currentSource: "Initializing...", completedSources: 0, totalSources: 0, totalTenders: 0 })
+    (setScraping as any)(-1)
+    (setScrapingProgress as any)({ currentSource: "Initializing...", completedSources: 0, totalSources: 0, totalTenders: 0 })
 
+    const gConsole: any = (globalThis as any).console
     try {
-      console.log("[v0] Starting scrape for all sources")
+      globalThis.console.log("[v0] Starting scrape for all sources")
 
-      const response = await fetch("/api/scraping/trigger", {
+      const response: Response = await (fetch as any)("/api/scraping/trigger", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ scrapeAll: true }),
       })
+      const responseAny: any = response
 
-      console.log("[v0] Scrape all response status:", response.status)
+      globalThis.console.log("[v0] Scrape all response status:", responseAny.status)
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error("[v0] Scrape all error response:", errorText)
-        throw new Error(`Server returned ${response.status}: ${errorText}`)
+
+      if (!responseAny.ok) {
+        const errorText: string = await responseAny.text()
+        globalThis.console.error("[v0] Scrape all error response:", errorText)
+        throw new Error(`Server returned ${responseAny.status}: ${errorText}`)
       }
 
-      const result = await response.json()
-      console.log("[v0] Scrape all response data:", result)
+      const result: any = await responseAny.json()
+      globalThis.console.log("[v0] Scrape all response data:", result)
 
       if (result.progressId) {
-        console.log("[v0] Starting progress polling for ID:", result.progressId)
-        pollProgress(result.progressId)
+        gConsole.log("[v0] Starting progress polling for ID:", result.progressId)
+        (pollProgress as any)(result.progressId)
         return // Don't show completion toast yet, wait for polling to finish
       }
 
-      const successCount = result.successfulSources || 0
-      const totalCount = result.sourcesScraped || 0
-      const tendersFound = result.totalScraped || 0
+      const successCount = Number(result.successfulSources || 0)
+      const totalCount = Number(result.sourcesScraped || 0)
+      const tendersFound = Number(result.totalScraped || 0)
 
-      console.log("[v0] Scraping completed:", { successCount, totalCount, tendersFound })
+      globalThis.console.log(`[v0] Scraping completed: success=${successCount} total=${totalCount} tenders=${tendersFound}`)
 
-      const message =
+      const message: string =
         tendersFound > 0
           ? `Found ${tendersFound} tender${tendersFound !== 1 ? "s" : ""} from ${successCount}/${totalCount} sources`
           : `Scraped ${totalCount} sources but found no tenders`
 
-      toast({
-        title: tendersFound > 0 ? "Scraping Complete" : "No Tenders Found",
-        description: message,
-        variant: tendersFound > 0 ? "default" : "destructive",
-      })
+      if (tendersFound > 0) {
+        (toast as any)("Scraping Complete: " + message)
+      } else {
+        (toast as any)("No Tenders Found: " + message)
+      }
 
-      setScrapingProgress(null)
-      setScraping(null)
+      (setScrapingProgress as any)(null)
+      (setScraping as any)(null)
       loadData()
     } catch (error) {
-      console.error("[v0] Scraping all error:", error)
-      toast({
-        title: "Scraping Error",
-        description: error instanceof Error ? error.message : "Failed to scrape all sources",
-        variant: "destructive",
-      })
-      setScrapingProgress(null)
-      setScraping(null)
+      gConsole.error("[v0] Scraping all error:", error)
+      (toast as any)("Scraping Error: " + (error instanceof Error ? error.message : "Failed to scrape all sources"))
+      (setScrapingProgress as any)(null)
+      (setScraping as any)(null)
     }
   }
 

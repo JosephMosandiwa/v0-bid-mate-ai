@@ -37,7 +37,7 @@ export function AdminLoginForm() {
         <CardDescription>Enter your credentials to access the admin panel</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={handleSubmit} className="space-y-4">
+        <form action={handleSubmit as any} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input

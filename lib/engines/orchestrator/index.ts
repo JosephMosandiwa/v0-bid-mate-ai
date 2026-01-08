@@ -7,7 +7,9 @@ import { TenderService, validateTender, normalizeTenderData } from "../tenders"
 import { OpportunityService, CompetitivenessService, StrategistService } from "../strategist"
 import type { ScrapedTender } from "../../scrapers/base-scraper"
 import type { ParsedDocument } from "../documind/types"
-import type { TenderData, ValidationResult } from "../tenders/types"
+// Tender types: use existing TenderValidationResult from tenders; keep TenderData as any for now
+type TenderData = any
+import type { TenderValidationResult as ValidationResult } from "../tenders/types"
 
 export interface EngineOrchestrator {
   processScrapedTender(tender: ScrapedTender): Promise<ProcessedTenderResult>
@@ -48,17 +50,7 @@ export interface StrategyEnrichmentResult {
  * Orchestrates all engines to work together seamlessly
  */
 export class EngineOrchestrator {
-  private tenderService: TenderService
-  private opportunityService: OpportunityService
-  private competitivenessService: CompetitivenessService
-  private strategistService: StrategistService
-
-  constructor() {
-    this.tenderService = new TenderService()
-    this.opportunityService = new OpportunityService()
-    this.competitivenessService = new CompetitivenessService()
-    this.strategistService = new StrategistService()
-  }
+  // Services expose static methods; call them directly (no instances required)
 
   /**
    * Process a scraped tender through all engines
@@ -73,13 +65,13 @@ export class EngineOrchestrator {
       const validation = validateTender(tender)
 
       console.log("[v0] Orchestrator: Validation result:", {
-        completeness: validation.completeness,
-        grade: validation.grade,
-        qualityScore: validation.quality_score,
+        score: validation.score,
+        isValid: validation.isValid,
+        errors: validation.errors?.length || 0,
       })
 
       console.log(
-        `[v0] Orchestrator: Processing tender from official API - Grade: ${validation.grade}, Completeness: ${validation.completeness * 100}%`,
+        `[v0] Orchestrator: Processing tender - Score: ${validation.score}`,
       )
 
       const normalizedTender = normalizeTenderData(tender)
@@ -117,9 +109,9 @@ export class EngineOrchestrator {
         console.log("[v0] Orchestrator: Step 3 - Analyzing opportunities for user...")
 
         try {
-          const opportunity = await this.opportunityService.createOpportunity({
+          const opportunity = await OpportunityService.createOpportunity({
             userId,
-            tenderId: tender.id || "",
+            tenderId: tender.scraped_tender_id || tender.tender_reference || "",
             tenderType: "scraped",
             tenderTitle: normalizedTender.title,
             tenderData: normalizedTender,
@@ -179,7 +171,7 @@ export class EngineOrchestrator {
 
       // Step 2: Tenders Engine - Extract tender data from document
       console.log("[v0] Orchestrator: Step 2 - Extracting tender data from document...")
-      const extractedTender = await this.tenderService.extractTenderFromDocument(document)
+      const extractedTender = await TenderService.extractTenderFromDocument(document)
 
       if (!extractedTender) {
         console.warn("[v0] Orchestrator: Could not extract tender data from document")
@@ -196,7 +188,7 @@ export class EngineOrchestrator {
       const normalizedTender = normalizeTenderData(extractedTender)
 
       console.log(
-        `[v0] Orchestrator: Tender extracted - Grade: ${validation.grade}, Completeness: ${validation.completeness * 100}%`,
+        `[v0] Orchestrator: Tender extracted - Score: ${validation.score}`,
       )
 
       return {
@@ -228,7 +220,7 @@ export class EngineOrchestrator {
 
       // Step 1: Calculate competitiveness score
       console.log("[v0] Orchestrator: Step 1 - Calculating competitiveness...")
-      const competitiveness = await this.competitivenessService.calculateScore({
+      const competitiveness = await CompetitivenessService.calculateScore({
         userId,
         tenderId,
         tenderType,
@@ -236,7 +228,7 @@ export class EngineOrchestrator {
 
       // Step 2: Generate recommendations
       console.log("[v0] Orchestrator: Step 2 - Generating strategic recommendations...")
-      const recommendations = await this.strategistService.generateRecommendations({
+      const recommendations = await StrategistService.generateRecommendations({
         userId,
         tenderId,
         tenderType,
@@ -245,7 +237,7 @@ export class EngineOrchestrator {
 
       // Step 3: Find related opportunities
       console.log("[v0] Orchestrator: Step 3 - Finding related opportunities...")
-      const opportunities = await this.opportunityService.findSimilar({
+      const opportunities = await OpportunityService.findSimilar({
         userId,
         tenderId,
         tenderType,

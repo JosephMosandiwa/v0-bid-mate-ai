@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server"
 import type { NextRequest } from "next/server"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, context: any) {
   try {
-    const { id } = params
+    const paramsObj = context?.params ? await context.params : context?.params ?? context
+    const { id } = paramsObj as { id?: string }
     const supabase = await createClient()
 
     const {
@@ -39,9 +40,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, context: any) {
   try {
-    const { id } = params
+    const paramsObj = context?.params ? await context.params : context?.params ?? context
+    const { id } = paramsObj as { id?: string }
     const { responses } = await request.json()
     const supabase = await createClient()
 

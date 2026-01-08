@@ -150,25 +150,79 @@ export class TenderOrchestrator {
             { name: 'strategy', fn: () => this.generateStrategy(analysisData) },
             { name: 'readiness', fn: () => this.assessReadiness() },
         ]
+        try {
+            // Run all engines in parallel and collect EngineResult objects
+            const results: EngineResult[] = await Promise.all(
+                engines.map(async (engine) => {
+                    return await this.runEngine(engine.name, engine.fn)
+                })
+            )
 
-        // Run all engines in parallel
-        const results = await Promise.allSettled(
-            engines.map(async (engine) => {
-                return await this.runEngine(engine.name, engine.fn)
+            // Classify results
+            const succeeded = results.filter(r => r.status === 'completed')
+            const failed = results.filter(r => r.status === 'failed')
+
+            // Ensure engines map in DB reflects final statuses/durations
+            const { data: current } = await this.supabase
+                .from('tender_orchestration_progress')
+                .select('engines, errors')
+                .eq('id', this.orchestrationId)
+                .single()
+
+            const enginesObj = current?.engines || {}
+            results.forEach(r => {
+                enginesObj[r.engine] = {
+                    status: r.status,
+                    progress: r.status === 'completed' ? 100 : 0,
+                    duration: r.duration
+                }
             })
-        )
 
-        // Update final status
-        const allSucceeded = results.every(r => r.status === 'fulfilled')
-        const someSucceeded = results.some(r => r.status === 'fulfilled')
+            const newErrors: string[] = failed.map(f => `${f.engine}: ${f.error || 'unknown'}`)
 
-        await this.updatePhaseProgress(2, true)
-        await this.updateOverallProgress(
-            allSucceeded ? 'completed' : someSucceeded ? 'partial_failure' : 'failed',
-            100
-        )
+            await this.supabase
+                .from('tender_orchestration_progress')
+                .update({
+                    engines: enginesObj,
+                    phase2_completed: failed.length === 0,
+                    phase2_results: results,
+                    errors: (current?.errors || []).concat(newErrors),
+                    overall_progress: 100,
+                    status: failed.length === 0 ? 'completed' : succeeded.length > 0 ? 'partial_failure' : 'failed',
+                    updated_at: new Date().toISOString(),
+                    completed_at: new Date().toISOString()
+                })
+                .eq('id', this.orchestrationId)
 
-        console.log(`[Orchestrator] Phase 2 complete - final status: ${allSucceeded ? 'completed' : 'partial'}`)
+            console.log(`[Orchestrator] Phase 2 complete - succeeded=${succeeded.length} failed=${failed.length}`)
+        } catch (error: any) {
+            console.error(`[Orchestrator] Phase 2 background execution error:`, error)
+
+            // Attempt to persist the fatal error to DB
+            try {
+                const { data: current } = await this.supabase
+                    .from('tender_orchestration_progress')
+                    .select('errors')
+                    .eq('id', this.orchestrationId)
+                    .single()
+
+                const updatedErrors = (current?.errors || []).concat([error?.message || String(error)])
+
+                await this.supabase
+                    .from('tender_orchestration_progress')
+                    .update({
+                        status: 'failed',
+                        errors: updatedErrors,
+                        overall_progress: 100,
+                        phase2_completed: false,
+                        updated_at: new Date().toISOString(),
+                        completed_at: new Date().toISOString()
+                    })
+                    .eq('id', this.orchestrationId)
+            } catch (persistErr) {
+                console.error('[Orchestrator] Failed to persist Phase 2 error:', persistErr)
+            }
+        }
     }
 
     /**

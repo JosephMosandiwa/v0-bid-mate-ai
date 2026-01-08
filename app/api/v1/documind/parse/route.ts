@@ -52,13 +52,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get document data
-    let documentData: ArrayBuffer
+    let documentData: ArrayBuffer | SharedArrayBuffer
     let mimeType: string
     let filename: string
 
     if (file) {
       documentData = await file.arrayBuffer()
-      mimeType = file.type || detectMimeType(Buffer.from(documentData)) || "application/pdf"
+      mimeType = file.type || detectMimeType(Buffer.from(new Uint8Array(documentData))) || "application/pdf"
       filename = file.name
     } else if (url) {
       // Fetch from URL
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file
-    const validation = validateFile(mimeType, documentData.byteLength)
+    const validation = validateFile(mimeType, (documentData as ArrayBuffer).byteLength)
     if (!validation.valid) {
       return NextResponse.json<ApiResponse<null>>(
         {
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for duplicate by content hash
-    const contentHash = generateContentHash(Buffer.from(documentData).toString("utf-8").substring(0, 10000))
+    const contentHash = generateContentHash(Buffer.from(new Uint8Array(documentData)).toString("utf-8").substring(0, 10000))
     const existingDocId = await getDocumentIdByHash(contentHash)
 
     if (existingDocId) {

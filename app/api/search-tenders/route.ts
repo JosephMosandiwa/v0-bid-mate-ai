@@ -50,8 +50,8 @@ export async function POST(request: Request) {
       if (swaggerSpec && swaggerSpec.paths) {
         const baseUrl = swaggerSpec.servers?.[0]?.url || "https://ocds-api.etenders.gov.za"
 
-        for (const [path, methods] of Object.entries(swaggerSpec.paths)) {
-          if (methods.get) {
+        for (const [path, methods] of Object.entries(swaggerSpec.paths as any)) {
+          if ((methods as any).get) {
             const fullUrl = `${baseUrl}${path}?dateFrom=${dateFrom}&dateTo=${dateTo}&limit=100`
             possibleEndpoints.push(fullUrl)
             console.log("[v0] Found endpoint from swagger:", fullUrl)

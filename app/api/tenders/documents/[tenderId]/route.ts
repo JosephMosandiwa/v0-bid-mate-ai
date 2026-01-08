@@ -3,9 +3,10 @@ import type { NextRequest } from "next/server"
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-export async function GET(request: NextRequest, { params }: { params: { tenderId: string } }) {
+export async function GET(request: NextRequest, context: any) {
   try {
-    const { tenderId } = params
+    const paramsObj = context?.params ? await context.params : context?.params ?? context
+    const { tenderId } = paramsObj as { tenderId?: string }
 
     console.log("[v0] Fetching documents for tender:", tenderId)
 

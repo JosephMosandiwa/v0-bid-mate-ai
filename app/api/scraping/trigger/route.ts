@@ -70,16 +70,16 @@ export async function POST(request: NextRequest) {
 
           // Update progress as completed
           if (progressId) {
-            supabase
+            (supabase
               .from("scraping_progress")
               .update({
                 status: "completed",
                 completed_at: new Date().toISOString(),
                 total_tenders: result.totalScraped || 0,
               })
-              .eq("id", progressId)
+              .eq("id", progressId) as any)
               .then(() => console.log("[v0] Progress marked as completed"))
-              .catch((err) => console.error("[v0] Error updating progress:", err))
+              .catch((err: any) => console.error("[v0] Error updating progress:", err))
           }
         })
         .catch((error) => {
@@ -87,16 +87,16 @@ export async function POST(request: NextRequest) {
 
           // Mark progress as failed
           if (progressId) {
-            supabase
+            (supabase
               .from("scraping_progress")
               .update({
                 status: "failed",
                 completed_at: new Date().toISOString(),
                 error_message: error instanceof Error ? error.message : "Unknown error",
               })
-              .eq("id", progressId)
+              .eq("id", progressId) as any)
               .then(() => console.log("[v0] Progress marked as failed"))
-              .catch((err) => console.error("[v0] Error updating failed progress:", err))
+              .catch((err: any) => console.error("[v0] Error updating failed progress:", err))
           }
         })
 

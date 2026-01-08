@@ -100,7 +100,7 @@ export function AdminNav() {
               <p className="text-xs text-muted-foreground capitalize">{admin.role}</p>
             </div>
           </div>
-          <form action={logoutAdmin}>
+          <form action={logoutAdmin as any}>
             <Button variant="outline" className="w-full bg-transparent" type="submit" size="sm">
               <LogOut className="h-4 w-4 mr-2" />
               Logout

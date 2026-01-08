@@ -265,7 +265,7 @@ export function StrategistPageClient({ showOnboarding }: StrategistPageClientPro
                 /* Chat Messages */
                 <ScrollArea className="flex-1 p-4">
                   <div className="max-w-3xl mx-auto space-y-4">
-                    {messages.map((message) => (
+                    {messages.map((message: any) => (
                       <div
                         key={message.id}
                         className={cn("flex gap-3", message.role === "user" ? "justify-end" : "justify-start")}

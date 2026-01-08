@@ -8,12 +8,10 @@ export const dynamic = 'force-dynamic'
  * 
  * Returns real-time progress for a tender orchestration
  */
-export async function GET(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, context: any) {
     try {
-        const orchestrationId = params.id
+        const paramsObj = context?.params ? await context.params : context?.params ?? context
+        const orchestrationId = (paramsObj as { id?: string }).id
         const supabase = await createClient()
 
         // Get current user

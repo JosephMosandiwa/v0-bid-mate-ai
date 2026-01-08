@@ -86,7 +86,6 @@ export const API_TENDER_SOURCES: TenderAPISource[] = [
               contact_person: t.contactPerson?.name || null,
               document_urls: (t.documents || []).map((doc: any) => doc.url).filter(Boolean),
               source_province: t.province || "National",
-              delivery_location: t.deliveryLocation || null,
               raw_data: release,
             }
           })

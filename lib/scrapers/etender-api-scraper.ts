@@ -226,7 +226,6 @@ export class ETenderApiScraper extends BaseScraper {
         tenderPeriod,
         procurementMethod,
         procurementMethodDetails,
-        procuringEntity,
         contactPerson, // Direct nested object in API response
         documents,
         mainProcurementCategory,
@@ -240,8 +239,8 @@ export class ETenderApiScraper extends BaseScraper {
       const contactEmail = contactPerson?.email
       const contactPhone = contactPerson?.telephoneNumber
 
-      // Extract organization name from procuringEntity
-      const organizationName = procuringEntity?.name || ocds.buyer?.name || "Unknown Organization"
+      // Extract organization name from OCDS buyer
+      const organizationName = ocds.buyer?.name || "Unknown Organization"
 
       // Format estimated value
       const estimatedValue = value?.amount ? `R ${value.amount.toLocaleString()} ${value.currency}` : undefined
@@ -287,8 +286,8 @@ export class ETenderApiScraper extends BaseScraper {
         // Location - using actual deliveryLocation field
         location: this.cleanText(location),
 
-        // Province - direct field from API
-        province: province,
+        // Source province - direct field from API
+        source_province: province,
 
         // URLs
         tender_url: `https://etenders.gov.za/tender/${tenderId}`,
@@ -299,26 +298,21 @@ export class ETenderApiScraper extends BaseScraper {
         // Additional enrichment fields from actual API
         tender_type: procurementMethodDetails || procurementMethod || "Open Tender",
         procurement_category: mainProcurementCategory,
-        procurement_method: procurementMethod,
-        status: status,
 
-        // Store special conditions if available
-        special_conditions: specialConditions && specialConditions !== "N/A" ? specialConditions : undefined,
+        // (special_conditions moved to raw_data only) - avoid top-level field not in ScrapedTender
 
-        // Store delivery location separately
-        delivery_location: deliveryLocation,
+        // delivery location handled via `location` and kept in raw_data; omit top-level field not in ScrapedTender
 
         // Raw OCDS data for full traceability
         raw_data: {
           ocid: ocds.ocid,
           release_date: ocds.date,
           tender_id: tenderId,
-          procurement_method: procurementMethod,
           procurement_method_details: procurementMethodDetails,
           tender_status: status,
           category: category,
           province: province,
-          buyer_id: procuringEntity?.id || ocds.buyer?.id,
+          buyer_id: ocds.buyer?.id,
           buyer_name: organizationName,
           special_conditions: specialConditions,
           delivery_location: deliveryLocation,
@@ -334,7 +328,7 @@ export class ETenderApiScraper extends BaseScraper {
         hasDescription: !!normalized.description && normalized.description.length > 50,
         organization: normalized.organization,
         category: normalized.category,
-        province: normalized.province,
+        source_province: normalized.source_province,
         hasPublishDate: !!normalized.publish_date,
         hasCloseDate: !!normalized.close_date,
         hasValue: !!normalized.estimated_value,
@@ -345,7 +339,7 @@ export class ETenderApiScraper extends BaseScraper {
         hasDocuments: !!normalized.document_urls && normalized.document_urls.length > 0,
         documentsCount: normalized.document_urls?.length || 0,
         totalFieldsPopulated: Object.keys(normalized).filter(
-          (k) => normalized[k] !== undefined && normalized[k] !== null && normalized[k] !== "",
+          (k) => (normalized as any)[k] !== undefined && (normalized as any)[k] !== null && (normalized as any)[k] !== "",
         ).length,
       })
 

@@ -27,11 +27,17 @@ Be concise, practical, and specific in your advice. Always reference the tender 
 
     const modelMessages = convertToModelMessages([{ role: "system", content: systemPrompt }, ...messages])
 
-    console.log("[v0] Calling OpenAI GPT-4 with", modelMessages.length, "messages")
+    // Ensure provider messages conform to { role: string; content: string }[]
+    const providerMessages = modelMessages.map((m: any) => ({
+      role: m.role,
+      content: Array.isArray(m.content) ? m.content.map((p: any) => (typeof p === "string" ? p : JSON.stringify(p))).join("") : String(m.content),
+    }))
+
+    console.log("[v0] Calling OpenAI GPT-4 with", providerMessages.length, "messages")
 
     const result = streamTextViaProvider({
       model: "openai/gpt-4-turbo",
-      messages: modelMessages,
+      messages: providerMessages,
       temperature: 0.7,
       maxTokens: 2000,
       abortSignal: request.signal,

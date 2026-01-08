@@ -13,7 +13,7 @@ async function getTesseract() {
   if (!TesseractModule) {
     TesseractModule = await import("tesseract.js")
   }
-  return TesseractModule.default
+  return (TesseractModule as any)
 }
 
 export interface OCRResult {
@@ -59,10 +59,10 @@ export async function performOCR(
     const blocks: OCRBlock[] = []
 
     // Process paragraphs/blocks
-    result.data.paragraphs?.forEach((para) => {
+    result.data.paragraphs?.forEach((para: any) => {
       const words: WordInfo[] = []
 
-      para.words?.forEach((word) => {
+      para.words?.forEach((word: any) => {
         words.push({
           text: word.text,
           position: {

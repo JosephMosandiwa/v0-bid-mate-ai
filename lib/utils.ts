@@ -48,8 +48,8 @@ export function findBestMatch(
     }
     // Word overlap
     else {
-      const fieldWords = normalizedFieldName.split(/(?=[A-Z])/).map((w) => w.toLowerCase())
-      const idWords = normalizedId.split(/(?=[A-Z])/).map((w) => w.toLowerCase())
+      const fieldWords = normalizedFieldName.split(/(?=[A-Z])/).map((w: string) => w.toLowerCase())
+      const idWords = normalizedId.split(/(?=[A-Z])/).map((w: string) => w.toLowerCase())
       const labelWords = normalizedLabel.split(/[^a-z]/).filter(Boolean)
 
       const allTargetWords = [...idWords, ...labelWords]
@@ -76,8 +76,8 @@ export function findBestMatch(
       } else if (normalizedFieldName.includes(normalizedKey) || normalizedKey.includes(normalizedFieldName)) {
         score = 80
       } else {
-        const fieldWords = normalizedFieldName.split(/(?=[A-Z])/).map((w) => w.toLowerCase())
-        const keyWords = normalizedKey.split(/(?=[A-Z])/).map((w) => w.toLowerCase())
+        const fieldWords = normalizedFieldName.split(/(?=[A-Z])/).map((w: string) => w.toLowerCase())
+        const keyWords = normalizedKey.split(/(?=[A-Z])/).map((w: string) => w.toLowerCase())
         const overlap = fieldWords.filter((w) => keyWords.some((kw) => kw.includes(w) || w.includes(kw))).length
         score = overlap * 20
       }

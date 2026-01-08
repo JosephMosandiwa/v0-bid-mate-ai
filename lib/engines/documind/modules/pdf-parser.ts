@@ -359,7 +359,7 @@ async function extractFormFields(data: Uint8Array): Promise<FormField[]> {
 
       const widget = widgets[0]
       const rect = widget.getRectangle()
-      const page = pdfDoc.getPages().findIndex((p) => {
+      const page = pdfDoc.getPages().findIndex((p: any) => {
         const pageRef = p.ref
         const widgetPage = widget.P()
         return widgetPage && pageRef.toString() === widgetPage.toString()

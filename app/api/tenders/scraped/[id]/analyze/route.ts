@@ -3,9 +3,10 @@ import { type NextRequest, NextResponse } from "next/server"
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, context: any) {
   try {
-    const tenderId = params.id
+    const paramsObj = context?.params ? await context.params : context?.params ?? context
+    const tenderId = (paramsObj as { id?: string }).id
 
     console.log("[v0] Starting automatic analysis for tender:", tenderId)
 

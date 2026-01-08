@@ -25,7 +25,7 @@ async function extractPdfFormFields(pdfUrl: string): Promise<{
     const fields = form.getFields()
     const pages = pdfDoc.getPages()
 
-    const extractedFields = fields.map((field) => {
+    const extractedFields = fields.map((field: any) => {
       const name = field.getName()
       const typeName = field.constructor.name
 
@@ -54,7 +54,7 @@ async function extractPdfFormFields(pdfUrl: string): Promise<{
       }
 
       try {
-        const widgets = field.acroField.getWidgets()
+          const widgets = field.acroField.getWidgets()
         if (widgets.length > 0) {
           const widget = widgets[0]
           const rect = widget.getRectangle()

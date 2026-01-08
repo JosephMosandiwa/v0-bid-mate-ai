@@ -183,9 +183,27 @@ function useToast() {
 
   return {
     ...state,
-    toast,
+    toast: (toastWithHelpers as any),
     dismiss: (toastId?: string) => dispatch({ type: 'DISMISS_TOAST', toastId }),
   }
 }
 
-export { useToast, toast }
+export { useToast }
+
+// Add convenience helpers to match common usage: `toast.success()` / `toast.error()`
+type ToastReturn = ReturnType<typeof toast>
+
+type ToastWithHelpers = typeof toast & {
+  success: (title: string, props?: Omit<Toast, 'title'>) => ToastReturn
+  error: (title: string, props?: Omit<Toast, 'title'>) => ToastReturn
+}
+
+const toastWithHelpers = toast as ToastWithHelpers
+
+toastWithHelpers.success = (title, props) =>
+  toast({ title, ...(props ?? {}), variant: 'default' })
+
+toastWithHelpers.error = (title, props) =>
+  toast({ title, ...(props ?? {}), variant: 'destructive' })
+
+export { toastWithHelpers as toast }

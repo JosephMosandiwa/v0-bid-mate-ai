@@ -27,10 +27,10 @@ export async function GET(request: NextRequest) {
     })
 
     return Response.json({
-      success: true,
+      ...result,
+      success: result?.success ?? true,
       message: "Scraping completed",
       timestamp: new Date().toISOString(),
-      ...result,
     })
   } catch (error) {
     console.error("[Cron] Scraping error:", error)

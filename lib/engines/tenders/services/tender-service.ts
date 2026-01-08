@@ -55,7 +55,7 @@ export class TenderService {
     console.log("[v0] TenderService: Extracting tender data from document")
 
     const extractedData: any = {}
-    const allText = document.pages.map((p) => p.text).join("\n")
+    const allText = document.pages.map((p) => p.content.full_text).join("\n")
 
     // Use extraction hints to find tender fields in document
     for (const field of TENDER_SCHEMA.fields) {
@@ -74,7 +74,7 @@ export class TenderService {
 
       // If not found, try context-based extraction
       if (!extractedData[field.name]) {
-        for (const contextWord of hints.contextWords) {
+        for (const contextWord of hints.context) {
           const contextRegex = new RegExp(`${contextWord}[:\\s]+(.*?)(?:\\n|$)`, "i")
           const match = allText.match(contextRegex)
           if (match && match[1]) {

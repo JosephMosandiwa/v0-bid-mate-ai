@@ -977,7 +977,6 @@ export function DynamicTenderForm({
 
   return (
     <div className="space-y-6">
-      {console.log("[v0] 🟢 DynamicTenderForm JSX RENDERING")}
 
       <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
         <CardHeader className="pb-3">

@@ -119,7 +119,7 @@ export default async function BillingPage() {
             <CardDescription>Manage your payment methods, invoices, and subscription settings</CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={handleManageSubscription}>
+            <form action={handleManageSubscription as any}>
               <Button type="submit" variant="outline" className="bg-transparent">
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Manage Subscription

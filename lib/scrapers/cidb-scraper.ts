@@ -30,7 +30,7 @@ export class CIDBScraper extends BaseScraper {
       const tenders: ScrapedTender[] = []
 
       // CIDB has construction-specific tenders
-      $("div.tender-item, table.cidb-tenders tr, div.construction-tender").each((_, element) => {
+      $("div.tender-item, table.cidb-tenders tr, div.construction-tender").each((_: any, element: any) => {
         const $el = $(element)
 
         const title = $el.find(".tender-title, td:first-child, h3, h4").text().trim()
@@ -75,25 +75,5 @@ export class CIDBScraper extends BaseScraper {
     }
   }
 
-  private cleanText(text: string): string {
-    return text.trim().replace(/\s+/g, " ")
-  }
-
-  private makeAbsoluteUrl(link: string, baseUrl: string): string {
-    if (link.startsWith("http")) return link
-    if (link.startsWith("/")) return `${baseUrl}${link}`
-    return `${baseUrl}/${link}`
-  }
-
-  private parseDate(dateStr: string): string {
-    try {
-      const date = new Date(dateStr)
-      if (!isNaN(date.getTime())) {
-        return date.toISOString()
-      }
-    } catch (error) {
-      console.error(`[v0] CIDBScraper: Error parsing date: ${dateStr}`)
-    }
-    return new Date().toISOString()
-  }
+  // Use helper methods from BaseScraper: `cleanText`, `makeAbsoluteUrl`, `parseDate`
 }

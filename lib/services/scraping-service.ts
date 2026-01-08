@@ -103,7 +103,7 @@ export class ScrapingService {
               alert_type: "new_opportunity",
               title: `${opportunities.length} New Matching Tenders`,
               message: `We found ${opportunities.length} new tender${opportunities.length > 1 ? "s" : ""} that match your profile. Check them out!`,
-              priority: opportunities.some((o) => o.match_score >= 0.8) ? "high" : "medium",
+              priority: opportunities.some((o: any) => o.match_score >= 0.8) ? "high" : "medium",
               action_url: "/dashboard/strategist?tab=opportunities",
               action_label: "View Opportunities",
             })
@@ -280,7 +280,7 @@ export class ScrapingService {
 
       if (result.tender) {
         console.log(
-          `[v0] ScrapingService: ✓ Tender ACCEPTED - ${result.tender.title} (${result.validation?.grade}, ${result.validation?.completeness * 100}% complete)`,
+          `[v0] ScrapingService: ✓ Tender ACCEPTED - ${result.tender.title} (${result.validation?.grade}, ${(result.validation?.completeness ?? 0) * 100}% complete)`,
         )
         validatedTenders.push({
           source_id: sourceId,

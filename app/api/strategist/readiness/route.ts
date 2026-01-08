@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     const { tender_id, force_recalculate } = await request.json()
 
     // Force recalculate
-    const score = await CompetitivenessService.calculateScore(user.id, tender_id)
+    const score = await CompetitivenessService.calculateScore({ userId: user.id, tenderId: tender_id })
 
     if (!score) {
       return Response.json({ error: "Failed to calculate readiness score" }, { status: 500 })

@@ -2,9 +2,10 @@ import { createClient } from "@/lib/supabase/server"
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib"
 import type { NextRequest } from "next/server"
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, context: any) {
   try {
-    const { id } = params
+    const paramsObj = context?.params ? await context.params : context?.params ?? context
+    const { id } = paramsObj as { id?: string }
     const supabase = await createClient()
 
     // Get current user
@@ -227,7 +228,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     // Save the PDF
     const pdfBytes = await pdfDoc.save()
 
-    return new Response(pdfBytes, {
+    return new Response(pdfBytes as unknown as BodyInit, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="tender_response_${tenderData.title?.replace(/[^a-z0-9]/gi, "_").toLowerCase() || "document"}.pdf"`,

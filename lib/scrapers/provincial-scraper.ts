@@ -37,7 +37,7 @@ export class ProvincialScraper extends BaseScraper {
       const tenders: ScrapedTender[] = []
 
       // Provincial portals vary, use generic patterns
-      $("table tbody tr, div.tender, div.notice, article.tender").each((_, element) => {
+      $("table tbody tr, div.tender, div.notice, article.tender").each((_: any, element: any) => {
         const $el = $(element)
 
         const title = $el.find("td:first-child, .title, h3, h4, a").first().text().trim()
@@ -78,28 +78,5 @@ export class ProvincialScraper extends BaseScraper {
     }
   }
 
-  private cleanText(text: string): string {
-    return text.trim().replace(/\s+/g, " ")
-  }
-
-  private makeAbsoluteUrl(link: string, baseUrl: string): string {
-    if (link.startsWith("http")) return link
-    try {
-      return new URL(link, baseUrl).href
-    } catch {
-      return link
-    }
-  }
-
-  private parseDate(dateStr: string): string {
-    try {
-      const date = new Date(dateStr)
-      if (!isNaN(date.getTime())) {
-        return date.toISOString()
-      }
-    } catch (error) {
-      console.error(`[v0] ProvincialScraper: Error parsing date: ${dateStr}`)
-    }
-    return new Date().toISOString()
-  }
+  // Use helper methods from BaseScraper: `cleanText`, `makeAbsoluteUrl`, `parseDate`
 }
