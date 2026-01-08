@@ -110,17 +110,17 @@ export default function TenderDetailPage() {
 
   useEffect(() => {
     loadTenderData()
-    loadDocuments()
   }, [id])
 
   const loadTenderData = async () => {
     try {
       // Fetch tender and analysis from database
-      const response = await fetch(`/api/tenders/scraped/${id}`)
+      const response = await fetch(`/api/tenders/${id}`)
       if (response.ok) {
         const data = await response.json()
         setTender(data.tender)
         setAnalysis(data.analysis)
+        setDocuments(data.documents || [])
       }
     } catch (error) {
       console.error("[v0] Error loading tender:", error)
@@ -129,12 +129,7 @@ export default function TenderDetailPage() {
     }
   }
 
-  const loadDocuments = async () => {
-    const result = await getTenderDocuments(id)
-    if (result.success) {
-      setDocuments(result.documents || [])
-    }
-  }
+  // loadDocuments removed as we load everything in loadTenderData
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -150,7 +145,7 @@ export default function TenderDetailPage() {
     const result = await uploadTenderDocument(formData)
 
     if (result.success) {
-      await loadDocuments()
+      await loadTenderData()
       setSelectedFile(null)
       e.target.value = ""
 
@@ -179,7 +174,7 @@ export default function TenderDetailPage() {
 
     const result = await deleteTenderDocument(documentId)
     if (result.success) {
-      await loadDocuments()
+      await loadTenderData()
     } else {
       alert(result.error || "Failed to delete document")
     }
@@ -279,7 +274,7 @@ export default function TenderDetailPage() {
       console.log("[v0] Save result:", result)
 
       if (result.success) {
-        await loadDocuments()
+        await loadTenderData()
         alert("Document analyzed successfully!")
       } else {
         console.error("[v0] Failed to save analysis:", result.error)
@@ -794,7 +789,6 @@ export default function TenderDetailPage() {
                 deadline: analysis?.tender_summary?.closing_date || tender.close_date,
                 value: tender.estimated_value,
                 requirements: analysis?.eligibility_requirements || [],
-                analysis: analysis,
               }}
             />
           </div>

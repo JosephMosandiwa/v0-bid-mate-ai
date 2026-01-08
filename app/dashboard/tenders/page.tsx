@@ -191,11 +191,7 @@ export default function TendersPage() {
   }
 
   const getTenderDetailUrl = (tender: UserTender) => {
-    if (tender.tender_type === "custom") {
-      return `/dashboard/custom-tenders/${tender.id}`
-    }
-    // Scraped tenders
-    return `/dashboard/tenders/${tender.tender_id}`
+    return `/dashboard/tenders/${tender.id}`
   }
 
   if (loading) {

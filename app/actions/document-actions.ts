@@ -191,3 +191,41 @@ export async function analyzeDocument(documentId: string, analysis: any) {
     return { success: false, error: "Failed to save analysis" }
   }
 }
+export async function uploadTemporaryDocument(formData: FormData) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: "Not authenticated" }
+
+  const file = formData.get("file") as File
+  if (!file) {
+    return { success: false, error: "File is required" }
+  }
+
+  // Upload file to Supabase Storage (temp folder)
+  const fileExt = file.name.split(".").pop()
+  const fileName = `temp/${user.id}/${Date.now()}.${fileExt}`
+
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from("tender-documents")
+    .upload(fileName, file)
+
+  if (uploadError) {
+    console.error("[v0] Error uploading file:", uploadError)
+    return { success: false, error: "Failed to upload file" }
+  }
+
+  // Get signed URL for the analysis step (valid for 1 hour)
+  const { data: urlData, error: urlError } = await supabase.storage
+    .from("tender-documents")
+    .createSignedUrl(fileName, 3600)
+
+  if (urlError) {
+    console.error("[v0] Error getting signed URL:", urlError)
+    return { success: false, error: "Failed to get file URL" }
+  }
+
+  return { success: true, url: urlData.signedUrl, path: fileName }
+}

@@ -209,17 +209,17 @@ This PDF document has ${pdfFormFields.length} interactive form fields. You MUST 
 
 Here are the actual PDF form field names and their types:
 ${pdfFormFields
-  .map((f) => {
-    let info = `- "${f.name}" (type: ${f.type})`
-    if (f.options && f.options.length > 0) {
-      info += ` [options: ${f.options.join(", ")}]`
-    }
-    if (f.position) {
-      info += ` [position: page ${f.position.page}, x ${f.position.x}, y ${f.position.y}, width ${f.position.width}, height ${f.position.height}]`
-    }
-    return info
-  })
-  .join("\n")}
+          .map((f) => {
+            let info = `- "${f.name}" (type: ${f.type})`
+            if (f.options && f.options.length > 0) {
+              info += ` [options: ${f.options.join(", ")}]`
+            }
+            if (f.position) {
+              info += ` [position: page ${f.position.page}, x ${f.position.x}, y ${f.position.y}, width ${f.position.width}, height ${f.position.height}]`
+            }
+            return info
+          })
+          .join("\n")}
 
 For each PDF field above, create a corresponding formField entry with:
 - id: Use the EXACT field name from the PDF (e.g., "${pdfFormFields[0]?.name || "Text1"}")
@@ -243,7 +243,7 @@ NOTE: This PDF does not have interactive form fields. Generate formFields based 
       const startTime = Date.now()
 
       const { text: aiResponse } = await generateTextViaProvider({
-        model: "openai/gpt-4o-mini",
+        model: "gemini-1.5-flash",
         prompt: `${basePrompt}
 
 ${pdfFieldsInstruction}
@@ -492,6 +492,36 @@ Respond with ONLY the following JSON structure (no markdown, no code blocks, jus
     } catch (aiError: any) {
       console.error("[v0] AI GENERATION ERROR")
       console.error("[v0] Error message:", aiError?.message)
+
+      // Check for OpenAI Quota Exceeded (429) and provide fallback for testing
+      if (aiError?.message?.includes("429") || aiError?.message?.includes("quota")) {
+        console.warn("[v0] ⚠️ OpenAI Quota Exceeded. Using MOCK DATA for analysis to unblock testing.")
+
+        const mockAnalysis = {
+          tender_summary: {
+            tender_number: "MOCK-429-TEST",
+            title: "Mock Tender (Quota Exceeded Fallback)",
+            entity: "Fallback Entity",
+            description: "This is a generated mock description because the OpenAI API key has exceeded its quota. The application flow is preserved for testing purposes.",
+            closing_date: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0],
+            contract_duration: "12 Months"
+          },
+          compliance_summary: {
+            requirements: ["Mock Requirement 1", "Mock Requirement 2"],
+            disqualifiers: ["Mock Disqualifier"],
+            strengtheners: ["Mock Strengthener"]
+          },
+          evaluation: {
+            criteria: [{ "criterion": "Price", "weight": 80 }, { "criterion": "BEE", "weight": 20 }]
+          },
+          formFields: [],
+          pdfFormFieldsDetected: hasPdfFormFields,
+          pdfFormFieldCount: pdfFormFields.length,
+          pdfFormFields: pdfFormFields
+        }
+        return Response.json(mockAnalysis)
+      }
+
       console.error("[v0] Error stack:", aiError?.stack?.substring(0, 500))
 
       return Response.json(

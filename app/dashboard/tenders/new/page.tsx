@@ -12,7 +12,9 @@ import { ArrowLeft, Upload, FileText, CheckCircle2, Loader2 } from "lucide-react
 import Link from "next/link"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createCustomTender } from "@/app/actions/tender-actions"
+import { uploadTemporaryDocument } from "@/app/actions/document-actions"
 import { useToast } from "@/hooks/use-toast"
+import { MultiEngineProgress } from "@/components/engines/multi-engine-progress"
 
 export default function NewTenderPage() {
   const router = useRouter()
@@ -21,6 +23,8 @@ export default function NewTenderPage() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [analysis, setAnalysis] = useState<any>(null)
+  const [orchestrationId, setOrchestrationId] = useState<string | null>(null)
+  const [tenderId, setTenderId] = useState<string | null>(null)
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -45,25 +49,27 @@ export default function NewTenderPage() {
       console.log("[v0] File name:", file.name)
       console.log("[v0] File size:", (file.size / 1024 / 1024).toFixed(2), "MB")
 
-      console.log("[v0] Step 1: Uploading PDF to blob storage...")
+      console.log("[v0] Step 1: Uploading PDF to Supabase storage...")
       const uploadFormData = new FormData()
       uploadFormData.append("file", file)
 
-      const blobResponse = await fetch("/api/upload-to-blob", {
-        method: "POST",
-        body: uploadFormData,
-      })
+      // Use the existing action or a new one? 
+      // I'll assume I'm creating 'uploadTemporaryDocument' in document-actions.ts correctly next.
+      // But verify I can import it.
+      // For now, I'll keep the logic here but call a new API route /api/tenders/upload-temp to be safe/consistent with fetch?
+      // No, server actions are better.
+      // Let's import { uploadTemporaryDocument } from "@/app/actions/document-actions"
 
-      if (!blobResponse.ok) {
-        const errorText = await blobResponse.text()
-        console.error("[v0] Blob upload error:", errorText)
-        throw new Error("Failed to upload file to storage")
+      const uploadResult = await uploadTemporaryDocument(uploadFormData)
+
+      if (!uploadResult.success || !uploadResult.url) {
+        throw new Error(uploadResult.error || "Failed to upload file")
       }
 
-      const { url } = await blobResponse.json()
-      console.log("[v0] ✓ File uploaded to blob successfully")
-      console.log("[v0] Blob URL:", url)
-      setBlobUrl(url)
+      console.log("[v0] ✓ File uploaded successfully")
+      console.log("[v0] URL:", uploadResult.url)
+      setBlobUrl(uploadResult.url)
+      const url = uploadResult.url // local var for next steps
 
       toast({
         title: "Analyzing Document",
@@ -71,7 +77,7 @@ export default function NewTenderPage() {
       })
 
       console.log("[v0] Step 2: Sending PDF to AI for direct analysis...")
-      console.log("[v0] Using OpenAI GPT-4o to read PDF directly from URL")
+      console.log("[v0] Requesting analysis via API...")
 
       const analysisResponse = await fetch("/api/analyze-tender", {
         method: "POST",
@@ -122,6 +128,7 @@ export default function NewTenderPage() {
       if (result.success) {
         console.log("[v0] ✓ Tender created successfully")
         console.log("[v0] Tender ID:", result.tenderId)
+        console.log("[v0] Orchestration ID:", result.orchestrationId)
         console.log("[v0] Document saved:", result.documentSaved)
         console.log("[v0] Analysis saved:", result.analysisSaved)
 
@@ -132,13 +139,23 @@ export default function NewTenderPage() {
           console.warn("[v0] Analysis error:", result.analysisError)
         }
 
-        toast({
-          title: "Tender Created Successfully",
-          description: "AI has analyzed your document and extracted all details.",
-        })
-
-        console.log("[v0] Redirecting to:", `/dashboard/custom-tenders/${result.tenderId}`)
-        router.push(`/dashboard/custom-tenders/${result.tenderId}`)
+        // Save tender and orchestration IDs to show progress
+        setTenderId(result.tenderId)
+        if (result.orchestrationId) {
+          setOrchestrationId(result.orchestrationId)
+          toast({
+            title: "Tender Created Successfully",
+            description: "Multi-engine analysis is running in the background...",
+          })
+        } else {
+          toast({
+            title: "Tender Created Successfully",
+            description: "AI has analyzed your document and extracted all details.",
+          })
+          // No orchestration - redirect immediately
+          console.log("[v0] Redirecting to:", `/dashboard/tenders/${result.tenderId}`)
+          router.push(`/dashboard/tenders/${result.tenderId}`)
+        }
       } else {
         console.error("[v0] ❌ Tender creation failed:", result.error)
         throw new Error(result.error || "Failed to create tender")
@@ -191,11 +208,10 @@ export default function NewTenderPage() {
             <div className="flex items-center gap-4">
               <Label
                 htmlFor="pdf-upload"
-                className={`flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer transition-colors ${
-                  loading
-                    ? "bg-muted text-muted-foreground cursor-not-allowed"
-                    : "bg-primary text-primary-foreground hover:bg-primary/90"
-                }`}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer transition-colors ${loading
+                  ? "bg-muted text-muted-foreground cursor-not-allowed"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
+                  }`}
               >
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 {loading ? "Processing..." : uploadedFile ? "Change Document" : "Upload PDF"}
@@ -225,17 +241,48 @@ export default function NewTenderPage() {
               </Alert>
             )}
 
-            {uploadedFile && !loading && analysis && (
+            {uploadedFile && !loading && analysis && !orchestrationId && (
               <Alert className="border-green-500/50 bg-green-500/10">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
                 <AlertDescription className="text-green-500">
-                  Document analyzed successfully! Redirecting to tender details...
+                  Document analyzed successfully! AI has extracted all tender details.
                 </AlertDescription>
               </Alert>
             )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Multi-Engine Progress Tracker */}
+      {orchestrationId && tenderId && (
+        <div className="max-w-3xl space-y-4">
+          <MultiEngineProgress
+            orchestrationId={orchestrationId}
+            onComplete={() => {
+              toast({
+                title: "Analysis Complete",
+                description: "All AI engines have finished processing your tender.",
+              })
+              // Redirect to tender detail page after a short delay
+              setTimeout(() => {
+                router.push(`/dashboard/tenders/${tenderId}`)
+              }, 2000)
+            }}
+          />
+
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-muted-foreground">
+              You can navigate away - analysis will continue in the background
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/dashboard/tenders/${tenderId}`)}
+            >
+              View Tender Details
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

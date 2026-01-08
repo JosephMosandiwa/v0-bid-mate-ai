@@ -1,10 +1,8 @@
 {
+  "/api/analyze-tender/route": "app/api/analyze-tender/route.js",
   "/api/strategist/alerts/route": "app/api/strategist/alerts/route.js",
-  "/api/strategist/plan/route": "app/api/strategist/plan/route.js",
   "/api/strategist/readiness/route": "app/api/strategist/readiness/route.js",
-  "/api/tenders/scraped/[id]/route": "app/api/tenders/scraped/[id]/route.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/dashboard/tenders/[id]/page": "app/dashboard/tenders/[id]/page.js",
-  "/dashboard/tenders/page": "app/dashboard/tenders/page.js",
-  "/page": "app/page.js"
+  "/dashboard/tenders/new/page": "app/dashboard/tenders/new/page.js",
+  "/dashboard/tenders/page": "app/dashboard/tenders/page.js"
 }

@@ -94,7 +94,7 @@ export function UploadCustomTenderDialog({ trigger }: UploadCustomTenderDialogPr
       // Redirect to the custom tender detail page after a short delay
       setTimeout(() => {
         setOpen(false)
-        router.push(`/dashboard/custom-tenders/${result.tender.id}`)
+        router.push(`/dashboard/tenders/${result.tender.id}`)
       }, 1500)
     } catch (err: any) {
       console.error("[v0] Upload error:", err)
