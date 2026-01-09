@@ -1,0 +1,10 @@
+var R=require("../../../chunks/[turbopack]_runtime.js")("server/app/api/analyze-tender/route.js")
+R.c("server/chunks/[root-of-the-server]__e2232856._.js")
+R.c("server/chunks/[root-of-the-server]__6f5f19a7._.js")
+R.c("server/chunks/38113_next_dist_esm_build_templates_app-route_2b86aa69.js")
+R.c("server/chunks/node_modules__pnpm_29933faf._.js")
+R.c("server/chunks/_03e98275._.js")
+R.c("server/chunks/8b56c_openai_index_mjs_653b24dc._.js")
+R.c("server/chunks/_next-internal_server_app_api_analyze-tender_route_actions_89eaac30.js")
+R.m(661628)
+module.exports=R.m(661628).exports

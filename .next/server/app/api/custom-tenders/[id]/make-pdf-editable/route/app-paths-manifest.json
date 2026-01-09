@@ -1,0 +1,3 @@
+{
+  "/api/custom-tenders/[id]/make-pdf-editable/route": "app/api/custom-tenders/[id]/make-pdf-editable/route.js"
+}

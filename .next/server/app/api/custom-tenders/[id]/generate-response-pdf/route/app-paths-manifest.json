@@ -1,0 +1,3 @@
+{
+  "/api/custom-tenders/[id]/generate-response-pdf/route": "app/api/custom-tenders/[id]/generate-response-pdf/route.js"
+}

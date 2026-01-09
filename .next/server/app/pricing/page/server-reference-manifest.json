@@ -1,0 +1,20 @@
+{
+  "node": {
+    "400d3e5446bb4e6e4e1644b829623d730024cd0d12": {
+      "workers": {
+        "app/pricing/page": {
+          "moduleId": 338073,
+          "async": false,
+          "exportedName": "createCheckoutSession",
+          "filename": "app/actions/stripe.ts"
+        }
+      },
+      "layer": {
+        "app/pricing/page": "action-browser"
+      },
+      "exportedName": "createCheckoutSession",
+      "filename": "app/actions/stripe.ts"
+    }
+  },
+  "edge": {}
+}

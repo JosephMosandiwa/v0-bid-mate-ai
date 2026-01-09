@@ -1,0 +1,35 @@
+{
+  "node": {
+    "407a8ca08fcf9739cce046a54db0f5cf64d000762a": {
+      "workers": {
+        "app/dashboard/scraped-tenders/[id]/page": {
+          "moduleId": 59953,
+          "async": false,
+          "exportedName": "saveScrapedTenderToUser",
+          "filename": "app/actions/tender-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/scraped-tenders/[id]/page": "action-browser"
+      },
+      "exportedName": "saveScrapedTenderToUser",
+      "filename": "app/actions/tender-actions.ts"
+    },
+    "007509618af3d7f7d46cd390f0e3e4a654a777e745": {
+      "workers": {
+        "app/dashboard/scraped-tenders/[id]/page": {
+          "moduleId": 59953,
+          "async": false,
+          "exportedName": "getGoogleMapsApiKey",
+          "filename": "lib/actions/get-google-maps-key.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/scraped-tenders/[id]/page": "action-browser"
+      },
+      "exportedName": "getGoogleMapsApiKey",
+      "filename": "lib/actions/get-google-maps-key.ts"
+    }
+  },
+  "edge": {}
+}

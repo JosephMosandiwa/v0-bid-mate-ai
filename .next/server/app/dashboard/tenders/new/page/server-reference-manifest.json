@@ -1,0 +1,35 @@
+{
+  "node": {
+    "404505f4575df6b361b5cc2add3d8bcc504a8c248d": {
+      "workers": {
+        "app/dashboard/tenders/new/page": {
+          "moduleId": 530523,
+          "async": false,
+          "exportedName": "createCustomTender",
+          "filename": "app/actions/tender-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/tenders/new/page": "action-browser"
+      },
+      "exportedName": "createCustomTender",
+      "filename": "app/actions/tender-actions.ts"
+    },
+    "4040f46a12af21bd15bb0204eb6028b06455093439": {
+      "workers": {
+        "app/dashboard/tenders/new/page": {
+          "moduleId": 530523,
+          "async": false,
+          "exportedName": "uploadTemporaryDocument",
+          "filename": "app/actions/document-actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/tenders/new/page": "action-browser"
+      },
+      "exportedName": "uploadTemporaryDocument",
+      "filename": "app/actions/document-actions.ts"
+    }
+  },
+  "edge": {}
+}

@@ -1,0 +1,3 @@
+{
+  "/api/cron/scrape-tenders/route": "app/api/cron/scrape-tenders/route.js"
+}

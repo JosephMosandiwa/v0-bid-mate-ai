@@ -1,0 +1,11 @@
+var R=require("../../../../../chunks/[turbopack]_runtime.js")("server/app/api/custom-tenders/[id]/generate-response-pdf/route.js")
+R.c("server/chunks/[root-of-the-server]__826b008d._.js")
+R.c("server/chunks/38113_next_9e0ef26c._.js")
+R.c("server/chunks/node_modules__pnpm_c5341ef0._.js")
+R.c("server/chunks/38113_next_dist_d101220b._.js")
+R.c("server/chunks/[root-of-the-server]__6f5f19a7._.js")
+R.c("server/chunks/node_modules__pnpm_29933faf._.js")
+R.c("server/chunks/ddfcc_@supabase_supabase-js_dist_index_mjs_3c75f36f._.js")
+R.c("server/chunks/ce889_server_app_api_custom-tenders_[id]_generate-response-pdf_route_actions_459d1b06.js")
+R.m(214455)
+module.exports=R.m(214455).exports

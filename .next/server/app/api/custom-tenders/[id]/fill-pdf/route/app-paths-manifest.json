@@ -1,0 +1,3 @@
+{
+  "/api/custom-tenders/[id]/fill-pdf/route": "app/api/custom-tenders/[id]/fill-pdf/route.js"
+}

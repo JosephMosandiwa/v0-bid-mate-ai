@@ -1,0 +1,3 @@
+{
+  "/api/custom-tenders/[id]/generate-filled-editable/route": "app/api/custom-tenders/[id]/generate-filled-editable/route.js"
+}

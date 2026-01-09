@@ -1,0 +1,13 @@
+var R=require("../../../../../chunks/[turbopack]_runtime.js")("server/app/api/custom-tenders/[id]/generate-filled-editable/route.js")
+R.c("server/chunks/[root-of-the-server]__2a54620c._.js")
+R.c("server/chunks/node_modules__pnpm_c5341ef0._.js")
+R.c("server/chunks/38113_next_dist_esm_build_templates_app-route_ee544133.js")
+R.c("server/chunks/38113_next_9e0ef26c._.js")
+R.c("server/chunks/38113_next_dist_d101220b._.js")
+R.c("server/chunks/[root-of-the-server]__6f5f19a7._.js")
+R.c("server/chunks/[root-of-the-server]__2de1aacc._.js")
+R.c("server/chunks/node_modules__pnpm_29933faf._.js")
+R.c("server/chunks/ddfcc_@supabase_supabase-js_dist_index_mjs_3c75f36f._.js")
+R.c("server/chunks/bec2d_app_api_custom-tenders_[id]_generate-filled-editable_route_actions_c63cc59f.js")
+R.m(99231)
+module.exports=R.m(99231).exports

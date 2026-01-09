@@ -9,23 +9,27 @@
 ## Phase 3a: Orchestrator Smoke Test ✅
 
 ### What Was Tested
+
 - Orchestrator object instantiation and method availability
 - Basic tender processing through the orchestrator pipeline
 - Invalid tender handling (graceful degradation)
 - Output schema consistency
 
 ### Test File
+
 - **Location**: [scripts/test-orchestrator.ts](scripts/test-orchestrator.ts) + [scripts/test-orchestrator.mjs](scripts/test-orchestrator.mjs)
 - **Type**: TypeScript + JavaScript fallback
 - **Run Command**: `pnpm test:orchestrator` or `node scripts/test-orchestrator.mjs`
 
 ### Key Findings
+
 ✅ Orchestrator properly exports `engineOrchestrator` singleton
 ✅ `processScrapedTender()` method is callable and returns structured results
 ✅ Error handling prevents crashes on invalid input
 ✅ Pipeline flow: validation → enrichment → opportunity creation
 
 ### Code Location
+
 - **Orchestrator**: [lib/engines/orchestrator/index.ts](lib/engines/orchestrator/index.ts)
 - **Route**: [app/api/test/orchestrator/route.ts](app/api/test/orchestrator/route.ts)
 
@@ -34,6 +38,7 @@
 ## Phase 3b: End-to-End Integration Test ✅
 
 ### What Was Tested
+
 - **ScraperFactory** creates correct scraper instances (eTender API, generic HTML)
 - Mock tender conforms to `ScrapedTender` schema
 - Full orchestrator pipeline: validation → strategist enrichment → opportunity identification
@@ -43,11 +48,13 @@
 - Tender metadata handling
 
 ### Test File
+
 - **Location**: [scripts/test-e2e.ts](scripts/test-e2e.ts)
 - **Type**: TypeScript
 - **Run Command**: `pnpm test:e2e`
 
 ### Test Cases (7 Total)
+
 1. **ScraperFactory ETender API** - Creates eTender API scraper instance
 2. **ScraperFactory Generic HTML** - Creates generic HTML scraper instance
 3. **Schema Conformance** - Mock tender has required fields
@@ -57,12 +64,14 @@
 7. **Schema Consistency** - Multiple runs produce consistent output shapes
 
 ### Key Findings
+
 ✅ All scrapers instantiate correctly
 ✅ Orchestrator pipeline handles multi-stage processing
 ✅ Normalization preserves schema integrity
 ✅ Error handling is robust for edge cases
 
 ### Test Data Fixture
+
 ```typescript
 {
   tender_reference: "E2E-TEST-{timestamp}",
@@ -84,6 +93,7 @@
 ## Phase 3c: Supabase Persistence Test ✅
 
 ### What Was Tested
+
 - Supabase connection and authentication
 - CRUD operations on `scraped_tenders` table
 - Data integrity across insert/retrieve cycles
@@ -92,12 +102,14 @@
 - Data deletion and cleanup
 
 ### Test File
+
 - **Location**: [scripts/test-supabase-persistence.ts](scripts/test-supabase-persistence.ts)
 - **Type**: TypeScript
 - **Run Command**: `pnpm test:supabase`
 - **Prerequisites**: Environment variables set (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`)
 
 ### Test Cases (9 Total)
+
 1. **Connection Validation** - Supabase client connects successfully
 2. **Insert Tender** - Test tender inserted into `scraped_tenders` table
 3. **Data Retrieval** - Inserted tender retrieved with all fields intact
@@ -109,6 +121,7 @@
 9. **Verify Deletion** - Record no longer exists after deletion
 
 ### Database Schema
+
 ```sql
 CREATE TABLE scraped_tenders (
   id UUID PRIMARY KEY,
@@ -130,6 +143,7 @@ CREATE TABLE scraped_tenders (
 ```
 
 ### Key Findings
+
 ✅ Supabase credentials properly configured
 ✅ All CRUD operations work correctly
 ✅ Data integrity maintained across operations
@@ -141,6 +155,7 @@ CREATE TABLE scraped_tenders (
 ## Phase 3d: API Integration & Deployment Readiness ✅
 
 ### What Was Tested
+
 - HTTP API endpoints respond with correct status codes
 - Request/response schema conformance
 - Error handling for authentication requirements
@@ -148,12 +163,14 @@ CREATE TABLE scraped_tenders (
 - Complete HTTP request → handler → response pipeline
 
 ### Test File
+
 - **Location**: [scripts/test-api-integration.ts](scripts/test-api-integration.ts)
 - **Type**: TypeScript
 - **Run Command**: `pnpm test:api`
 - **Prerequisites**: Dev server running on `http://localhost:3000` (`pnpm dev`)
 
 ### API Endpoints Tested (8 Total)
+
 1. **GET /api/test/orchestrator** (200) - Orchestrator smoke test endpoint
 2. **GET /api/search-tenders?q=bridge** (200) - Tender search with query
 3. **POST /api/strategist/readiness** (200) - Tender scoring/readiness check
@@ -164,6 +181,7 @@ CREATE TABLE scraped_tenders (
 8. **GET /api/tenders** (401) - Tenders list (auth required)
 
 ### Key Findings
+
 ✅ Test orchestrator endpoint returns 200 with valid JSON
 ✅ Search endpoints accept query parameters
 ✅ POST endpoints accept JSON body and process correctly
@@ -172,6 +190,7 @@ CREATE TABLE scraped_tenders (
 ✅ Error responses are well-formatted
 
 ### Expected Response Times
+
 - Orchestrator smoke test: 100-500ms
 - Search endpoint: 50-200ms
 - Strategist scoring: 200-1000ms
@@ -182,6 +201,7 @@ CREATE TABLE scraped_tenders (
 ## Test Infrastructure Summary
 
 ### Available Test Commands
+
 ```bash
 pnpm test:orchestrator     # Phase 3a - Orchestrator smoke test
 pnpm test:e2e              # Phase 3b - End-to-end pipeline
@@ -193,12 +213,15 @@ pnpm test:orchestrator && pnpm test:e2e && pnpm test:supabase && pnpm test:api
 ```
 
 ### TypeScript Validation
+
 All test files pass TypeScript compilation with **0 errors**:
+
 ```bash
 npx tsc --noEmit  # ✅ Success
 ```
 
 ### Git Commits
+
 - **Phase 3a**: `dd3a662` "Phase 3a: Add orchestrator smoke test script"
 - **Phase 3b**: `d217268` "Phase 3b: Add end-to-end integration test suite"
 - **Phase 3c**: `d277ff5` "Phase 3c: Add Supabase persistence validation test suite"
@@ -247,18 +270,21 @@ npx tsc --noEmit  # ✅ Success
 ## Next Steps (Phase 4+)
 
 ### Phase 4: Production Deployment Validation
+
 - Deploy to staging environment
 - Run smoke tests against staging
 - Validate DNS, SSL certificates, load balancing
 - Performance testing with realistic data volumes
 
 ### Phase 5: Continuous Integration/CD Pipeline
+
 - Automated test execution on push
 - Build artifact generation
 - Automated deployment to production
 - Rollback procedures
 
 ### Phase 6: Monitoring & Observability
+
 - Application performance monitoring (APM)
 - Error tracking (Sentry)
 - Logging aggregation
@@ -269,6 +295,7 @@ npx tsc --noEmit  # ✅ Success
 ## Test Maintenance
 
 Each test file includes:
+
 - Clear documentation of what is being tested
 - Detailed assertions with error messages
 - Cleanup procedures (especially for database tests)
@@ -276,6 +303,7 @@ Each test file includes:
 - Extensible architecture for adding more tests
 
 ### Adding New Tests
+
 1. Create test file in [scripts/](scripts/) folder
 2. Add npm script to [package.json](package.json)
 3. Ensure TypeScript compilation passes

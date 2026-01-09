@@ -1,0 +1,3 @@
+{
+  "/api/custom-tenders/[id]/negotiation-strategy/route": "app/api/custom-tenders/[id]/negotiation-strategy/route.js"
+}
