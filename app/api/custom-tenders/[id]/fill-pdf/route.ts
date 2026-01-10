@@ -1,3 +1,121 @@
+import { NextResponse } from 'next/server'
+import fs from 'fs/promises'
+import path from 'path'
+import fetch from 'node-fetch'
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
+import { createServerClient } from '@/lib/supabase/server'
+
+export const runtime = 'nodejs'
+
+async function readStore() {
+  const filePath = path.join(process.cwd(), 'data', 'tenders.json')
+  try {
+    const raw = await fs.readFile(filePath, 'utf8')
+    return JSON.parse(raw)
+  } catch {
+    return { tenders: [], documents: [], analysis: [] }
+  }
+}
+
+export async function POST(request: Request, context: any) {
+  try {
+    const { params } = context
+    const id = params?.id
+    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+
+    const body = await request.json().catch(() => ({}))
+    const fields = body.fields || null
+
+    // Try to find original PDF from Supabase documents
+    let pdfBytes: Uint8Array | null = null
+    try {
+      const supabase = await createServerClient()
+      const { data: docs, error: docErr } = await supabase
+        .from('user_custom_tender_documents')
+        .select('blob_url,storage_path')
+        .eq('tender_id', id)
+        .limit(1)
+
+      if (!docErr && docs && docs.length > 0 && docs[0].blob_url) {
+        const resp = await fetch(docs[0].blob_url)
+        if (resp.ok) pdfBytes = new Uint8Array(await resp.arrayBuffer())
+      }
+    } catch (e) {
+      console.warn('[fill-pdf] Supabase doc fetch failed:', e?.message || e)
+    }
+
+    // Fallback: check local data store
+    if (!pdfBytes) {
+      const store = await readStore()
+      const docs = store.documents || []
+      const doc = docs.find((d: any) => d.tender_id === id)
+      if (doc && doc.blob_url) {
+        try {
+          const resp = await fetch(doc.blob_url)
+          if (resp.ok) pdfBytes = new Uint8Array(await resp.arrayBuffer())
+        } catch (e) {
+          console.warn('[fill-pdf] Local doc fetch failed:', e?.message || e)
+        }
+      }
+    }
+
+    if (!pdfBytes) {
+      return NextResponse.json({ error: 'Original PDF not found' }, { status: 404 })
+    }
+
+    // Load PDF and stamp field values on the first page
+    const pdfDoc = await PDFDocument.load(pdfBytes)
+    const pages = pdfDoc.getPages()
+    const firstPage = pages[0]
+    const { width, height } = firstPage.getSize()
+
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+    const fontSize = 10
+    const startY = height - 40
+    let y = startY
+
+    const dataToWrite: Record<string, any> = {}
+
+    if (fields) {
+      Object.assign(dataToWrite, fields)
+    } else {
+      // Try to read extracted fields from analysis row
+      try {
+        const supabase = await createServerClient()
+        const { data: analysisRows } = await supabase.from('user_custom_tender_analysis').select('analysis_data').eq('tender_id', id).limit(1)
+        if (analysisRows && analysisRows.length > 0) {
+          const analysisData = analysisRows[0].analysis_data || {}
+          Object.assign(dataToWrite, analysisData.extracted || {})
+        }
+      } catch (e) {
+        const store = await readStore()
+        const localAnalysis = (store.analysis || []).find((a: any) => a.tender_id === id)
+        if (localAnalysis) Object.assign(dataToWrite, localAnalysis.analysis_data?.extracted || {})
+      }
+    }
+
+    // Write each field as a line: Key: Value
+    for (const [k, v] of Object.entries(dataToWrite)) {
+      const text = `${k}: ${String((v as any)?.value ?? v ?? '')}`
+      firstPage.drawText(text, { x: 40, y, size: fontSize, font, color: rgb(0, 0, 0) })
+      y -= fontSize + 6
+      if (y < 40) break
+    }
+
+    const pdfBytesOut = await pdfDoc.save()
+
+    const outDir = path.join(process.cwd(), 'data')
+    await fs.mkdir(outDir, { recursive: true })
+    const outPath = path.join(outDir, `tender-${id}-filled.pdf`)
+    await fs.writeFile(outPath, pdfBytesOut)
+
+    const url = `/data/tender-${id}-filled.pdf`
+    return NextResponse.json({ success: true, url })
+  } catch (e: any) {
+    console.error('[fill-pdf] Error:', e)
+    return NextResponse.json({ error: e.message || 'Failed' }, { status: 500 })
+  }
+}
 import { createClient } from "@/lib/supabase/server"
 import { PDFDocument } from "pdf-lib"
 import type { NextRequest } from "next/server"

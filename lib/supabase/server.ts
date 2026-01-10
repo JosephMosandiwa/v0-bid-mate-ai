@@ -1,5 +1,6 @@
 import { createServerClient as createSupabaseServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -23,3 +24,13 @@ export async function createClient() {
 }
 
 export const createServerClient = createClient
+
+// Admin/service-role client for privileged server-side operations that must bypass RLS.
+export function createAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE
+  if (!url || !key) {
+    throw new Error('SUPABASE service role key not configured')
+  }
+  return createSupabaseClient(url, key)
+}

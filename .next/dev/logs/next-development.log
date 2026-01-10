@@ -1,2 +1,317 @@
-[00:00:04.858] Server  WARN     ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
-[00:00:06.381] Server  LOG      ✓ Ready in 5.2s
+[00:00:03.846] Server  WARN     ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+[00:00:04.604] Server  LOG      ✓ Ready in 3.6s
+[00:00:10.518] Server  LOG      ○ Compiling /dashboard/tenders/[id] ...
+[00:00:46.260] Browser ERROR   A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/dashboard..." notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <RootLayout>
+                        <html lang="en" suppressHydrationWarning={true}>
+                          <head>
+                          <body
+                            className="font-sans inter_b2991b2-module__9mH_6q__variable poppins_e1f1a0b-module__ez4LmG..."
+-                           data-new-gr-c-s-check-loaded="14.1268.0"
+-                           data-gr-ext-installed=""
+                          >
+                  ...
+
+[00:00:49.209] Browser LOG     [v0] Theme loaded from storage: null
+[00:00:50.334] Browser LOG     [v0] Applying theme: dark
+[00:00:56.084] Browser ERROR   [v0] Error caught by boundary: {} {"componentStack":"\n    at TenderDetailPage (http://localhost:3000/_next/static/chunks/_c8ff050f._.js:4273:273)\n    at ClientPageRoot (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:2157:27)\n    at SegmentViewNode (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3299:28)\n    at InnerLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:390:34)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at LoadingBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:496:32)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at InnerScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:290:9)\n    at ScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:373:34)\n    at RenderFromTemplateContext (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:769:44)\n    at SegmentStateProvider (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3315:33)\n    at OuterLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:532:30)\n    at InnerLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:390:34)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at Suspense (<anonymous>)\n    at LoadingBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:496:32)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at InnerScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:290:9)\n    at ScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:373:34)\n    at RenderFromTemplateContext (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:769:44)\n    at SegmentStateProvider (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3315:33)\n    at OuterLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:532:30)\n    at InnerLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:390:34)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at Suspense (<anonymous>)\n    at LoadingBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:496:32)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at InnerScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:290:9)\n    at ScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:373:34)\n    at RenderFromTemplateContext (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:769:44)\n    at SegmentStateProvider (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3315:33)\n    at OuterLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:532:30)\n    at main (<anonymous>)\n    at div (<anonymous>)\n    at DashboardLayout [Server] (<anonymous>)\n    at SegmentViewNode (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3299:28)\n    at InnerLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:390:34)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9815:9)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at Suspense (<anonymous>)\n    at LoadingBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:496:32)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at InnerScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:290:9)\n    at ScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:373:34)\n    at RenderFromTemplateContext (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:769:44)\n    at SegmentStateProvider (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3315:33)\n    at OuterLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:532:30)\n    at ThemeProvider (http://localhost:3000/_next/static/chunks/_d0ec05cd._.js:18:26)\n    at Suspense (<anonymous>)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/_d0ec05cd._.js:99:9)\n    at body (<anonymous>)\n    at html (<anonymous>)\n    at RootLayout [Server] (<anonymous>)\n    at SegmentViewNode (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3299:28)\n    at __next_root_layout_boundary__ (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:1666:64)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9815:9)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at DevRootHTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9959:46)\n    at AppDevOverlayErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3410:9)\n    at HotReload (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:10953:22)\n    at Router (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:11131:23)\n    at ErrorBoundaryHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:982:9)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at RootErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9639:30)\n    at AppRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:11448:22)\n    at ServerRoot (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:12965:23)\n    at Root (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:12983:17)"}
+[00:02:05.446] Browser LOG     [v0] Theme loaded from storage: null
+[00:02:05.840] Browser LOG     [v0] Applying theme: dark
+[00:02:06.746] Browser ERROR   [v0] Error caught by boundary: {} {"componentStack":"\n    at TenderDetailPage (http://localhost:3000/_next/static/chunks/_c8ff050f._.js:4273:273)\n    at ClientPageRoot (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:2157:27)\n    at SegmentViewNode (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3299:28)\n    at InnerLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:390:34)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at LoadingBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:496:32)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at InnerScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:290:9)\n    at ScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:373:34)\n    at RenderFromTemplateContext (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:769:44)\n    at SegmentStateProvider (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3315:33)\n    at OuterLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:532:30)\n    at InnerLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:390:34)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at Suspense (<anonymous>)\n    at LoadingBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:496:32)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at InnerScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:290:9)\n    at ScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:373:34)\n    at RenderFromTemplateContext (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:769:44)\n    at SegmentStateProvider (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3315:33)\n    at OuterLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:532:30)\n    at InnerLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:390:34)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at Suspense (<anonymous>)\n    at LoadingBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:496:32)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at InnerScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:290:9)\n    at ScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:373:34)\n    at RenderFromTemplateContext (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:769:44)\n    at SegmentStateProvider (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3315:33)\n    at OuterLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:532:30)\n    at main (<anonymous>)\n    at div (<anonymous>)\n    at DashboardLayout [Server] (<anonymous>)\n    at SegmentViewNode (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3299:28)\n    at InnerLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:390:34)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9815:9)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at Suspense (<anonymous>)\n    at LoadingBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:496:32)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at InnerScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:290:9)\n    at ScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:373:34)\n    at RenderFromTemplateContext (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:769:44)\n    at SegmentStateProvider (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3315:33)\n    at OuterLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:532:30)\n    at ThemeProvider (http://localhost:3000/_next/static/chunks/_d0ec05cd._.js:18:26)\n    at Suspense (<anonymous>)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/_d0ec05cd._.js:99:9)\n    at body (<anonymous>)\n    at html (<anonymous>)\n    at RootLayout [Server] (<anonymous>)\n    at SegmentViewNode (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3299:28)\n    at __next_root_layout_boundary__ (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:1666:64)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9815:9)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at DevRootHTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9959:46)\n    at AppDevOverlayErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3410:9)\n    at HotReload (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:10953:22)\n    at Router (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:11131:23)\n    at ErrorBoundaryHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:982:9)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at RootErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9639:30)\n    at AppRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:11448:22)\n    at ServerRoot (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:12965:23)\n    at Root (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:12983:17)"}
+[00:02:18.421] Browser LOG     [v0] Theme loaded from storage: null
+[00:02:19.298] Browser LOG     [v0] Applying theme: dark
+[00:02:20.770] Server  LOG     [v0] Readiness check for THIS SPECIFIC tender: undefined "General" "user:" "ad699139-82ac-41b4-b9f2-442842048f47"
+[00:02:31.138] Browser ERROR   [v0] Error caught by boundary: {} {"componentStack":"\n    at TenderDetailPage (http://localhost:3000/_next/static/chunks/_c8ff050f._.js:4273:273)\n    at ClientPageRoot (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:2157:27)\n    at SegmentViewNode (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3299:28)\n    at InnerLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:390:34)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at LoadingBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:496:32)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at InnerScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:290:9)\n    at ScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:373:34)\n    at RenderFromTemplateContext (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:769:44)\n    at SegmentStateProvider (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3315:33)\n    at OuterLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:532:30)\n    at InnerLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:390:34)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at Suspense (<anonymous>)\n    at LoadingBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:496:32)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at InnerScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:290:9)\n    at ScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:373:34)\n    at RenderFromTemplateContext (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:769:44)\n    at SegmentStateProvider (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3315:33)\n    at OuterLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:532:30)\n    at InnerLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:390:34)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at Suspense (<anonymous>)\n    at LoadingBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:496:32)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at InnerScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:290:9)\n    at ScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:373:34)\n    at RenderFromTemplateContext (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:769:44)\n    at SegmentStateProvider (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3315:33)\n    at OuterLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:532:30)\n    at main (<anonymous>)\n    at div (<anonymous>)\n    at DashboardLayout [Server] (<anonymous>)\n    at SegmentViewNode (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3299:28)\n    at InnerLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:390:34)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9815:9)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at Suspense (<anonymous>)\n    at LoadingBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:496:32)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at InnerScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:290:9)\n    at ScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:373:34)\n    at RenderFromTemplateContext (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:769:44)\n    at SegmentStateProvider (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3315:33)\n    at OuterLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:532:30)\n    at ThemeProvider (http://localhost:3000/_next/static/chunks/_d0ec05cd._.js:18:26)\n    at Suspense (<anonymous>)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/_d0ec05cd._.js:99:9)\n    at body (<anonymous>)\n    at html (<anonymous>)\n    at RootLayout [Server] (<anonymous>)\n    at SegmentViewNode (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3299:28)\n    at __next_root_layout_boundary__ (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:1666:64)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9815:9)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at DevRootHTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9959:46)\n    at AppDevOverlayErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3410:9)\n    at HotReload (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:10953:22)\n    at Router (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:11131:23)\n    at ErrorBoundaryHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:982:9)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at RootErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9639:30)\n    at AppRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:11448:22)\n    at ServerRoot (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:12965:23)\n    at Root (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:12983:17)"}
+[00:02:42.717] Browser ERROR   A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/dashboard..." notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <RootLayout>
+                        <html lang="en" suppressHydrationWarning={true}>
+                          <head>
+                          <body
+                            className="font-sans inter_b2991b2-module__9mH_6q__variable poppins_e1f1a0b-module__ez4LmG..."
+-                           data-new-gr-c-s-check-loaded="14.1268.0"
+-                           data-gr-ext-installed=""
+                          >
+                  ...
+
+[00:02:42.717] Browser LOG     [v0] Theme loaded from storage: null
+[00:02:42.717] Browser LOG     [v0] Applying theme: dark
+[00:03:25.334] Browser LOG     [v0] ================================================
+[00:03:25.334] Browser LOG     [v0] STARTING CUSTOM TENDER UPLOAD PROCESS
+[00:03:25.334] Browser LOG     [v0] ================================================
+[00:03:25.334] Browser LOG     [v0] File name: WTE-0448 CS - Concrete Culverts and Storm Water Pipes for Theewaterskloof Dam.pdf
+[00:03:25.334] Browser LOG     [v0] File size: 0.83 MB
+[00:03:25.334] Browser LOG     [v0] Step 1: Uploading PDF to Supabase storage...
+[00:03:27.937] Browser LOG     [v0] ✓ File uploaded successfully
+[00:03:27.938] Browser LOG     [v0] URL: https://xqyecqkrtaydoesxnvlw.supabase.co/storage/v1/object/sign/tender-documents/temp/ad699139-82ac-41b4-b9f2-442842048f47/1768003787278.pdf?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hY2JjOTkxMy00Y2FkLTQ5Y2ItYTQ0Mi0xMTY5YzFjZDZhZjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0ZW5kZXItZG9jdW1lbnRzL3RlbXAvYWQ2OTkxMzktODJhYy00MWI0LWI5ZjItNDQyODQyMDQ4ZjQ3LzE3NjgwMDM3ODcyNzgucGRmIiwiaWF0IjoxNzY4MDAzNzg5LCJleHAiOjE3NjgwMDczODl9.4mDGMzNszoeO3ufC-hRiF7NReksiX4P1KDDSZhLb-2U
+[00:03:27.938] Browser LOG     [v0] Step 2: Sending PDF to AI for direct analysis...
+[00:03:27.938] Browser LOG     [v0] Requesting analysis via API...
+[00:03:30.980] Server  LOG      ○ Compiling /api/analyze-tender ...
+[00:03:36.458] Server  LOG     [v0] ========================================
+[00:03:36.460] Server  LOG     [v0] TENDER ANALYSIS REQUEST
+[00:03:36.461] Server  LOG     [v0] ========================================
+[00:03:36.462] Server  LOG     [v0] Document text length: 0 "characters"
+[00:03:36.463] Server  LOG     [v0] Document URL provided: "YES"
+[00:03:36.463] Server  LOG     [v0] PDF fields provided: 0
+[00:03:36.465] Server  LOG     [v0] Extracting PDF form fields from: "https://xqyecqkrtaydoesxnvlw.supabase.co/storage/v1/object/sign/tender-documents/temp/ad699139-82ac-41b4-b9f2-442842048f47/1768003787278.pdf?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hY2JjOTkxMy00Y2FkLTQ5Y2ItYTQ0Mi0xMTY5YzFjZDZhZjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0ZW5kZXItZG9jdW1lbnRzL3RlbXAvYWQ2OTkxMzktODJhYy00MWI0LWI5ZjItNDQyODQyMDQ4ZjQ3LzE3NjgwMDM3ODcyNzgucGRmIiwiaWF0IjoxNzY4MDAzNzg5LCJleHAiOjE3NjgwMDczODl9.4mDGMzNszoeO3ufC-hRiF7NReksiX4P1KDDSZhLb-2U"
+[00:03:38.655] Server  LOG     [v0] Found 0 "PDF form fields with positions"
+[00:03:38.657] Server  LOG     [v0] PDF has interactive form fields: false
+[00:03:38.658] Server  LOG     [v0] No text provided - extracting from PDF URL using unpdf...
+[00:03:38.658] Server  LOG     [v0] PDF URL: "https://xqyecqkrtaydoesxnvlw.supabase.co/storage/v1/object/sign/tender-documents/temp/ad699139-82ac-41b4-b9f2-442842048f47/1768003787278.pdf?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hY2JjOTkxMy00Y2FkLTQ5Y2ItYTQ0Mi0xMTY5YzFjZDZhZjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJ0ZW5kZXItZG9jdW1lbnRzL3RlbXAvYWQ2OTkxMzktODJhYy00MWI0LWI5ZjItNDQyODQyMDQ4ZjQ3LzE3NjgwMDM3ODcyNzgucGRmIiwiaWF0IjoxNzY4MDAzNzg5LCJleHAiOjE3NjgwMDczODl9.4mDGMzNszoeO3ufC-hRiF7NReksiX4P1KDDSZhLb-2U"
+[00:03:38.659] Server  LOG     [v0] Step 1: Fetching PDF from blob storage...
+[00:03:38.767] Server  LOG     [v0] PDF fetched successfully, size: "852.82" "KB"
+[00:03:38.769] Server  LOG     [v0] Step 2: Extracting text using unpdf library...
+[00:03:40.843] Server  LOG     [v0] ✓ Text extracted successfully using unpdf
+[00:03:40.845] Server  LOG     [v0] Total pages: 52
+[00:03:40.846] Server  LOG     [v0] Extracted text length: 85160 "characters"
+[00:03:40.847] Server  LOG     [v0] First 500 characters: "DEPARTMENT OF WATER AND SANITATION REPUBLIC OF SOUTH AFRICA DUE AT 11:00 ON CLOSING DATE: 22 JANUARY 2026 BID: WTE-0448 CS SUPPLY AND DELIVERY OF CONCRETE CULVERTS AND STORM WATER DRAINAGE PIPES FOR RIVIERSONDEREND GWS AT THEEWATERSKLOOF DAM: CONSTRUCTION SOUTH IN THE WESTERN CAPE FOR DWS CONSTRUCTION SOUTH. SUBMIT BID DOCUMENTS TO: POSTAL ADDRESS: OR TO BE DEPOSITED IN: DIRECTOR-GENERAL: THE BID BOX AT THE ENTRANCE WATER AND SANITATION OF 4-6 ALKMAAR STREET PRIVATE BAG X3042 DALJOSAPHAT PAARL P"
+[00:03:40.849] Server  LOG     [v0] Word count: 13688
+[00:03:40.850] Server  LOG     [v0] Average words per page: 263
+[00:03:40.850] Server  LOG     [v0] Using text for analysis, length: 85160 "characters"
+[00:03:40.851] Server  LOG     [v0] Using ORIGINAL analysis prompt
+[00:03:40.854] Server  LOG     [v0] Step 3: Calling configured AI provider via wrapper for analysis...
+[00:03:40.855] Server  LOG     [v0] Provider selection: Gemini; model hint: gemini-1.5-flash; prompt length: 94673 chars; truncated text length: 85160
+[00:03:40.857] Server  LOG     [v0] Provider: Gemini (Model: gemini-2.5-flash, API: v1) - attempt 1/3
+[00:03:40.857] Server  LOG     [v0] Gemini request URL: "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=AIzaSyDYtHkYfTW5aKi0Cf21J_iirnbS9XHon_A"
+[00:03:40.859] Server  LOG     [v0] Gemini request body (truncated): "{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"You are an elite tender analyst with 20+ years of experience helping companies win government and corporate tenders. Your analysis must be thorough, actionable, and strategically valuable.\\n\\n===========================================\\nCRITICAL METADATA EXTRACTION RULES\\n===========================================\\n\\nExtract the following with ABSOLUTE PRECISION:\\n\\n1. TENDER TITLE:\\n   - Extract the EXACT official title word-for-word\\n   - Look in: Document header, \\\"Tender Name/Title\\\", \\\"Project Name\\\", \\\"RFP/RFQ/RFB Title\\\", \\\"Bid Number\\\"\\n   - Common locations: First page header, title page, section 1\\n   - DO NOT paraphrase, summarize, or interpret\\n   - If multiple titles, use the most prominent/official one\\n   - Example: \\\"Supply and Delivery of Medical Equipment to Provincial Hospitals\\\"\\n\\n2. ISSUING ORGANIZATION:\\n   - Extract FULL official name including all hierarchy levels\\n   - Look for: \\\"Issued by\\\", \\\"Procuring Entity\\\", \\\"Department\\\", \\\"Ministry\\\", \\\"Tender Authority\\\"\\n   - Include: Department, Division, Province/Region, Country if specified\\n   - Example: \\\"Department of Health, Western Cape Provincial Government, South Africa\\\"\\n   - DO NOT abbreviate official names\\n\\n3. SUBMISSION DEADLINE:\\n   - Extract FINAL submission date ONLY (no time component)\\n   - Look for: \\\"Closing Date\\\", \\\"Submission Deadline\\\", \\\"Due Date\\\", \\\"Closing Time\\\", \\\"Tender Closes\\\"\\n   - Format: YYYY-MM-DD ONLY (e.g., \\\"2024-03-15\\\")\\n   - CRITICAL: DO NOT include time (HH:MM) in the deadline field\\n   - If time is mentioned, include it in the deadlines array instead\\n   - If unclear, note \\\"See deadlines section for details\\\"\\n\\n4. TENDER VALUE/BUDGET:\\n   - Extract estimated contract value, budget range, or ceiling price\\n   - Look for: \\\"Tender Value\\\", \\\"Estimated Budget\\\", \\\"Contract Value\\\", \\\"Price Range\\\", \\\"Maximum Price\\\"\\n   - Include currency and amount: \\\"R 2,500,000\\\" or \\\"ZAR 2.5M\\\" or \\\"R 1M - R 3M\\\"\\n"
+[00:04:02.048] Server  LOG     [v0] Gemini raw response (truncated): "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\": [\n          {\n            \"text\": \"```json\\n{\\n  \\\"tender_summary\\\": {\\n    \\\"tender_number\\\": \\\"WTE-0448 CS\\\",\\n    \\\"title\\\": \\\"SUPPLY AND DELIVERY OF CONCRETE CULVERTS AND STORM WATER DRAINAGE PIPES FOR RIVIERSONDEREND GWS AT THEEWATERSKLOOF DAM: CONSTRUCTION SOUTH IN THE WESTERN CAPE FOR DWS CONSTRUCTION SOUTH.\\\",\\n    \\\"entity\\\": \\\"Department of Water and Sanitation, Construction South, Republic of South Africa\\\",\\n    \\\"description\\\": \\\"The Department of Water and Sanitation, Construction South Division, is procuring the supply and delivery of specific concrete culverts and stormwater drainage pipes. This procurement is essential for the defect rectification of access roads and the Golf Course at Theewaters\"\n          }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\": \"MAX_TOKENS\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 22492,\n    \"candidatesTokenCount\": 159,\n    \"totalTokenCount\": 26488,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 22492\n      }\n    ],\n    \"thoughtsTokenCount\": 3837\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\": \"7phhaeaGMKq-xN8Pxu_yoAM\"\n}\n"
+[00:04:02.049] Server  LOG     [v0] AI generation completed in 21.193 "seconds"
+[00:04:02.050] Server  LOG     [v0] Raw AI response length: 664 "characters"
+[00:04:02.050] Server  LOG     [v0] AI response preview (first 200 chars): "```json\n{\n  \"tender_summary\": {\n    \"tender_number\": \"WTE-0448 CS\",\n    \"title\": \"SUPPLY AND DELIVERY OF CONCRETE CULVERTS AND STORM WATER DRAINAGE PIPES FOR RIVIERSONDEREND GWS AT THEEWATERSKLOOF DAM"
+[00:04:02.051] Server  LOG     [v0] First 500 chars of response: "```json\n{\n  \"tender_summary\": {\n    \"tender_number\": \"WTE-0448 CS\",\n    \"title\": \"SUPPLY AND DELIVERY OF CONCRETE CULVERTS AND STORM WATER DRAINAGE PIPES FOR RIVIERSONDEREND GWS AT THEEWATERSKLOOF DAM: CONSTRUCTION SOUTH IN THE WESTERN CAPE FOR DWS CONSTRUCTION SOUTH.\",\n    \"entity\": \"Department of Water and Sanitation, Construction South, Republic of South Africa\",\n    \"description\": \"The Department of Water and Sanitation, Construction South Division, is procuring the supply and delivery of sp"
+[00:04:02.052] Server  WARN    [v0] Parse attempt 1 failed: "No JSON object could be extracted from the model response"
+[00:04:02.053] Server  LOG     [v0] Provider: Gemini (Model: gemini-2.5-flash, API: v1) - attempt 1/3
+[00:04:02.053] Server  LOG     [v0] Gemini request URL: "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=AIzaSyDYtHkYfTW5aKi0Cf21J_iirnbS9XHon_A"
+[00:04:02.054] Server  LOG     [v0] Gemini request body (truncated): "{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":\"The assistant produced the following text when asked to return a single JSON object. Extract or correct the JSON so it matches this canonical schema and return RAW JSON only (no markdown, no explanation):\\n\\nSchema: Top-level JSON object matching analysisSchema keys: tender_summary, compliance_summary, evaluation, action_plan, financial_requirements, legal_registration, labour_employment, technical_specs, submission_requirements, penalties_payment, formFields (array of {id,label,type,required,section,placeholder,description,options,pdfFieldName}), pdfFormFieldsDetected (bool), pdfFormFieldCount (number). Use ISO dates where possible. Respond with RAW JSON only.\\n\\nModel output:\\n```json\\n{\\n  \\\"tender_summary\\\": {\\n    \\\"tender_number\\\": \\\"WTE-0448 CS\\\",\\n    \\\"title\\\": \\\"SUPPLY AND DELIVERY OF CONCRETE CULVERTS AND STORM WATER DRAINAGE PIPES FOR RIVIERSONDEREND GWS AT THEEWATERSKLOOF DAM: CONSTRUCTION SOUTH IN THE WESTERN CAPE FOR DWS CONSTRUCTION SOUTH.\\\",\\n    \\\"entity\\\": \\\"Department of Water and Sanitation, Construction South, Republic of South Africa\\\",\\n    \\\"description\\\": \\\"The Department of Water and Sanitation, Construction South Division, is procuring the supply and delivery of specific concrete culverts and stormwater drainage pipes. This procurement is essential for the defect rectification of access roads and the Golf Course at Theewaters\"}]}],\"generationConfig\":{\"temperature\":0.2,\"maxOutputTokens\":4000}}"
+[00:04:06.945] Server  LOG     [v0] Gemini raw response (truncated): "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\": [\n          {\n            \"text\": \"```json\\n{\\n  \\\"tender_summary\\\": {\\n    \\\"tender_number\\\": \\\"WTE-0448 CS\\\",\\n    \\\"title\\\": \\\"SUPPLY AND DELIVERY OF CONCRETE CULVERTS AND STORM WATER DRAINAGE PIPES FOR RIVIERSONDEREND GWS AT THEEWATERSKLOOF DAM: CONSTRUCTION SOUTH IN THE WESTERN CAPE FOR DWS CONSTRUCTION SOUTH.\\\",\\n    \\\"entity\\\": \\\"Department of Water and Sanitation, Construction South, Republic of South Africa\\\",\\n    \\\"description\\\": \\\"The Department of Water and Sanitation, Construction South Division, is procuring the supply and delivery of specific concrete culverts and stormwater drainage pipes. This procurement is essential for the defect rectification of access roads and the Golf Course at Theewaterskloof Dam.\\\"\\n  },\\n  \\\"compliance_summary\\\": {},\\n  \\\"evaluation\\\": {},\\n  \\\"action_plan\\\": {},\\n  \\\"financial_requirements\\\": {},\\n  \\\"legal_registration\\\": {},\\n  \\\"labour_employment\\\": {},\\n  \\\"technical_specs\\\": {},\\n  \\\"submission_requirements\\\": {},\\n  \\\"penalties_payment\\\": {},\\n  \\\"formFields\\\": [],\\n  \\\"pdfFormFieldsDetected\\\": false,\\n  \\\"pdfFormFieldCount\\\": 0\\n}\\n```\"\n          }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 304,\n    \"candidatesTokenCount\": 270,\n    \"totalTokenCount\": 1354,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 304\n      }\n    ],\n    \"thoughtsTokenCount\": 780\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\": \"9JhhaeuVBre7xN8Pmqyx2Q0\"\n}\n"
+[00:04:06.947] Server  LOG     [v0] Verifier response preview: "```json\n{\n  \"tender_summary\": {\n    \"tender_number\": \"WTE-0448 CS\",\n    \"title\": \"SUPPLY AND DELIVERY OF CONCRETE CULVERTS AND STORM WATER DRAINAGE PIPES FOR RIVIERSONDEREND GWS AT THEEWATERSKLOOF DAM: CONSTRUCTION SOUTH IN THE WESTERN CAPE FOR DWS CONSTRUCTION SOUTH.\",\n    \"entity\": \"Department of Water and Sanitation, Construction South, Republic of South Africa\",\n    \"description\": \"The Departm"
+[00:04:06.978] Server  LOG     [v0] ========================================
+[00:04:06.982] Server  LOG     [v0] ANALYSIS RESULTS
+[00:04:06.983] Server  LOG     [v0] ========================================
+[00:04:06.985] Server  LOG     [v0] Tender title: "SUPPLY AND DELIVERY OF CONCRETE CULVERTS AND STORM WATER DRAINAGE PIPES FOR RIVIERSONDEREND GWS AT THEEWATERSKLOOF DAM: CONSTRUCTION SOUTH IN THE WESTERN CAPE FOR DWS CONSTRUCTION SOUTH."
+[00:04:06.986] Server  LOG     [v0] Requirements count: 0
+[00:04:07.002] Server  LOG     [v0] Disqualifiers count: 0
+[00:04:07.005] Server  LOG     [v0] Criteria count: 0
+[00:04:07.007] Server  LOG     [v0] Form fields count: 0
+[00:04:07.025] Server  LOG     [v0] PDF form fields detected: false
+[00:04:07.026] Server  LOG     [v0] PDF form field count: 0
+[00:04:07.027] Server  LOG     [v0] ========================================
+[00:04:08.091] Browser LOG     [v0] Analyze API response status: 200
+[00:04:08.091] Browser LOG     [v0] ✓ Analysis complete successfully
+[00:04:08.091] Browser LOG     [v0] Analysis keys: ["tender_summary","compliance_summary","evaluation","action_plan","financial_requirements","legal_registration","labour_employment","technical_specs","submission_requirements","penalties_payment","formFields","pdfFormFieldsDetected","pdfFormFieldCount","__meta","diagnostics","pdfFormFields"]
+[00:04:08.091] Browser LOG     [v0] Full analysis structure: {
+  "tender_summary": {
+    "tender_number": "WTE-0448 CS",
+    "title": "SUPPLY AND DELIVERY OF CONCRETE CULVERTS AND STORM WATER DRAINAGE PIPES FOR RIVIERSONDEREND GWS AT THEEWATERSKLOOF DAM: CONSTRUCTION SOUTH IN THE WESTERN CAPE FOR DWS CONSTRUCTION SOUTH.",
+    "entity": "Department of Water and Sanitation, Construction South, Republic of South Africa",
+    "description": "The Department of Water and Sanitation, Construction South Division, is procuring the supply and delivery of specific concrete culverts and stormwater drainage pipes. This procurement is essential for the defect rectification of access roads and the Golf Course at Theewaterskloof Dam.",
+    "contract_duration": "Not specified",
+    "closing_date": "Not specified",
+    "submission_method": "Not specified",
+    "compulsory_briefing": "Not specified",
+    "validity_period": "Not specified",
+    "contact_email": "Not specified"
+  },
+  "compliance_summary": {
+    "requirements": [],
+    "disqualifiers": [],
+    "strengtheners": []
+  },
+  "evaluation": {
+    "criteria": [],
+    "threshold": "Not specified",
+    "pricing_system": "Not specified"
+  },
+  "action_plan": {
+    "critical_dates": [],
+    "preparation_tasks": []
+  },
+  "financial_requirements": {
+    "bank_guarantee": "Not specified",
+    "performance_bond": "Not specified",
+    "insurance_requirements": [],
+    "financial_turnover": "Not specified",
+    "audited_financials": "Not specified",
+    "payment_terms": "Not specified"
+  },
+  "legal_registration": {
+    "cidb_grading": "Not specified",
+    "cipc_registration": "Not specified",
+    "professional_registration": [],
+    "joint_venture_requirements": "Not specified",
+    "subcontracting_limitations": "Not specified"
+  },
+  "labour_employment": {
+    "local_content": "Not specified",
+    "subcontracting_limit": "Not specified",
+    "labour_composition": "Not specified",
+    "skills_development": "Not specified",
+    "employment_equity": "Not specified"
+  },
+  "technical_specs": {
+    "minimum_experience": "Not specified",
+    "project_references": "Not specified",
+    "key_personnel": [],
+    "equipment_resources": [],
+    "methodology_requirements": "Not specified"
+  },
+  "submission_requirements": {
+    "number_of_copies": "Not specified",
+    "formatting_requirements": "Not specified",
+    "submission_address": "Not specified",
+    "query_deadline": "Not specified",
+    "late_submission_policy": "Not specified"
+  },
+  "penalties_payment": {
+    "late_completion_penalty": "Not specified",
+    "non_performance_penalty": "Not specified",
+    "warranty_period": "Not specified",
+    "payment_schedule": "Not specified",
+    "retention_amount": "Not specified",
+    "payment_timeframe": "Not specified"
+  },
+  "formFields": [],
+  "pdfFormFieldsDetected": false,
+  "pdfFormFieldCount": 0,
+  "__meta": {
+    "provider": "Gemini",
+    "model": "gemini-1.5-flash"
+  },
+  "diagnostics": {
+    "parseAttempts": 2,
+    "parseErrors": [
+      "no_json_found"
+    ],
+    "verifierAttempts": 1,
+    "providerRawPreview": "```json\n{\n  \"tender_summary\": {\n    \"tender_number\": \"WTE-0448 CS\",\n    \"title\": \"SUPPLY AND DELIVERY OF CONCRETE CULVERTS AND STORM WATER DRAINAGE PIPES FOR RIVIERSONDEREND GWS AT THEEWATERSKLOOF DAM: CONSTRUCTION SOUTH IN THE WESTERN CAPE FOR DWS CONSTRUCTION SOUTH.\",\n    \"entity\": \"Department of Water and Sanitation, Construction South, Republic of South Africa\",\n    \"description\": \"The Department of Water and Sanitation, Construction South Division, is procuring the supply and delivery of specific concrete culverts and stormwater drainage pipes. This procurement is essential for the defect rectification of access roads and the Golf Course at Theewaters"
+  },
+  "pdfFormFields": []
+}
+[00:04:08.091] Browser LOG     [v0] Analysis has tender_summary: true
+[00:04:08.091] Browser LOG     [v0] Analysis has formFields: 0
+[00:04:08.091] Browser LOG     [v0] Step 3: Creating tender record with analysis...
+[00:04:08.553] Server  LOG     [v0] createCustomTender called with data: {}
+[00:04:08.789] Server  LOG     [v0] User authenticated: "ad699139-82ac-41b4-b9f2-442842048f47"
+[00:04:08.790] Server  LOG     [v0] Creating custom tender record...
+[00:04:09.019] Server  LOG     [v0] Custom tender created successfully: "94aeddcd-1cf2-4721-9c1d-fc5c5cbd3a11"
+[00:04:09.021] Server  LOG     [v0] Processing existing document...
+[00:04:11.369] Server  LOG     [v0] Saving analysis data...
+[00:04:11.376] Server  LOG     [v0] Inserting analysis with tender_id: "94aeddcd-1cf2-4721-9c1d-fc5c5cbd3a11"
+[00:04:11.635] Server  LOG     [v0] Analysis saved successfully
+[00:04:11.637] Server  LOG     [v0] Triggering multi-engine orchestration...
+[00:04:11.651] Server  LOG     [Orchestrator] Starting orchestration 805b60ea-0a83-45e9-a09b-463720bcb915 for tender 94aeddcd-1cf2-4721-9c1d-fc5c5cbd3a11
+[00:04:12.380] Server  LOG     [Orchestrator] Starting Phase 1 - Critical Analysis
+[00:04:13.616] Server  LOG     [Orchestrator] Running document (attempt 1/2)
+[00:04:14.550] Server  LOG     [Orchestrator] Running tender_analysis (attempt 1/2)
+[00:04:15.526] Server  LOG     [Orchestrator] Starting Phase 2 - Deep Analysis (parallel)
+[00:04:15.530] Server  LOG     [Orchestrator] Phase 2 execution started in background
+[00:04:15.536] Server  LOG     [v0] Orchestration started: 805b60ea-0a83-45e9-a09b-463720bcb915
+[00:04:15.539] Server  LOG     [v0] Returning success for tender: "94aeddcd-1cf2-4721-9c1d-fc5c5cbd3a11"
+[00:04:15.991] Server  LOG     [Orchestrator] Running strategy (attempt 1/2)
+[00:04:16.138] Browser LOG     [v0] createCustomTender result: {"analysisError":null,"analysisSaved":true,"documentError":null,"documentSaved":true,"orchestrationId":"805b60ea-0a83-45e9-a09b-463720bcb915","success":true,"tenderId":"94aeddcd-1cf2-4721-9c1d-fc5c5cbd3a11"}
+[00:04:16.138] Browser LOG     [v0] ✓ Tender created successfully
+[00:04:16.138] Browser LOG     [v0] Tender ID: 94aeddcd-1cf2-4721-9c1d-fc5c5cbd3a11
+[00:04:16.138] Browser LOG     [v0] Orchestration ID: 805b60ea-0a83-45e9-a09b-463720bcb915
+[00:04:16.138] Browser LOG     [v0] Document saved: true
+[00:04:16.138] Browser LOG     [v0] Analysis saved: true
+[00:04:16.156] Server  LOG     [Orchestrator] Running readiness (attempt 1/2)
+[00:04:16.183] Server  LOG     [Orchestrator] Running boq (attempt 1/2)
+[00:04:18.704] Server  LOG     [Orchestrator] Phase 2 complete - succeeded=3 failed=0
+[00:10:53.438] Browser ERROR   [v0] Error caught by boundary: {} {"componentStack":"\n    at TenderDetailPage (http://localhost:3000/_next/static/chunks/_c8ff050f._.js:4273:273)\n    at ClientPageRoot (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:2157:27)\n    at SegmentViewNode (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3299:28)\n    at InnerLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:390:34)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at LoadingBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:496:32)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at InnerScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:290:9)\n    at ScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:373:34)\n    at RenderFromTemplateContext (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:769:44)\n    at SegmentStateProvider (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3315:33)\n    at OuterLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:532:30)\n    at InnerLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:390:34)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at Suspense (<anonymous>)\n    at LoadingBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:496:32)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at InnerScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:290:9)\n    at ScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:373:34)\n    at RenderFromTemplateContext (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:769:44)\n    at SegmentStateProvider (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3315:33)\n    at OuterLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:532:30)\n    at InnerLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:390:34)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at Suspense (<anonymous>)\n    at LoadingBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:496:32)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at InnerScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:290:9)\n    at ScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:373:34)\n    at RenderFromTemplateContext (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:769:44)\n    at SegmentStateProvider (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3315:33)\n    at OuterLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:532:30)\n    at main (<anonymous>)\n    at div (<anonymous>)\n    at DashboardLayout [Server] (<anonymous>)\n    at SegmentViewNode (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3299:28)\n    at InnerLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:390:34)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9815:9)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at Suspense (<anonymous>)\n    at LoadingBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:496:32)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at InnerScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:290:9)\n    at ScrollAndFocusHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:373:34)\n    at RenderFromTemplateContext (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:769:44)\n    at SegmentStateProvider (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3315:33)\n    at OuterLayoutRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_262e5d95._.js:532:30)\n    at ThemeProvider (http://localhost:3000/_next/static/chunks/_d0ec05cd._.js:18:26)\n    at Suspense (<anonymous>)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/_d0ec05cd._.js:99:9)\n    at body (<anonymous>)\n    at html (<anonymous>)\n    at RootLayout [Server] (<anonymous>)\n    at SegmentViewNode (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3299:28)\n    at __next_root_layout_boundary__ (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:1666:64)\n    at RedirectErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9325:9)\n    at RedirectBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9367:29)\n    at HTTPAccessFallbackErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9815:9)\n    at HTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9890:39)\n    at DevRootHTTPAccessFallbackBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9959:46)\n    at AppDevOverlayErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_94258391._.js:3410:9)\n    at HotReload (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:10953:22)\n    at Router (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:11131:23)\n    at ErrorBoundaryHandler (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:982:9)\n    at ErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:1048:26)\n    at RootErrorBoundary (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:9639:30)\n    at AppRouter (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:11448:22)\n    at ServerRoot (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:12965:23)\n    at Root (http://localhost:3000/_next/static/chunks/38113_next_dist_client_9205b8d7._.js:12983:17)"}
+[00:12:59.785] Server  LOG      ✓ Compiled in 2.6s
+[00:15:31.084] Browser ERROR   A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/dashboard..." notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <RootLayout>
+                        <html lang="en" suppressHydrationWarning={true}>
+                          <head>
+                          <body
+                            className="font-sans inter_b2991b2-module__9mH_6q__variable poppins_e1f1a0b-module__ez4LmG..."
+-                           data-new-gr-c-s-check-loaded="14.1268.0"
+-                           data-gr-ext-installed=""
+                          >
+                  ...
+
+[00:15:31.084] Browser LOG     [v0] Theme loaded from storage: null
+[00:15:31.084] Browser LOG     [v0] Applying theme: dark

@@ -35,6 +35,8 @@ export interface PDFParseResult {
   formFields: FormField[]
   rawText: string
   isScanned: boolean
+  // raw PDF bytes for optional server-side rendering/OCR
+  rawPdf?: Uint8Array
 }
 
 export interface PDFParseOptions {
@@ -130,6 +132,7 @@ export async function parsePDF(data: ArrayBuffer | Uint8Array, options: PDFParse
     formFields,
     rawText: fullText,
     isScanned,
+    rawPdf: uint8Data,
   }
 }
 

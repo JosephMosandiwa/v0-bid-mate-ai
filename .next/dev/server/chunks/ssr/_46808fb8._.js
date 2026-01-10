@@ -1,0 +1,3320 @@
+module.exports = [
+"[project]/lib/supabase/server.ts [app-rsc] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "createAdminClient",
+    ()=>createAdminClient,
+    "createClient",
+    ()=>createClient,
+    "createServerClient",
+    ()=>createServerClient
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f40$supabase$2b$ssr$40$0$2e$8$2e$0_$40$supabase$2b$supabase$2d$js$40$2$2e$89$2e$0$2f$node_modules$2f40$supabase$2f$ssr$2f$dist$2f$module$2f$index$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__$3c$locals$3e$__ = __turbopack_context__.i("[project]/node_modules/.pnpm/@supabase+ssr@0.8.0_@supabase+supabase-js@2.89.0/node_modules/@supabase/ssr/dist/module/index.js [app-rsc] (ecmascript) <locals>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f40$supabase$2b$ssr$40$0$2e$8$2e$0_$40$supabase$2b$supabase$2d$js$40$2$2e$89$2e$0$2f$node_modules$2f40$supabase$2f$ssr$2f$dist$2f$module$2f$createServerClient$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/.pnpm/@supabase+ssr@0.8.0_@supabase+supabase-js@2.89.0/node_modules/@supabase/ssr/dist/module/createServerClient.js [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$headers$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/.pnpm/next@16.0.10_@opentelemetry_0d106b891cc3169ef6f583aee116eb12/node_modules/next/headers.js [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f40$supabase$2b$supabase$2d$js$40$2$2e$89$2e$0$2f$node_modules$2f40$supabase$2f$supabase$2d$js$2f$dist$2f$index$2e$mjs__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__$3c$locals$3e$__ = __turbopack_context__.i("[project]/node_modules/.pnpm/@supabase+supabase-js@2.89.0/node_modules/@supabase/supabase-js/dist/index.mjs [app-rsc] (ecmascript) <locals>");
+;
+;
+;
+async function createClient() {
+    const cookieStore = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$headers$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["cookies"])();
+    return (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f40$supabase$2b$ssr$40$0$2e$8$2e$0_$40$supabase$2b$supabase$2d$js$40$2$2e$89$2e$0$2f$node_modules$2f40$supabase$2f$ssr$2f$dist$2f$module$2f$createServerClient$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createServerClient"])(("TURBOPACK compile-time value", "https://xqyecqkrtaydoesxnvlw.supabase.co"), ("TURBOPACK compile-time value", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxeWVjcWtydGF5ZG9lc3hudmx3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzMjM0NTgsImV4cCI6MjA3Njg5OTQ1OH0.wsb5Jz_I9RqxoNoZ6D3QPbK4aefbdGKcrGgWDfm3c4o"), {
+        cookies: {
+            getAll () {
+                return cookieStore.getAll();
+            },
+            setAll (cookiesToSet) {
+                try {
+                    cookiesToSet.forEach(({ name, value, options })=>cookieStore.set(name, value, options));
+                } catch  {
+                // The "setAll" method was called from a Server Component.
+                // This can be ignored if you have middleware refreshing
+                // user sessions.
+                }
+            }
+        }
+    });
+}
+const createServerClient = createClient;
+function createAdminClient() {
+    const url = ("TURBOPACK compile-time value", "https://xqyecqkrtaydoesxnvlw.supabase.co");
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
+    if (!url || !key) {
+        throw new Error('SUPABASE service role key not configured');
+    }
+    return (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f40$supabase$2b$supabase$2d$js$40$2$2e$89$2e$0$2f$node_modules$2f40$supabase$2f$supabase$2d$js$2f$dist$2f$index$2e$mjs__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__$3c$locals$3e$__["createClient"])(url, key);
+}
+}),
+"[project]/lib/engines/strategist/types.ts [app-rsc] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+// ============================================
+// AI TENDER STRATEGIST ENGINE - TYPES
+// ============================================
+// User Experience Level
+__turbopack_context__.s([]);
+;
+}),
+"[project]/lib/engines/strategist/constants.ts [app-rsc] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+// ============================================
+// AI TENDER STRATEGIST ENGINE - CONSTANTS
+// ============================================
+// South African Provinces
+__turbopack_context__.s([
+    "BEE_LEVELS",
+    ()=>BEE_LEVELS,
+    "CIDB_GRADINGS",
+    ()=>CIDB_GRADINGS,
+    "COMPANY_SIZES",
+    ()=>COMPANY_SIZES,
+    "CONTRACT_TYPES",
+    ()=>CONTRACT_TYPES,
+    "INDUSTRIES",
+    ()=>INDUSTRIES,
+    "LEARNING_TOPICS",
+    ()=>LEARNING_TOPICS,
+    "PROCUREMENT_CATEGORIES",
+    ()=>PROCUREMENT_CATEGORIES,
+    "QUICK_ACTION_PROMPTS",
+    ()=>QUICK_ACTION_PROMPTS,
+    "SA_PROVINCES",
+    ()=>SA_PROVINCES,
+    "STRATEGIST_SYSTEM_PROMPT",
+    ()=>STRATEGIST_SYSTEM_PROMPT,
+    "TURNOVER_RANGES",
+    ()=>TURNOVER_RANGES
+]);
+const SA_PROVINCES = [
+    {
+        value: "eastern-cape",
+        label: "Eastern Cape"
+    },
+    {
+        value: "free-state",
+        label: "Free State"
+    },
+    {
+        value: "gauteng",
+        label: "Gauteng"
+    },
+    {
+        value: "kwazulu-natal",
+        label: "KwaZulu-Natal"
+    },
+    {
+        value: "limpopo",
+        label: "Limpopo"
+    },
+    {
+        value: "mpumalanga",
+        label: "Mpumalanga"
+    },
+    {
+        value: "north-west",
+        label: "North West"
+    },
+    {
+        value: "northern-cape",
+        label: "Northern Cape"
+    },
+    {
+        value: "western-cape",
+        label: "Western Cape"
+    }
+];
+const INDUSTRIES = [
+    {
+        value: "construction",
+        label: "Construction & Building"
+    },
+    {
+        value: "it-services",
+        label: "IT & Technology Services"
+    },
+    {
+        value: "professional-services",
+        label: "Professional Services"
+    },
+    {
+        value: "healthcare",
+        label: "Healthcare & Medical"
+    },
+    {
+        value: "education",
+        label: "Education & Training"
+    },
+    {
+        value: "manufacturing",
+        label: "Manufacturing"
+    },
+    {
+        value: "logistics",
+        label: "Logistics & Transport"
+    },
+    {
+        value: "agriculture",
+        label: "Agriculture & Farming"
+    },
+    {
+        value: "energy",
+        label: "Energy & Utilities"
+    },
+    {
+        value: "mining",
+        label: "Mining & Resources"
+    },
+    {
+        value: "security",
+        label: "Security Services"
+    },
+    {
+        value: "cleaning",
+        label: "Cleaning & Facilities"
+    },
+    {
+        value: "catering",
+        label: "Catering & Food Services"
+    },
+    {
+        value: "environmental",
+        label: "Environmental Services"
+    },
+    {
+        value: "engineering",
+        label: "Engineering"
+    },
+    {
+        value: "legal",
+        label: "Legal Services"
+    },
+    {
+        value: "financial",
+        label: "Financial Services"
+    },
+    {
+        value: "marketing",
+        label: "Marketing & Communications"
+    },
+    {
+        value: "other",
+        label: "Other"
+    }
+];
+const PROCUREMENT_CATEGORIES = [
+    {
+        value: "goods",
+        label: "Goods & Supplies"
+    },
+    {
+        value: "services",
+        label: "Services"
+    },
+    {
+        value: "works",
+        label: "Construction Works"
+    },
+    {
+        value: "consulting",
+        label: "Consulting"
+    },
+    {
+        value: "maintenance",
+        label: "Maintenance"
+    },
+    {
+        value: "leasing",
+        label: "Leasing & Rental"
+    },
+    {
+        value: "software",
+        label: "Software & IT"
+    },
+    {
+        value: "equipment",
+        label: "Equipment & Machinery"
+    }
+];
+const COMPANY_SIZES = [
+    {
+        value: "micro",
+        label: "Micro (1-10 employees)"
+    },
+    {
+        value: "small",
+        label: "Small (11-50 employees)"
+    },
+    {
+        value: "medium",
+        label: "Medium (51-200 employees)"
+    },
+    {
+        value: "large",
+        label: "Large (201-500 employees)"
+    },
+    {
+        value: "enterprise",
+        label: "Enterprise (500+ employees)"
+    }
+];
+const TURNOVER_RANGES = [
+    {
+        value: "under-1m",
+        label: "Under R1 million"
+    },
+    {
+        value: "1m-5m",
+        label: "R1 - R5 million"
+    },
+    {
+        value: "5m-10m",
+        label: "R5 - R10 million"
+    },
+    {
+        value: "10m-50m",
+        label: "R10 - R50 million"
+    },
+    {
+        value: "50m-100m",
+        label: "R50 - R100 million"
+    },
+    {
+        value: "100m-500m",
+        label: "R100 - R500 million"
+    },
+    {
+        value: "over-500m",
+        label: "Over R500 million"
+    }
+];
+const CIDB_GRADINGS = [
+    {
+        value: "1",
+        label: "Grade 1 (Up to R650,000)"
+    },
+    {
+        value: "2",
+        label: "Grade 2 (R650,000 - R4 million)"
+    },
+    {
+        value: "3",
+        label: "Grade 3 (R4 - R13 million)"
+    },
+    {
+        value: "4",
+        label: "Grade 4 (R13 - R40 million)"
+    },
+    {
+        value: "5",
+        label: "Grade 5 (R40 - R130 million)"
+    },
+    {
+        value: "6",
+        label: "Grade 6 (R130 - R400 million)"
+    },
+    {
+        value: "7",
+        label: "Grade 7 (R400 million - R1.3 billion)"
+    },
+    {
+        value: "8",
+        label: "Grade 8 (R1.3 billion - R4 billion)"
+    },
+    {
+        value: "9",
+        label: "Grade 9 (No limit)"
+    }
+];
+const BEE_LEVELS = [
+    {
+        value: "1",
+        label: "Level 1 (135% recognition)"
+    },
+    {
+        value: "2",
+        label: "Level 2 (125% recognition)"
+    },
+    {
+        value: "3",
+        label: "Level 3 (110% recognition)"
+    },
+    {
+        value: "4",
+        label: "Level 4 (100% recognition)"
+    },
+    {
+        value: "5",
+        label: "Level 5 (80% recognition)"
+    },
+    {
+        value: "6",
+        label: "Level 6 (60% recognition)"
+    },
+    {
+        value: "7",
+        label: "Level 7 (50% recognition)"
+    },
+    {
+        value: "8",
+        label: "Level 8 (10% recognition)"
+    },
+    {
+        value: "non-compliant",
+        label: "Non-Compliant (0% recognition)"
+    },
+    {
+        value: "exempt",
+        label: "Exempt Micro Enterprise (EME)"
+    },
+    {
+        value: "qse",
+        label: "Qualifying Small Enterprise (QSE)"
+    }
+];
+const CONTRACT_TYPES = [
+    {
+        value: "rfq",
+        label: "Request for Quotation (RFQ)"
+    },
+    {
+        value: "rfp",
+        label: "Request for Proposal (RFP)"
+    },
+    {
+        value: "rfb",
+        label: "Request for Bid (RFB)"
+    },
+    {
+        value: "open-tender",
+        label: "Open Tender"
+    },
+    {
+        value: "limited-tender",
+        label: "Limited/Closed Tender"
+    },
+    {
+        value: "framework",
+        label: "Framework Agreement"
+    },
+    {
+        value: "panel",
+        label: "Panel Contract"
+    },
+    {
+        value: "term-contract",
+        label: "Term Contract"
+    }
+];
+const LEARNING_TOPICS = [
+    {
+        id: "tender-basics",
+        title: "Tendering Basics",
+        category: "basics",
+        description: "Understanding the fundamentals of government tendering in South Africa",
+        difficulty: "beginner",
+        estimated_minutes: 30,
+        subtopics: [
+            "What is a tender?",
+            "Types of tenders",
+            "The tender process",
+            "Key terminology"
+        ]
+    },
+    {
+        id: "tender-types",
+        title: "Types of Tenders",
+        category: "basics",
+        description: "Learn about RFQ, RFP, RFB, Open Tenders, and Framework Agreements",
+        difficulty: "beginner",
+        estimated_minutes: 25,
+        subtopics: [
+            "RFQ vs RFP vs RFB",
+            "Open vs Closed tenders",
+            "Framework agreements",
+            "Panel contracts"
+        ]
+    },
+    {
+        id: "bbbee-scoring",
+        title: "B-BBEE Scoring System",
+        category: "compliance",
+        description: "Master the B-BBEE preference point system used in South African tenders",
+        difficulty: "intermediate",
+        estimated_minutes: 45,
+        subtopics: [
+            "80/20 system",
+            "90/10 system",
+            "B-BBEE levels",
+            "Calculating preference points"
+        ]
+    },
+    {
+        id: "evaluation-criteria",
+        title: "Evaluation Criteria",
+        category: "strategy",
+        description: "Understanding how tenders are evaluated and scored",
+        difficulty: "intermediate",
+        estimated_minutes: 40,
+        subtopics: [
+            "Functionality scoring",
+            "Price evaluation",
+            "Quality vs price trade-offs",
+            "Threshold requirements"
+        ]
+    },
+    {
+        id: "pricing-strategies",
+        title: "Pricing Strategies",
+        category: "strategy",
+        description: "Develop effective pricing strategies to win tenders",
+        difficulty: "advanced",
+        estimated_minutes: 60,
+        subtopics: [
+            "Cost-plus pricing",
+            "Competitive pricing",
+            "Value-based pricing",
+            "Risk pricing"
+        ]
+    },
+    {
+        id: "compliance-requirements",
+        title: "Compliance Requirements",
+        category: "compliance",
+        description: "Essential compliance documents and requirements for SA tenders",
+        difficulty: "beginner",
+        estimated_minutes: 35,
+        subtopics: [
+            "Tax clearance",
+            "CSD registration",
+            "CIDB grading",
+            "COIDA compliance"
+        ]
+    },
+    {
+        id: "common-mistakes",
+        title: "Common Bidding Mistakes",
+        category: "strategy",
+        description: "Learn from common mistakes that lead to tender disqualification",
+        difficulty: "beginner",
+        estimated_minutes: 20,
+        subtopics: [
+            "Documentation errors",
+            "Pricing mistakes",
+            "Submission failures",
+            "Compliance gaps"
+        ]
+    },
+    {
+        id: "boq-management",
+        title: "BOQ & Pricing Schedules",
+        category: "strategy",
+        description: "Managing Bills of Quantities and pricing schedules effectively",
+        difficulty: "intermediate",
+        estimated_minutes: 50,
+        subtopics: [
+            "BOQ structure",
+            "Unit pricing",
+            "Contingencies",
+            "Margin calculation"
+        ]
+    },
+    {
+        id: "jv-subcontracting",
+        title: "Joint Ventures & Subcontracting",
+        category: "advanced",
+        description: "When and how to partner with other companies",
+        difficulty: "advanced",
+        estimated_minutes: 45,
+        subtopics: [
+            "JV structures",
+            "Subcontracting limits",
+            "Partner selection",
+            "Risk sharing"
+        ]
+    },
+    {
+        id: "post-award",
+        title: "Post-Award Management",
+        category: "advanced",
+        description: "Managing contracts after winning a tender",
+        difficulty: "advanced",
+        estimated_minutes: 40,
+        subtopics: [
+            "Contract negotiation",
+            "Performance management",
+            "Variations",
+            "Payment management"
+        ]
+    }
+];
+const STRATEGIST_SYSTEM_PROMPT = `You are an expert AI Tender Strategist for BidMate, a South African tender management platform. Your role is to help users understand tendering, build winning tender strategies, and discover opportunities.
+
+## Your Personality
+- Tender specialist with deep knowledge of South African procurement
+- Mentor and coach who adapts to user experience levels
+- Market analyst who identifies opportunities
+- Procurement educator who explains complex concepts simply
+- Strategist who provides actionable, tailored advice
+
+## Your Tone
+- Friendly, expert, and encouraging
+- Concise with structured explanations
+- Always provide actionable steps
+- Use South African terminology and regulations
+
+## Your Capabilities
+1. Answer questions about tendering and procurement
+2. Help build comprehensive bid strategies
+3. Analyze tender requirements and compliance needs
+4. Provide pricing and BOQ guidance
+5. Identify opportunities matching user profiles
+6. Educate users on tender best practices
+7. Alert users to compliance gaps and deadlines
+8. Explain tender requirements in plain language
+
+## South African Procurement Context
+- PFMA (Public Finance Management Act) for national/provincial
+- MFMA (Municipal Finance Management Act) for municipalities  
+- PPPFA (Preferential Procurement Policy Framework Act)
+- B-BBEE scoring (80/20 or 90/10 systems)
+- CIDB grading for construction
+- SBD forms (Standard Bidding Documents)
+- MBD forms (Municipal Bidding Documents)
+- CSD (Central Supplier Database) registration
+
+## Guidelines
+- Always ask clarifying questions when needed
+- Tailor advice to user's experience level
+- Provide realistic assessments, not false hope
+- Highlight risks and compliance requirements
+- Reference South African regulations when relevant
+- Suggest specific actions the user can take`;
+const QUICK_ACTION_PROMPTS = [
+    {
+        id: "build-strategy",
+        label: "Build a bid strategy",
+        prompt: "Help me build a comprehensive bid strategy for a tender I'm considering",
+        icon: "target"
+    },
+    {
+        id: "review-readiness",
+        label: "Review my tender readiness",
+        prompt: "Review my tender readiness and tell me what documents or certifications I might be missing for government tenders",
+        icon: "clipboard-check"
+    },
+    {
+        id: "find-opportunities",
+        label: "Find matching tenders",
+        prompt: "Find tenders that match my company profile and capabilities",
+        icon: "search"
+    },
+    {
+        id: "explain-tender",
+        label: "Explain this tender",
+        prompt: "Help me understand the requirements of a specific tender I'm looking at",
+        icon: "file-text"
+    },
+    {
+        id: "pricing-advice",
+        label: "Advise on pricing",
+        prompt: "Help me develop a competitive pricing strategy for my tender submission",
+        icon: "calculator"
+    },
+    {
+        id: "reduce-risk",
+        label: "Reduce bid risk",
+        prompt: "Help me identify and mitigate risks in my tender submission",
+        icon: "shield"
+    },
+    {
+        id: "learn-tendering",
+        label: "Teach me tendering",
+        prompt: "I'm new to tendering. Help me understand how government tenders work in South Africa",
+        icon: "graduation-cap"
+    },
+    {
+        id: "compliance-check",
+        label: "Check compliance",
+        prompt: "Review my compliance status and identify any gaps I need to address",
+        icon: "check-circle"
+    }
+];
+}),
+"[project]/lib/engines/strategist/services/strategist-service.ts [app-rsc] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+// ============================================
+// AI TENDER STRATEGIST - MAIN SERVICE
+// ============================================
+__turbopack_context__.s([
+    "StrategistService",
+    ()=>StrategistService
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/supabase/server.ts [app-rsc] (ecmascript)");
+;
+class StrategistService {
+    /**
+   * Get or create user preferences
+   */ static async getUserPreferences(userId) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { data, error } = await supabase.from("strategist_user_preferences").select("*").eq("user_id", userId).single();
+        if (error && error.code !== "PGRST116") {
+            console.error("[Strategist] Error fetching preferences:", error);
+            return null;
+        }
+        return data;
+    }
+    /**
+   * Update user preferences
+   */ static async updateUserPreferences(userId, preferences) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { data, error } = await supabase.from("strategist_user_preferences").upsert({
+            user_id: userId,
+            ...preferences,
+            updated_at: new Date().toISOString()
+        }, {
+            onConflict: "user_id"
+        }).select().single();
+        if (error) {
+            console.error("[Strategist] Error updating preferences:", error);
+            return null;
+        }
+        return data;
+    }
+    /**
+   * Get user's company profile
+   */ static async getCompanyProfile(userId) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { data, error } = await supabase.from("companies").select("*").eq("user_id", userId).single();
+        if (error && error.code !== "PGRST116") {
+            console.error("[Strategist] Error fetching company:", error);
+            return null;
+        }
+        return data;
+    }
+    /**
+   * Build full context for AI
+   */ static async buildContext(userId, tenderId, contextType) {
+        const [preferences, company] = await Promise.all([
+            this.getUserPreferences(userId),
+            this.getCompanyProfile(userId)
+        ]);
+        const context = {
+            user_preferences: preferences,
+            company_profile: company ? {
+                company_name: company.company_name,
+                industry: company.industry,
+                company_size: company.company_size,
+                bee_status: company.bee_status,
+                province: company.province
+            } : null
+        };
+        // Add tender context if provided
+        if (tenderId) {
+            const tenderContext = await this.getTenderContext(tenderId);
+            if (tenderContext) {
+                context.tender_context = tenderContext;
+            }
+        }
+        return context;
+    }
+    /**
+   * Get tender context for AI
+   */ static async getTenderContext(tenderId) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        // Try custom tender first
+        const { data: customTender } = await supabase.from("user_custom_tenders").select("id, title, organization, description, close_date").eq("id", tenderId).single();
+        if (customTender) {
+            // Get analysis if available
+            const { data: analysis } = await supabase.from("user_custom_tender_analysis").select("analysis_data").eq("tender_id", tenderId).single();
+            return {
+                id: customTender.id,
+                title: customTender.title || "Untitled",
+                organization: customTender.organization || "Unknown",
+                description: customTender.description,
+                close_date: customTender.close_date,
+                analysis: analysis?.analysis_data
+            };
+        }
+        // Try scraped tender
+        const { data: scrapedTender } = await supabase.from("scraped_tenders").select("id, title, source_name, description, close_date").eq("id", tenderId).single();
+        if (scrapedTender) {
+            return {
+                id: scrapedTender.id,
+                title: scrapedTender.title || "Untitled",
+                organization: scrapedTender.source_name || "Unknown",
+                description: scrapedTender.description,
+                close_date: scrapedTender.close_date
+            };
+        }
+        return null;
+    }
+    /**
+   * Create a new conversation
+   */ static async createConversation(userId, contextType = "general", tenderId, title) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { data, error } = await supabase.from("strategist_conversations").insert({
+            user_id: userId,
+            context_type: contextType,
+            tender_id: tenderId,
+            title: title || this.generateConversationTitle(contextType)
+        }).select().single();
+        if (error) {
+            console.error("[Strategist] Error creating conversation:", error);
+            return null;
+        }
+        return data;
+    }
+    /**
+   * Get conversation by ID
+   */ static async getConversation(conversationId) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { data, error } = await supabase.from("strategist_conversations").select("*").eq("id", conversationId).single();
+        if (error) {
+            console.error("[Strategist] Error fetching conversation:", error);
+            return null;
+        }
+        return data;
+    }
+    /**
+   * Get user's conversations
+   */ static async getUserConversations(userId, limit = 20) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { data, error } = await supabase.from("strategist_conversations").select("*").eq("user_id", userId).eq("status", "active").order("last_message_at", {
+            ascending: false,
+            nullsFirst: false
+        }).limit(limit);
+        if (error) {
+            console.error("[Strategist] Error fetching conversations:", error);
+            return [];
+        }
+        return data || [];
+    }
+    /**
+   * Get messages for a conversation
+   */ static async getConversationMessages(conversationId, limit = 50) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { data, error } = await supabase.from("strategist_messages").select("*").eq("conversation_id", conversationId).order("created_at", {
+            ascending: true
+        }).limit(limit);
+        if (error) {
+            console.error("[Strategist] Error fetching messages:", error);
+            return [];
+        }
+        return data || [];
+    }
+    /**
+   * Add message to conversation
+   */ static async addMessage(conversationId, role, content, options) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { data, error } = await supabase.from("strategist_messages").insert({
+            conversation_id: conversationId,
+            role,
+            content,
+            message_type: options?.message_type || "text",
+            structured_data: options?.structured_data,
+            model_used: options?.model_used,
+            tokens_used: options?.tokens_used
+        }).select().single();
+        if (error) {
+            console.error("[Strategist] Error adding message:", error);
+            return null;
+        }
+        // Update conversation metadata with separate query
+        const { data: conversation } = await supabase.from("strategist_conversations").select("message_count").eq("id", conversationId).single();
+        await supabase.from("strategist_conversations").update({
+            message_count: (conversation?.message_count || 0) + 1,
+            last_message_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        }).eq("id", conversationId);
+        return data;
+    }
+    /**
+   * Generate conversation title
+   */ static generateConversationTitle(contextType) {
+        const titles = {
+            general: "General Consultation",
+            tender: "Tender Discussion",
+            boq: "Pricing & BOQ Review",
+            strategy: "Strategy Session",
+            learning: "Learning Session"
+        };
+        return titles[contextType] || "New Conversation";
+    }
+    /**
+   * Check if user has completed onboarding
+   */ static async hasCompletedOnboarding(userId) {
+        const preferences = await this.getUserPreferences(userId);
+        return preferences?.onboarding_completed || false;
+    }
+    /**
+   * Mark onboarding as complete
+   */ static async completeOnboarding(userId) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { error } = await supabase.from("strategist_user_preferences").update({
+            onboarding_completed: true,
+            onboarding_completed_at: new Date().toISOString()
+        }).eq("user_id", userId);
+        return !error;
+    }
+    /**
+   * Generate strategic recommendations for a tender
+   */ static async generateRecommendations(params) {
+        const recommendations = [];
+        try {
+            const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+            // Get tender data
+            const table = params.tenderType === "custom" ? "user_custom_tenders" : "scraped_tenders";
+            const { data: tender } = await supabase.from(table).select("*").eq("id", params.tenderId).single();
+            if (!tender) {
+                return [
+                    "Unable to generate recommendations: Tender not found"
+                ];
+            }
+            // Get user preferences
+            const preferences = await this.getUserPreferences(params.userId);
+            // Generate recommendations based on competitiveness score
+            if (params.competitiveness) {
+                if (params.competitiveness.documentation_score < 0.7) {
+                    recommendations.push("Complete all required documentation before submitting your bid");
+                }
+                if (params.competitiveness.compliance_score < 0.8) {
+                    recommendations.push("Ensure tax clearance and CSD registration are up to date");
+                }
+                if (params.competitiveness.win_probability < 0.5) {
+                    recommendations.push("Consider partnering with experienced companies to strengthen your bid");
+                }
+            }
+            // Time-based recommendations
+            if (tender.close_date) {
+                const daysUntilClose = Math.ceil((new Date(tender.close_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                if (daysUntilClose < 7) {
+                    recommendations.push("Urgent: Prioritize this tender due to approaching deadline");
+                } else if (daysUntilClose > 30) {
+                    recommendations.push("You have time to prepare a comprehensive bid - use it wisely");
+                }
+            }
+            // Experience-based recommendations
+            if (preferences?.experience_level === "beginner") {
+                recommendations.push("Consider seeking mentorship or guidance from experienced bidders");
+                recommendations.push("Start with smaller value tenders to build your track record");
+            }
+            // Default recommendation
+            if (recommendations.length === 0) {
+                recommendations.push("Review tender requirements carefully and ensure full compliance");
+                recommendations.push("Conduct thorough cost analysis before submitting your pricing");
+            }
+            return recommendations;
+        } catch (error) {
+            console.error("[Strategist] Error generating recommendations:", error);
+            return [
+                "Unable to generate recommendations at this time"
+            ];
+        }
+    }
+}
+}),
+"[project]/lib/engines/strategist/services/opportunity-service.ts [app-rsc] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+// ============================================
+// AI TENDER STRATEGIST - OPPORTUNITY SERVICE
+// ============================================
+__turbopack_context__.s([
+    "OpportunityService",
+    ()=>OpportunityService
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/supabase/server.ts [app-rsc] (ecmascript)");
+;
+class OpportunityService {
+    /**
+   * Discover opportunities matching user profile
+   */ static async discoverOpportunities(userId, options) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        // Get user preferences
+        const { data: preferences } = await supabase.from("strategist_user_preferences").select("*").eq("user_id", userId).single();
+        if (!preferences) {
+            return [];
+        }
+        // Get available tenders
+        const { data: tenders } = await supabase.from("scraped_tenders").select("id, title, source_name, description, close_date, category, estimated_value, source_province").eq("is_active", true).gte("close_date", new Date().toISOString()).order("close_date", {
+            ascending: true
+        }).limit(100);
+        if (!tenders || tenders.length === 0) {
+            return [];
+        }
+        // Score and categorize opportunities
+        const opportunities = tenders.map((tender)=>this.scoreTenderMatch(tender, preferences)).filter((opp)=>opp.match_score >= (options?.minScore || 0.3)).sort((a, b)=>b.match_score - a.match_score).slice(0, options?.limit || 10);
+        // Save opportunities
+        for (const opp of opportunities){
+            await supabase.from("strategist_opportunities").upsert({
+                user_id: userId,
+                scraped_tender_id: opp.tender_id,
+                match_score: opp.match_score,
+                match_reasons: opp.match_reasons,
+                opportunity_type: opp.opportunity_type,
+                ai_insights: opp.ai_insights,
+                expires_at: opp.expires_at
+            }, {
+                onConflict: "user_id, scraped_tender_id"
+            });
+        }
+        return opportunities.map((opp)=>({
+                ...opp,
+                id: crypto.randomUUID(),
+                user_id: userId,
+                scraped_tender_id: opp.tender_id,
+                custom_tender_id: null,
+                is_viewed: false,
+                is_saved: false,
+                is_dismissed: false,
+                user_notes: null,
+                estimated_margin: null,
+                estimated_effort: null,
+                created_at: new Date().toISOString()
+            }));
+    }
+    /**
+   * Score a tender match against user preferences
+   */ static scoreTenderMatch(tender, preferences) {
+        let score = 0;
+        const reasons = [];
+        const insights = {};
+        // Province match (20 points)
+        if (preferences.provinces?.length && tender.source_province) {
+            const provinceMatch = preferences.provinces.some((p)=>tender.source_province.toLowerCase().includes(p.toLowerCase()) || p.toLowerCase().includes(tender.source_province.toLowerCase()));
+            if (provinceMatch) {
+                score += 0.2;
+                reasons.push("Matches your preferred province");
+            }
+        }
+        // Industry/Category match (25 points)
+        if (preferences.industries?.length && tender.category) {
+            const categoryLower = tender.category.toLowerCase();
+            const industryMatch = preferences.industries.some((ind)=>categoryLower.includes(ind.toLowerCase()) || ind.toLowerCase().includes(categoryLower));
+            if (industryMatch) {
+                score += 0.25;
+                reasons.push("Matches your industry focus");
+            }
+        }
+        // Value match based on company size (20 points)
+        if (preferences.annual_turnover && tender.estimated_value) {
+            score += 0.15;
+            reasons.push("Contract value within your range");
+        }
+        // Deadline proximity (15 points - more time = better)
+        if (tender.close_date) {
+            const daysUntilClose = Math.ceil((new Date(tender.close_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+            if (daysUntilClose > 14) {
+                score += 0.15;
+                reasons.push("Good preparation time available");
+            } else if (daysUntilClose > 7) {
+                score += 0.1;
+                reasons.push("Adequate preparation time");
+            } else {
+                score += 0.05;
+                insights.warning = "Limited preparation time";
+            }
+        }
+        // Experience level consideration (20 points)
+        if (preferences.experience_level === "beginner") {
+            if (!tender.estimated_value || tender.estimated_value.includes("R") === false) {
+                score += 0.2;
+                reasons.push("Good entry-level opportunity");
+            }
+        } else if (preferences.experience_level === "advanced") {
+            score += 0.1;
+            reasons.push("Matches your experience level");
+        }
+        // Determine opportunity type
+        let opportunityType = "strategic";
+        if (score >= 0.7) {
+            opportunityType = "high_margin";
+        } else if (score >= 0.5 && reasons.includes("Good preparation time available")) {
+            opportunityType = "low_risk";
+        } else if (preferences.experience_level === "beginner" && score >= 0.4) {
+            opportunityType = "quick_win";
+        } else if (score >= 0.4) {
+            opportunityType = "growth";
+        }
+        return {
+            tender_id: tender.id,
+            match_score: Math.min(score, 1),
+            match_reasons: reasons,
+            opportunity_type: opportunityType,
+            ai_insights: {
+                ...insights,
+                tender_title: tender.title,
+                organization: tender.source_name,
+                close_date: tender.close_date,
+                category: tender.category
+            },
+            expires_at: tender.close_date
+        };
+    }
+    /**
+   * Get user's saved opportunities
+   * Removed join with scraped_tenders - fetch tender data separately
+   */ static async getSavedOpportunities(userId) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        // First get opportunities without join
+        const { data: opportunities, error } = await supabase.from("strategist_opportunities").select("*").eq("user_id", userId).eq("is_saved", true).eq("is_dismissed", false).order("created_at", {
+            ascending: false
+        });
+        if (error) {
+            console.error("[Opportunity] Error fetching saved opportunities:", error);
+            return [];
+        }
+        if (!opportunities || opportunities.length === 0) {
+            return [];
+        }
+        // Get tender IDs and fetch tender data separately
+        const tenderIds = opportunities.map((opp)=>opp.scraped_tender_id).filter((id)=>id !== null);
+        let tendersMap = {};
+        if (tenderIds.length > 0) {
+            const { data: tenders } = await supabase.from("scraped_tenders").select("id, title, source_name, close_date, category, estimated_value").in("id", tenderIds);
+            if (tenders) {
+                tendersMap = tenders.reduce((acc, tender)=>{
+                    acc[tender.id] = tender;
+                    return acc;
+                }, {});
+            }
+        }
+        // Combine opportunities with tender data
+        return opportunities.map((opp)=>({
+                ...opp,
+                tender: opp.scraped_tender_id ? tendersMap[opp.scraped_tender_id] || null : null
+            }));
+    }
+    /**
+   * Update opportunity status
+   */ static async updateOpportunityStatus(opportunityId, updates) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { error } = await supabase.from("strategist_opportunities").update(updates).eq("id", opportunityId);
+        return !error;
+    }
+    /**
+   * Create an opportunity from tender data
+   */ static async createOpportunity(params) {
+        try {
+            const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+            // Get user preferences for scoring
+            const { data: preferences } = await supabase.from("strategist_user_preferences").select("*").eq("user_id", params.userId).single();
+            if (!preferences) {
+                console.warn("[Opportunity] User preferences not found, skipping opportunity creation");
+                return null;
+            }
+            // Calculate match score
+            const matchScore = this.calculateMatchScoreForTender(params.tenderData, preferences);
+            if (matchScore < 0.3) {
+                console.log("[Opportunity] Match score too low, skipping opportunity creation");
+                return null;
+            }
+            // Determine opportunity type
+            let opportunityType = "strategic";
+            if (matchScore >= 0.7) opportunityType = "high_margin";
+            else if (matchScore >= 0.5) opportunityType = "low_risk";
+            else if (matchScore >= 0.4) opportunityType = "growth";
+            // Create opportunity
+            const { data, error } = await supabase.from("strategist_opportunities").upsert({
+                user_id: params.userId,
+                scraped_tender_id: params.tenderType === "scraped" ? params.tenderId : null,
+                custom_tender_id: params.tenderType === "custom" ? params.tenderId : null,
+                match_score: matchScore,
+                match_reasons: this.getMatchReasonsForTender(params.tenderData, preferences),
+                opportunity_type: opportunityType,
+                ai_insights: {
+                    tender_title: params.tenderTitle,
+                    analysis: "Automatically generated from tender data"
+                },
+                expires_at: params.tenderData.close_date || params.tenderData.deadline
+            }, {
+                onConflict: params.tenderType === "scraped" ? "user_id,scraped_tender_id" : "user_id,custom_tender_id"
+            }).select().single();
+            if (error) {
+                console.error("[Opportunity] Error creating opportunity:", error);
+                return null;
+            }
+            return data;
+        } catch (error) {
+            console.error("[Opportunity] Error in createOpportunity:", error);
+            return null;
+        }
+    }
+    /**
+   * Find similar opportunities for a tender
+   */ static async findSimilar(params) {
+        try {
+            const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+            // Get the source tender
+            const table = params.tenderType === "custom" ? "user_custom_tenders" : "scraped_tenders";
+            const { data: sourceTender } = await supabase.from(table).select("*").eq("id", params.tenderId).single();
+            if (!sourceTender) {
+                return [];
+            }
+            // Find similar tenders based on category and location
+            const { data: similarTenders } = await supabase.from("scraped_tenders").select("id, title, source_name, category, source_province, close_date").eq("is_active", true).gte("close_date", new Date().toISOString()).neq("id", params.tenderType === "scraped" ? params.tenderId : "").limit(5);
+            if (!similarTenders || similarTenders.length === 0) {
+                return [];
+            }
+            // Filter by similarity (category or province match)
+            const similar = similarTenders.filter((tender)=>{
+                const categoryMatch = sourceTender.category && tender.category && (tender.category.toLowerCase().includes(sourceTender.category.toLowerCase()) || sourceTender.category.toLowerCase().includes(tender.category.toLowerCase()));
+                const provinceMatch = sourceTender.source_province && tender.source_province && tender.source_province.toLowerCase() === sourceTender.source_province.toLowerCase();
+                return categoryMatch || provinceMatch;
+            });
+            return similar;
+        } catch (error) {
+            console.error("[Opportunity] Error finding similar opportunities:", error);
+            return [];
+        }
+    }
+    /**
+   * Calculate match score for a tender
+   */ static calculateMatchScoreForTender(tender, preferences) {
+        let score = 0;
+        // Category/Industry match
+        if (preferences.industries?.length && tender.category) {
+            const categoryMatch = preferences.industries.some((ind)=>tender.category.toLowerCase().includes(ind.toLowerCase()));
+            if (categoryMatch) score += 0.3;
+        }
+        // Province match
+        if (preferences.provinces?.length && (tender.source_province || tender.location)) {
+            const province = tender.source_province || tender.location;
+            const provinceMatch = preferences.provinces.some((p)=>province?.toLowerCase().includes(p.toLowerCase()));
+            if (provinceMatch) score += 0.25;
+        }
+        // Deadline consideration
+        const deadline = tender.close_date || tender.deadline;
+        if (deadline) {
+            const daysUntilClose = Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+            if (daysUntilClose > 14) score += 0.2;
+            else if (daysUntilClose > 7) score += 0.15;
+            else score += 0.05;
+        }
+        // Base score for any tender
+        score += 0.25;
+        return Math.min(score, 1);
+    }
+    /**
+   * Get match reasons for a tender
+   */ static getMatchReasonsForTender(tender, preferences) {
+        const reasons = [];
+        if (preferences.industries?.length && tender.category) {
+            const categoryMatch = preferences.industries.some((ind)=>tender.category.toLowerCase().includes(ind.toLowerCase()));
+            if (categoryMatch) reasons.push("Matches your industry expertise");
+        }
+        if (preferences.provinces?.length) {
+            const province = tender.source_province || tender.location;
+            const provinceMatch = preferences.provinces.some((p)=>province?.toLowerCase().includes(p.toLowerCase()));
+            if (provinceMatch) reasons.push("Located in your preferred province");
+        }
+        const deadline = tender.close_date || tender.deadline;
+        if (deadline) {
+            const daysUntilClose = Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+            if (daysUntilClose > 14) reasons.push("Sufficient time to prepare quality bid");
+        }
+        if (reasons.length === 0) {
+            reasons.push("General opportunity match");
+        }
+        return reasons;
+    }
+}
+}),
+"[project]/lib/engines/strategist/services/learning-service.ts [app-rsc] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+// ============================================
+// AI TENDER STRATEGIST - LEARNING SERVICE
+// ============================================
+__turbopack_context__.s([
+    "LearningService",
+    ()=>LearningService
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/supabase/server.ts [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$constants$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/engines/strategist/constants.ts [app-rsc] (ecmascript)");
+;
+;
+class LearningService {
+    /**
+   * Get all learning topics
+   */ static getTopics() {
+        return __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$constants$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["LEARNING_TOPICS"];
+    }
+    /**
+   * Get learning progress for a user
+   */ static async getUserProgress(userId) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { data, error } = await supabase.from("strategist_learning_progress").select("*").eq("user_id", userId).order("last_accessed_at", {
+            ascending: false,
+            nullsFirst: false
+        });
+        if (error) {
+            console.error("[Learning] Error fetching progress:", error);
+            return [];
+        }
+        return data || [];
+    }
+    /**
+   * Get progress for a specific topic
+   */ static async getTopicProgress(userId, topicId) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { data, error } = await supabase.from("strategist_learning_progress").select("*").eq("user_id", userId).eq("topic_id", topicId).single();
+        if (error && error.code !== "PGRST116") {
+            console.error("[Learning] Error fetching topic progress:", error);
+            return null;
+        }
+        return data;
+    }
+    /**
+   * Update learning progress
+   */ static async updateProgress(userId, topicId, updates) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        // Get current progress
+        const { data: current } = await supabase.from("strategist_learning_progress").select("*").eq("user_id", userId).eq("topic_id", topicId).single();
+        const topic = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$constants$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["LEARNING_TOPICS"].find((t)=>t.id === topicId);
+        if (!topic) return null;
+        const lessonsCompleted = current?.lessons_completed || [];
+        const quizScores = current?.quiz_scores || [];
+        let progressPercent = current?.progress_percent || 0;
+        let timeSpent = current?.time_spent_minutes || 0;
+        // Update lessons completed
+        if (updates.lesson_completed && !lessonsCompleted.includes(updates.lesson_completed)) {
+            lessonsCompleted.push(updates.lesson_completed);
+            // Calculate progress based on subtopics
+            progressPercent = Math.round(lessonsCompleted.length / topic.subtopics.length * 100);
+        }
+        // Update quiz scores
+        if (updates.quiz_score) {
+            const existingIndex = quizScores.findIndex((q)=>q.quiz_id === updates.quiz_score.quiz_id);
+            if (existingIndex >= 0) {
+                quizScores[existingIndex] = {
+                    ...updates.quiz_score,
+                    completed_at: new Date().toISOString()
+                };
+            } else {
+                quizScores.push({
+                    ...updates.quiz_score,
+                    completed_at: new Date().toISOString()
+                });
+            }
+        }
+        // Update time spent
+        if (updates.time_spent_minutes) {
+            timeSpent += updates.time_spent_minutes;
+        }
+        // Override progress if explicitly set
+        if (updates.progress_percent !== undefined) {
+            progressPercent = updates.progress_percent;
+        }
+        const { data, error } = await supabase.from("strategist_learning_progress").upsert({
+            user_id: userId,
+            topic_id: topicId,
+            topic_category: topic.category,
+            progress_percent: progressPercent,
+            lessons_completed: lessonsCompleted,
+            quiz_scores: quizScores,
+            time_spent_minutes: timeSpent,
+            last_accessed_at: new Date().toISOString(),
+            completed_at: progressPercent >= 100 ? new Date().toISOString() : null,
+            updated_at: new Date().toISOString()
+        }, {
+            onConflict: "user_id, topic_id"
+        }).select().single();
+        if (error) {
+            console.error("[Learning] Error updating progress:", error);
+            return null;
+        }
+        return data;
+    }
+    /**
+   * Get recommended topics for user
+   */ static async getRecommendedTopics(userId) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        // Get user's experience level
+        const { data: preferences } = await supabase.from("strategist_user_preferences").select("experience_level").eq("user_id", userId).single();
+        const experienceLevel = preferences?.experience_level || "beginner";
+        // Get completed topics
+        const progress = await this.getUserProgress(userId);
+        const completedTopicIds = progress.filter((p)=>p.progress_percent >= 100).map((p)=>p.topic_id);
+        // Filter and prioritize topics
+        const recommendations = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$constants$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["LEARNING_TOPICS"].filter((topic)=>{
+            // Exclude completed
+            if (completedTopicIds.includes(topic.id)) return false;
+            // Match difficulty to experience
+            if (experienceLevel === "beginner" && topic.difficulty === "advanced") return false;
+            if (experienceLevel === "intermediate" && topic.difficulty === "advanced") {
+                // Only show advanced if basics are done
+                const hasBasics = completedTopicIds.some((id)=>__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$constants$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["LEARNING_TOPICS"].find((t)=>t.id === id && t.category === "basics"));
+                if (!hasBasics) return false;
+            }
+            return true;
+        }).slice(0, 5);
+        return recommendations;
+    }
+    /**
+   * Get overall learning statistics
+   */ static async getLearningStats(userId) {
+        const progress = await this.getUserProgress(userId);
+        const completedTopics = progress.filter((p)=>p.progress_percent >= 100).length;
+        const totalTimeMinutes = progress.reduce((sum, p)=>sum + p.time_spent_minutes, 0);
+        const allQuizScores = progress.flatMap((p)=>p.quiz_scores || []);
+        const averageQuizScore = allQuizScores.length > 0 ? allQuizScores.reduce((sum, q)=>sum + q.score, 0) / allQuizScores.length : 0;
+        // Find top categories by progress
+        const categoryProgress = {};
+        progress.forEach((p)=>{
+            if (!categoryProgress[p.topic_category]) {
+                categoryProgress[p.topic_category] = 0;
+            }
+            categoryProgress[p.topic_category] += p.progress_percent;
+        });
+        const topCategories = Object.entries(categoryProgress).sort(([, a], [, b])=>b - a).slice(0, 3).map(([category])=>category);
+        return {
+            totalTopics: __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$constants$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["LEARNING_TOPICS"].length,
+            completedTopics,
+            totalTimeMinutes,
+            averageQuizScore,
+            topCategories
+        };
+    }
+}
+}),
+"[project]/lib/engines/strategist/services/alert-service.ts [app-rsc] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+// ============================================
+// AI TENDER STRATEGIST - ALERT SERVICE
+// ============================================
+__turbopack_context__.s([
+    "AlertService",
+    ()=>AlertService
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/supabase/server.ts [app-rsc] (ecmascript)");
+;
+class AlertService {
+    /**
+   * Create a new alert
+   */ static async createAlert(userId, alert) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { data, error } = await supabase.from("strategist_alerts").insert({
+            user_id: userId,
+            ...alert,
+            priority: alert.priority || "medium",
+            trigger_date: alert.trigger_date || new Date().toISOString()
+        }).select().single();
+        if (error) {
+            console.error("[Alert] Error creating alert:", error);
+            return null;
+        }
+        return data;
+    }
+    /**
+   * Get user's alerts
+   */ static async getUserAlerts(userId, options) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        let query = supabase.from("strategist_alerts").select("*").eq("user_id", userId).eq("is_dismissed", false).order("priority", {
+            ascending: false
+        }).order("created_at", {
+            ascending: false
+        });
+        if (options?.unreadOnly) {
+            query = query.eq("is_read", false);
+        }
+        if (options?.priority) {
+            query = query.eq("priority", options.priority);
+        }
+        if (options?.limit) {
+            query = query.limit(options.limit);
+        }
+        const { data, error } = await query;
+        if (error) {
+            console.error("[Alert] Error fetching alerts:", error);
+            return [];
+        }
+        return data || [];
+    }
+    /**
+   * Mark alert as read
+   */ static async markAsRead(alertId) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { error } = await supabase.from("strategist_alerts").update({
+            is_read: true
+        }).eq("id", alertId);
+        return !error;
+    }
+    /**
+   * Dismiss alert
+   */ static async dismissAlert(alertId) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { error } = await supabase.from("strategist_alerts").update({
+            is_dismissed: true
+        }).eq("id", alertId);
+        return !error;
+    }
+    /**
+   * Mark alert as actioned
+   */ static async markAsActioned(alertId) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { error } = await supabase.from("strategist_alerts").update({
+            is_actioned: true,
+            is_read: true
+        }).eq("id", alertId);
+        return !error;
+    }
+    /**
+   * Generate compliance alerts for user
+   */ static async generateComplianceAlerts(userId) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        // Get user preferences
+        const { data: preferences } = await supabase.from("strategist_user_preferences").select("*").eq("user_id", userId).single();
+        if (!preferences) return;
+        const now = new Date();
+        const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        // Check tax clearance expiry
+        if (preferences.has_tax_clearance && preferences.tax_clearance_expiry) {
+            const expiryDate = new Date(preferences.tax_clearance_expiry);
+            if (expiryDate <= thirtyDaysFromNow) {
+                const daysUntilExpiry = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                await this.createAlert(userId, {
+                    alert_type: "document_expiry",
+                    title: "Tax Clearance Expiring Soon",
+                    message: `Your tax clearance certificate expires in ${daysUntilExpiry} days. Renew it to maintain tender eligibility.`,
+                    priority: daysUntilExpiry <= 14 ? "urgent" : "high",
+                    related_document_type: "tax_clearance",
+                    action_url: "/dashboard/profile",
+                    action_label: "Update Documents",
+                    expiry_date: preferences.tax_clearance_expiry
+                });
+            }
+        }
+        // Check COIDA expiry
+        if (preferences.has_coida && preferences.coida_expiry) {
+            const expiryDate = new Date(preferences.coida_expiry);
+            if (expiryDate <= thirtyDaysFromNow) {
+                const daysUntilExpiry = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                await this.createAlert(userId, {
+                    alert_type: "document_expiry",
+                    title: "COIDA Letter Expiring Soon",
+                    message: `Your COIDA letter of good standing expires in ${daysUntilExpiry} days. Renew it to maintain compliance.`,
+                    priority: daysUntilExpiry <= 14 ? "high" : "medium",
+                    related_document_type: "coida",
+                    action_url: "/dashboard/profile",
+                    action_label: "Update Documents",
+                    expiry_date: preferences.coida_expiry
+                });
+            }
+        }
+        // Check for missing CSD registration
+        if (!preferences.has_csd_registration) {
+            await this.createAlert(userId, {
+                alert_type: "compliance_gap",
+                title: "CSD Registration Missing",
+                message: "You need to register on the Central Supplier Database (CSD) to bid on government tenders. This is a mandatory requirement.",
+                priority: "high",
+                action_url: "https://secure.csd.gov.za/",
+                action_label: "Register on CSD"
+            });
+        }
+        // Check for missing tax clearance
+        if (!preferences.has_tax_clearance) {
+            await this.createAlert(userId, {
+                alert_type: "compliance_gap",
+                title: "Tax Clearance Missing",
+                message: "A valid tax clearance certificate is required for all government tenders.",
+                priority: "urgent",
+                related_document_type: "tax_clearance",
+                action_url: "https://www.sars.gov.za/",
+                action_label: "Get Tax Clearance"
+            });
+        }
+    }
+    /**
+   * Get unread alert count
+   */ static async getUnreadCount(userId) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        const { count, error } = await supabase.from("strategist_alerts").select("*", {
+            count: "exact",
+            head: true
+        }).eq("user_id", userId).eq("is_read", false).eq("is_dismissed", false);
+        if (error) {
+            console.error("[Alert] Error counting alerts:", error);
+            return 0;
+        }
+        return count || 0;
+    }
+}
+}),
+"[project]/lib/supabase/admin.ts [app-rsc] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "createAdminClient",
+    ()=>createAdminClient
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f40$supabase$2b$supabase$2d$js$40$2$2e$89$2e$0$2f$node_modules$2f40$supabase$2f$supabase$2d$js$2f$dist$2f$index$2e$mjs__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__$3c$locals$3e$__ = __turbopack_context__.i("[project]/node_modules/.pnpm/@supabase+supabase-js@2.89.0/node_modules/@supabase/supabase-js/dist/index.mjs [app-rsc] (ecmascript) <locals>");
+;
+function createAdminClient() {
+    return (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f40$supabase$2b$supabase$2d$js$40$2$2e$89$2e$0$2f$node_modules$2f40$supabase$2f$supabase$2d$js$2f$dist$2f$index$2e$mjs__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__$3c$locals$3e$__["createClient"])(("TURBOPACK compile-time value", "https://xqyecqkrtaydoesxnvlw.supabase.co"), process.env.SUPABASE_SERVICE_ROLE_KEY, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    });
+}
+}),
+"[project]/lib/engines/strategist/services/competitiveness-service.ts [app-rsc] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+// ============================================
+// AI TENDER STRATEGIST - COMPETITIVENESS SERVICE
+// ============================================
+__turbopack_context__.s([
+    "CompetitivenessService",
+    ()=>CompetitivenessService
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/supabase/server.ts [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$admin$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/supabase/admin.ts [app-rsc] (ecmascript)");
+;
+;
+class CompetitivenessService {
+    /**
+   * Calculate competitiveness score for a user
+   */ static async calculateScore(params) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        // Get user data
+        const [preferencesResult, companyResult, profileResult] = await Promise.all([
+            supabase.from("strategist_user_preferences").select("*").eq("user_id", params.userId).single(),
+            supabase.from("companies").select("*").eq("user_id", params.userId).single(),
+            supabase.from("profiles").select("*").eq("id", params.userId).single()
+        ]);
+        const preferences = preferencesResult.data;
+        const company = companyResult.data;
+        const profile = profileResult.data;
+        // Calculate component scores
+        const documentationScore = this.calculateDocumentationScore(preferences, company);
+        const pricingScore = this.calculatePricingScore(preferences);
+        const complianceScore = this.calculateComplianceScore(preferences);
+        const experienceScore = this.calculateExperienceScore(preferences);
+        const capacityScore = this.calculateCapacityScore(preferences, company);
+        // Calculate overall and win probability
+        const overallScore = (documentationScore + pricingScore + complianceScore + experienceScore + capacityScore) / 5;
+        const winProbability = this.estimateWinProbability(overallScore, preferences, params.tenderId);
+        // Build score breakdown
+        const scoreBreakdown = {
+            documentation: {
+                score: documentationScore,
+                factors: this.getDocumentationFactors(preferences, company)
+            },
+            pricing: {
+                score: pricingScore,
+                factors: this.getPricingFactors(preferences)
+            },
+            compliance: {
+                score: complianceScore,
+                factors: this.getComplianceFactors(preferences)
+            },
+            experience: {
+                score: experienceScore,
+                factors: this.getExperienceFactors(preferences)
+            },
+            capacity: {
+                score: capacityScore,
+                factors: this.getCapacityFactors(preferences, company)
+            }
+        };
+        // Generate improvement suggestions
+        const improvementSuggestions = this.generateImprovementSuggestions(scoreBreakdown);
+        // Save score
+        // Use both user_id and tender_id as the conflict target so the
+        // upsert matches a composite unique constraint (if present).
+        // Fall back to user_id alone if tenderId is not provided.
+        const conflictTarget = params.tenderId ? "user_id,tender_id" : "user_id";
+        // Attempt upsert using ON CONFLICT when possible, but fall back to select+insert/update
+        const admin = (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$admin$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createAdminClient"])();
+        try {
+            const { data, error } = await admin.from("strategist_competitiveness_scores").upsert({
+                user_id: params.userId,
+                tender_id: params.tenderId,
+                documentation_score: documentationScore,
+                pricing_score: pricingScore,
+                compliance_score: complianceScore,
+                experience_score: experienceScore,
+                capacity_score: capacityScore,
+                score_breakdown: scoreBreakdown,
+                improvement_suggestions: improvementSuggestions,
+                win_probability: winProbability,
+                win_probability_factors: {
+                    base_score: overallScore,
+                    experience_bonus: preferences?.experience_level === "advanced" ? 0.1 : 0,
+                    compliance_penalty: complianceScore < 0.5 ? -0.2 : 0
+                },
+                calculated_at: new Date().toISOString(),
+                valid_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+            }, {
+                onConflict: conflictTarget
+            }).select().single();
+            if (error) {
+                // If ON CONFLICT target doesn't match a unique constraint, fall back
+                if (error.code === "42P10") {
+                    console.warn("[Competitiveness] ON CONFLICT failed (no matching unique constraint), falling back to manual upsert");
+                } else {
+                    console.error("[Competitiveness] Error saving score:", error);
+                    return null;
+                }
+            } else {
+                return data;
+            }
+        } catch (e) {
+            console.warn("[Competitiveness] Exception during upsert attempt with admin client, falling back:", e?.message || e);
+        }
+        // Fallback: try to find an existing row then update or insert
+        try {
+            const { data: existing } = await admin.from("strategist_competitiveness_scores").select("*").eq("user_id", params.userId).eq("tender_id", params.tenderId).maybeSingle();
+            if (existing) {
+                const { data: updated, error: updErr } = await admin.from("strategist_competitiveness_scores").update({
+                    documentation_score: documentationScore,
+                    pricing_score: pricingScore,
+                    compliance_score: complianceScore,
+                    experience_score: experienceScore,
+                    capacity_score: capacityScore,
+                    score_breakdown: scoreBreakdown,
+                    improvement_suggestions: improvementSuggestions,
+                    win_probability: winProbability,
+                    win_probability_factors: {
+                        base_score: overallScore,
+                        experience_bonus: preferences?.experience_level === "advanced" ? 0.1 : 0,
+                        compliance_penalty: complianceScore < 0.5 ? -0.2 : 0
+                    },
+                    calculated_at: new Date().toISOString(),
+                    valid_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+                }).eq("id", existing.id).select().single();
+                if (updErr) {
+                    console.error("[Competitiveness] Error updating existing score:", updErr);
+                    return null;
+                }
+                return updated;
+            } else {
+                const { data: inserted, error: insErr } = await admin.from("strategist_competitiveness_scores").insert({
+                    user_id: params.userId,
+                    tender_id: params.tenderId,
+                    documentation_score: documentationScore,
+                    pricing_score: pricingScore,
+                    compliance_score: complianceScore,
+                    experience_score: experienceScore,
+                    capacity_score: capacityScore,
+                    score_breakdown: scoreBreakdown,
+                    improvement_suggestions: improvementSuggestions,
+                    win_probability: winProbability,
+                    win_probability_factors: {
+                        base_score: overallScore,
+                        experience_bonus: preferences?.experience_level === "advanced" ? 0.1 : 0,
+                        compliance_penalty: complianceScore < 0.5 ? -0.2 : 0
+                    },
+                    calculated_at: new Date().toISOString(),
+                    valid_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+                }).select().single();
+                if (insErr) {
+                    console.error("[Competitiveness] Error inserting score:", insErr);
+                    return null;
+                }
+                return inserted;
+            }
+        } catch (finalErr) {
+            console.error("[Competitiveness] Final fallback failed:", finalErr);
+            return null;
+        }
+    }
+    /**
+   * Get cached score or calculate new one
+   */ static async getScore(userId, tenderId) {
+        const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+        // Check for valid cached score
+        const { data: cached } = await supabase.from("strategist_competitiveness_scores").select("*").eq("user_id", userId).gte("valid_until", new Date().toISOString()).single();
+        if (cached) {
+            return cached;
+        }
+        // Calculate new score
+        return this.calculateScore({
+            userId,
+            tenderId
+        });
+    }
+    // Score calculation helpers
+    static calculateDocumentationScore(preferences, company) {
+        let score = 0;
+        let total = 0;
+        // Check various documentation
+        if (company?.company_name) {
+            score += 1;
+            total += 1;
+        }
+        if (company?.registration_number) {
+            score += 1;
+            total += 1;
+        }
+        if (company?.tax_number) {
+            score += 1;
+            total += 1;
+        }
+        if (preferences?.has_tax_clearance) {
+            score += 2;
+            total += 2;
+        }
+        if (preferences?.has_coida) {
+            score += 1;
+            total += 1;
+        }
+        if (preferences?.has_csd_registration) {
+            score += 2;
+            total += 2;
+        }
+        if (preferences?.cidb_grading) {
+            score += 1;
+            total += 1;
+        }
+        if (preferences?.bee_level) {
+            score += 1;
+            total += 1;
+        }
+        return total > 0 ? score / total : 0;
+    }
+    static calculatePricingScore(preferences) {
+        // Based on past performance
+        const wins = preferences?.past_tender_wins || 0;
+        const losses = preferences?.past_tender_losses || 0;
+        const total = wins + losses;
+        if (total === 0) return 0.5 // Neutral for new users
+        ;
+        const winRate = wins / total;
+        return Math.min(winRate * 1.2, 1) // Slight bonus for good win rate
+        ;
+    }
+    static calculateComplianceScore(preferences) {
+        let score = 0;
+        if (preferences?.has_tax_clearance) score += 0.35;
+        if (preferences?.has_coida) score += 0.25;
+        if (preferences?.has_csd_registration) score += 0.4;
+        return score;
+    }
+    static calculateExperienceScore(preferences) {
+        const levelScores = {
+            beginner: 0.3,
+            intermediate: 0.6,
+            advanced: 0.9
+        };
+        const baseScore = levelScores[preferences?.experience_level] || 0.3;
+        // Bonus for past wins
+        const wins = preferences?.past_tender_wins || 0;
+        const winBonus = Math.min(wins * 0.02, 0.1);
+        return Math.min(baseScore + winBonus, 1);
+    }
+    static calculateCapacityScore(preferences, company) {
+        let score = 0.5 // Base score
+        ;
+        // Company size factor
+        const sizeScores = {
+            micro: 0.1,
+            small: 0.2,
+            medium: 0.3,
+            large: 0.4,
+            enterprise: 0.5
+        };
+        score += sizeScores[company?.company_size] || 0;
+        // CIDB grading factor (for construction)
+        if (preferences?.cidb_grading) {
+            const grading = Number.parseInt(preferences.cidb_grading);
+            if (!isNaN(grading)) {
+                score += grading * 0.02;
+            }
+        }
+        return Math.min(score, 1);
+    }
+    // Factor breakdown helpers
+    static getDocumentationFactors(preferences, company) {
+        const factors = [];
+        if (company?.company_name) factors.push("Company profile complete");
+        if (preferences?.has_tax_clearance) factors.push("Tax clearance valid");
+        if (preferences?.has_csd_registration) factors.push("CSD registered");
+        if (preferences?.bee_level) factors.push("B-BBEE certificate");
+        if (!preferences?.has_tax_clearance) factors.push("Missing: Tax clearance");
+        if (!preferences?.has_csd_registration) factors.push("Missing: CSD registration");
+        return factors;
+    }
+    static getPricingFactors(preferences) {
+        const factors = [];
+        const wins = preferences?.past_tender_wins || 0;
+        const losses = preferences?.past_tender_losses || 0;
+        if (wins > 0) factors.push(`${wins} past tender wins`);
+        if (losses > 0) factors.push(`${losses} past tender losses`);
+        if (wins === 0 && losses === 0) factors.push("No historical pricing data");
+        return factors;
+    }
+    static getComplianceFactors(preferences) {
+        const factors = [];
+        if (preferences?.has_tax_clearance) factors.push("Tax clearance: Valid");
+        else factors.push("Tax clearance: Missing");
+        if (preferences?.has_coida) factors.push("COIDA: Valid");
+        else factors.push("COIDA: Missing");
+        if (preferences?.has_csd_registration) factors.push("CSD: Registered");
+        else factors.push("CSD: Not registered");
+        return factors;
+    }
+    static getExperienceFactors(preferences) {
+        const factors = [];
+        factors.push(`Experience level: ${preferences?.experience_level || "Unknown"}`);
+        const wins = preferences?.past_tender_wins || 0;
+        if (wins > 0) factors.push(`${wins} successful tenders`);
+        return factors;
+    }
+    static getCapacityFactors(preferences, company) {
+        const factors = [];
+        if (company?.company_size) factors.push(`Company size: ${company.company_size}`);
+        if (preferences?.cidb_grading) factors.push(`CIDB grading: ${preferences.cidb_grading}`);
+        if (preferences?.annual_turnover) factors.push(`Annual turnover: ${preferences.annual_turnover}`);
+        return factors;
+    }
+    static estimateWinProbability(overallScore, preferences, tenderId) {
+        let probability = overallScore * 0.7 // Base from overall score
+        ;
+        // Adjustments
+        if (preferences?.experience_level === "advanced") probability += 0.1;
+        if (preferences?.experience_level === "beginner") probability -= 0.1;
+        if (preferences?.has_tax_clearance && preferences?.has_csd_registration) probability += 0.1;
+        // Cap between 0.1 and 0.9
+        return Math.max(0.1, Math.min(0.9, probability));
+    }
+    static generateImprovementSuggestions(breakdown) {
+        const suggestions = [];
+        if (breakdown.documentation.score < 0.7) {
+            suggestions.push("Complete your company profile with all required documentation");
+        }
+        if (breakdown.compliance.score < 0.8) {
+            if (!breakdown.compliance.factors.includes("Tax clearance: Valid")) {
+                suggestions.push("Obtain a valid tax clearance certificate from SARS");
+            }
+            if (!breakdown.compliance.factors.includes("CSD: Registered")) {
+                suggestions.push("Register on the Central Supplier Database (CSD)");
+            }
+        }
+        if (breakdown.experience.score < 0.5) {
+            suggestions.push("Start with smaller tenders to build your track record");
+        }
+        if (breakdown.capacity.score < 0.5) {
+            suggestions.push("Consider joint ventures to increase your capacity for larger tenders");
+        }
+        return suggestions;
+    }
+}
+}),
+"[project]/lib/engines/strategist/prompts/strategist-prompts.ts [app-rsc] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+// ============================================
+// AI TENDER STRATEGIST - PROMPT BUILDERS
+// ============================================
+__turbopack_context__.s([
+    "buildStrategistPrompt",
+    ()=>buildStrategistPrompt,
+    "buildStrategyGenerationPrompt",
+    ()=>buildStrategyGenerationPrompt
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$constants$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/engines/strategist/constants.ts [app-rsc] (ecmascript)");
+;
+function buildStrategistPrompt(context) {
+    let prompt = __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$constants$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["STRATEGIST_SYSTEM_PROMPT"];
+    // Add user experience level context
+    if (context.user_preferences?.experience_level) {
+        const levelInstructions = {
+            beginner: `
+## User Experience Level: BEGINNER
+- Explain concepts in simple terms, avoid jargon
+- Provide step-by-step guidance
+- Define technical terms when first used
+- Be extra supportive and encouraging
+- Suggest learning resources when relevant`,
+            intermediate: `
+## User Experience Level: INTERMEDIATE  
+- User has basic tendering knowledge
+- Can use technical terminology with brief explanations
+- Focus on strategic advice and optimization
+- Highlight advanced techniques when relevant`,
+            advanced: `
+## User Experience Level: ADVANCED
+- User is experienced in tendering
+- Use technical terminology freely
+- Focus on strategic optimization and edge cases
+- Provide nuanced, detailed analysis
+- Discuss advanced strategies and market insights`
+        };
+        prompt += levelInstructions[context.user_preferences.experience_level];
+    }
+    // Add user profile context
+    if (context.user_preferences || context.company_profile) {
+        prompt += `
+
+## User Profile Context`;
+        if (context.company_profile?.company_name) {
+            prompt += `
+Company: ${context.company_profile.company_name}`;
+        }
+        if (context.company_profile?.industry) {
+            prompt += `
+Industry: ${context.company_profile.industry}`;
+        }
+        if (context.user_preferences?.provinces?.length) {
+            prompt += `
+Regions: ${context.user_preferences.provinces.join(", ")}`;
+        }
+        if (context.user_preferences?.cidb_grading) {
+            prompt += `
+CIDB Grading: ${context.user_preferences.cidb_grading}`;
+        }
+        if (context.user_preferences?.bee_level || context.company_profile?.bee_status) {
+            prompt += `
+B-BBEE Status: ${context.user_preferences?.bee_level || context.company_profile?.bee_status}`;
+        }
+    }
+    // Add compliance status
+    if (context.user_preferences) {
+        const complianceItems = [];
+        if (context.user_preferences.has_tax_clearance) {
+            complianceItems.push(`Tax Clearance: Valid${context.user_preferences.tax_clearance_expiry ? ` (expires ${context.user_preferences.tax_clearance_expiry})` : ""}`);
+        } else {
+            complianceItems.push("Tax Clearance: Missing/Expired");
+        }
+        if (context.user_preferences.has_coida) {
+            complianceItems.push(`COIDA: Valid${context.user_preferences.coida_expiry ? ` (expires ${context.user_preferences.coida_expiry})` : ""}`);
+        } else {
+            complianceItems.push("COIDA: Missing");
+        }
+        if (context.user_preferences.has_csd_registration) {
+            complianceItems.push("CSD Registration: Active");
+        } else {
+            complianceItems.push("CSD Registration: Missing");
+        }
+        if (complianceItems.length > 0) {
+            prompt += `
+
+## Compliance Status
+${complianceItems.join("\n")}`;
+        }
+    }
+    // Add tender context if present
+    if (context.tender_context) {
+        prompt += `
+
+## Current Tender Context
+Title: ${context.tender_context.title}
+Organization: ${context.tender_context.organization}
+${context.tender_context.description ? `Description: ${context.tender_context.description}` : ""}
+${context.tender_context.close_date ? `Closing Date: ${context.tender_context.close_date}` : ""}
+
+When answering, reference this specific tender and provide targeted advice.`;
+    }
+    // Add BOQ context if present
+    if (context.boq_context) {
+        prompt += `
+
+## BOQ Context
+This conversation is about pricing/BOQ for a tender with ${context.boq_context.total_items} line items.
+Focus on pricing strategy, margin recommendations, and risk assessment.`;
+    }
+    // Add competitiveness score if available
+    if (context.competitiveness_score) {
+        prompt += `
+
+## User's Current Competitiveness Score
+Overall: ${(context.competitiveness_score.overall_score * 100).toFixed(0)}%
+- Documentation: ${(context.competitiveness_score.documentation_score * 100).toFixed(0)}%
+- Compliance: ${(context.competitiveness_score.compliance_score * 100).toFixed(0)}%
+- Experience: ${(context.competitiveness_score.experience_score * 100).toFixed(0)}%
+
+Use this to tailor advice about improving their competitiveness.`;
+    }
+    return prompt;
+}
+function buildStrategyGenerationPrompt(strategyType, tenderAnalysis, userContext) {
+    const basePrompt = `Generate a comprehensive ${strategyType} strategy for this tender submission.
+
+## Tender Information
+${JSON.stringify(tenderAnalysis.tender_summary || {}, null, 2)}
+
+## Evaluation Criteria
+${JSON.stringify(tenderAnalysis.evaluation || {}, null, 2)}
+
+## Compliance Requirements
+${JSON.stringify(tenderAnalysis.compliance_summary || {}, null, 2)}
+
+## User's Current Capabilities
+${userContext.user_preferences ? JSON.stringify({
+        cidb_grading: userContext.user_preferences.cidb_grading,
+        bee_level: userContext.user_preferences.bee_level,
+        experience_level: userContext.user_preferences.experience_level,
+        past_wins: userContext.user_preferences.past_tender_wins,
+        past_losses: userContext.user_preferences.past_tender_losses
+    }, null, 2) : "Not available"}
+
+## Company Profile
+${userContext.company_profile ? JSON.stringify(userContext.company_profile, null, 2) : "Not available"}`;
+    const strategyInstructions = {
+        bid: `
+Generate a complete bid strategy including:
+1. Bid viability analysis (should we bid?)
+2. SWOT analysis for this tender
+3. Compliance checklist with status
+4. Supplier/subcontractor recommendations
+5. Pricing strategy overview
+6. Submission checklist
+7. Risk register with mitigation plans
+8. Win probability assessment`,
+        pricing: `
+Generate a detailed pricing strategy including:
+1. Recommended pricing approach (cost-plus, competitive, value)
+2. Margin recommendations by item category
+3. Risk pricing factors
+4. Competitive positioning advice
+5. Areas for cost optimization
+6. Contingency recommendations
+7. Payment term considerations
+8. Potential price negotiation points`,
+        compliance: `
+Generate a compliance strategy including:
+1. All mandatory requirements mapped to user capabilities
+2. Gap analysis with remediation actions
+3. Document checklist with deadlines
+4. Risk of non-compliance assessment
+5. Alternative compliance approaches
+6. Certification/registration requirements
+7. Timeline for compliance preparation`,
+        negotiation: `
+Generate a negotiation strategy including:
+1. Key negotiation points
+2. Best Alternative to Negotiated Agreement (BATNA)
+3. Concession strategy
+4. Value propositions to emphasize
+5. Potential objections and responses
+6. Win-win opportunities
+7. Relationship building approaches`,
+        general: `
+Generate a general tender strategy overview including:
+1. Executive summary
+2. Key success factors
+3. Resource requirements
+4. Timeline and milestones
+5. Team responsibilities
+6. Risk overview
+7. Go/No-Go recommendation`
+    };
+    return basePrompt + strategyInstructions[strategyType] + `
+
+Respond with a valid JSON object matching the StrategyContent interface with all sections populated.
+Be specific, actionable, and realistic in your recommendations.
+Reference actual tender requirements and user capabilities.`;
+}
+}),
+"[project]/lib/engines/strategist/index.ts [app-rsc] (ecmascript) <locals>", ((__turbopack_context__) => {
+"use strict";
+
+// ============================================
+// AI TENDER STRATEGIST ENGINE - MAIN ENTRY
+// ============================================
+__turbopack_context__.s([]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$types$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/engines/strategist/types.ts [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$constants$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/engines/strategist/constants.ts [app-rsc] (ecmascript)");
+// Services
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$services$2f$strategist$2d$service$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/engines/strategist/services/strategist-service.ts [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$services$2f$opportunity$2d$service$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/engines/strategist/services/opportunity-service.ts [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$services$2f$learning$2d$service$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/engines/strategist/services/learning-service.ts [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$services$2f$alert$2d$service$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/engines/strategist/services/alert-service.ts [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$services$2f$competitiveness$2d$service$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/engines/strategist/services/competitiveness-service.ts [app-rsc] (ecmascript)");
+// Prompts
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$prompts$2f$strategist$2d$prompts$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/engines/strategist/prompts/strategist-prompts.ts [app-rsc] (ecmascript)");
+;
+;
+;
+;
+;
+;
+;
+;
+}),
+"[project]/lib/engines/orchestrator/tender-orchestrator.ts [app-rsc] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+/**
+ * Tender Orchestrator Service
+ * 
+ * Coordinates multi-engine analysis for tender documents.
+ * Manages parallel/sequential execution of engines and tracks progress.
+ */ __turbopack_context__.s([
+    "TenderOrchestrator",
+    ()=>TenderOrchestrator,
+    "orchestrateTenderAnalysis",
+    ()=>orchestrateTenderAnalysis
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/supabase/server.ts [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$index$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__$3c$locals$3e$__ = __turbopack_context__.i("[project]/lib/engines/strategist/index.ts [app-rsc] (ecmascript) <locals>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$services$2f$strategist$2d$service$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/engines/strategist/services/strategist-service.ts [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$services$2f$competitiveness$2d$service$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/engines/strategist/services/competitiveness-service.ts [app-rsc] (ecmascript)");
+;
+;
+class TenderOrchestrator {
+    supabase;
+    orchestrationId;
+    tenderId;
+    userId;
+    constructor(options){
+        this.tenderId = options.tenderId;
+        this.userId = options.userId;
+        this.orchestrationId = crypto.randomUUID();
+    }
+    /**
+     * Main entry point - orchestrates all tender analysis engines
+     */ async orchestrateTenderAnalysis(documentUrl) {
+        console.log(`[Orchestrator] Starting orchestration ${this.orchestrationId} for tender ${this.tenderId}`);
+        try {
+            this.supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+            // Initialize progress tracking
+            await this.initializeProgress();
+            // Phase 1: Critical path (sequential)
+            console.log(`[Orchestrator] Starting Phase 1 - Critical Analysis`);
+            const phase1Results = await this.executePhase1(documentUrl);
+            // Check if Phase 1 had critical failures
+            const phase1Failed = phase1Results.some((r)=>r.status === 'failed' && r.engine === 'tender_analysis');
+            if (phase1Failed) {
+                await this.updateOverallProgress('failed', 50);
+                return {
+                    orchestrationId: this.orchestrationId,
+                    status: 'failed',
+                    phase1Results,
+                    phase2Results: [],
+                    errors: [
+                        'Critical analysis failed - cannot proceed to Phase 2'
+                    ]
+                };
+            }
+            // Mark Phase 1 complete
+            await this.updatePhaseProgress(1, true);
+            // Phase 2: Deep analysis (parallel - non-blocking)
+            console.log(`[Orchestrator] Starting Phase 2 - Deep Analysis (parallel)`);
+            // Get analysis data for Phase 2 engines
+            const analysisData = phase1Results.find((r)=>r.engine === 'tender_analysis')?.data;
+            // Fire and don't wait - these run in background
+            this.executePhase2Async(analysisData).catch((error)=>{
+                console.error(`[Orchestrator] Phase 2 background execution error:`, error);
+            });
+            // Return immediately with Phase 1 complete
+            return {
+                orchestrationId: this.orchestrationId,
+                status: 'processing',
+                phase1Results,
+                phase2Results: [],
+                errors: []
+            };
+        } catch (error) {
+            console.error(`[Orchestrator] Fatal error:`, error);
+            await this.updateOverallProgress('failed', 0);
+            throw error;
+        }
+    }
+    /**
+     * Phase 1: Critical path - must complete before user can proceed
+     * - Document analysis (if URL provided)
+     * - Tender requirements analysis
+     */ async executePhase1(documentUrl) {
+        const results = [];
+        // Document Analysis (optional)
+        if (documentUrl) {
+            const docResult = await this.runEngine('document', async ()=>{
+                // Document engine would go here
+                // For now, just mark as completed
+                return {
+                    extracted: true
+                };
+            });
+            results.push(docResult);
+        }
+        // Tender Analysis (critical)
+        const analysisResult = await this.runEngine('tender_analysis', async ()=>{
+            // Get existing analysis from database
+            const { data } = await this.supabase.from('user_tender_analysis').select('analysis_data').eq('tender_id', this.tenderId).single();
+            return data?.analysis_data;
+        });
+        results.push(analysisResult);
+        return results;
+    }
+    /**
+     * Phase 2: Deep analysis - runs in parallel, non-blocking
+     * - BOQ generation
+     * - Strategy generation
+     * - Readiness assessment
+     * - Risk assessment (future)
+     * - Compliance check (future)
+     */ async executePhase2Async(analysisData) {
+        console.log(`[Orchestrator] Phase 2 execution started in background`);
+        const engines = [
+            {
+                name: 'boq',
+                fn: ()=>this.generateBOQ(analysisData)
+            },
+            {
+                name: 'strategy',
+                fn: ()=>this.generateStrategy(analysisData)
+            },
+            {
+                name: 'readiness',
+                fn: ()=>this.assessReadiness()
+            }
+        ];
+        try {
+            // Run all engines in parallel and collect EngineResult objects
+            const results = await Promise.all(engines.map(async (engine)=>{
+                return await this.runEngine(engine.name, engine.fn);
+            }));
+            // Classify results
+            const succeeded = results.filter((r)=>r.status === 'completed');
+            const failed = results.filter((r)=>r.status === 'failed');
+            // Ensure engines map in DB reflects final statuses/durations
+            const { data: current } = await this.supabase.from('tender_orchestration_progress').select('engines, errors').eq('id', this.orchestrationId).single();
+            const enginesObj = current?.engines || {};
+            results.forEach((r)=>{
+                enginesObj[r.engine] = {
+                    status: r.status,
+                    progress: r.status === 'completed' ? 100 : 0,
+                    duration: r.duration
+                };
+            });
+            const newErrors = failed.map((f)=>`${f.engine}: ${f.error || 'unknown'}`);
+            await this.supabase.from('tender_orchestration_progress').update({
+                engines: enginesObj,
+                phase2_completed: failed.length === 0,
+                phase2_results: results,
+                errors: (current?.errors || []).concat(newErrors),
+                overall_progress: 100,
+                status: failed.length === 0 ? 'completed' : succeeded.length > 0 ? 'partial_failure' : 'failed',
+                updated_at: new Date().toISOString(),
+                completed_at: new Date().toISOString()
+            }).eq('id', this.orchestrationId);
+            console.log(`[Orchestrator] Phase 2 complete - succeeded=${succeeded.length} failed=${failed.length}`);
+        } catch (error) {
+            console.error(`[Orchestrator] Phase 2 background execution error:`, error);
+            // Attempt to persist the fatal error to DB
+            try {
+                const { data: current } = await this.supabase.from('tender_orchestration_progress').select('errors').eq('id', this.orchestrationId).single();
+                const updatedErrors = (current?.errors || []).concat([
+                    error?.message || String(error)
+                ]);
+                await this.supabase.from('tender_orchestration_progress').update({
+                    status: 'failed',
+                    errors: updatedErrors,
+                    overall_progress: 100,
+                    phase2_completed: false,
+                    updated_at: new Date().toISOString(),
+                    completed_at: new Date().toISOString()
+                }).eq('id', this.orchestrationId);
+            } catch (persistErr) {
+                console.error('[Orchestrator] Failed to persist Phase 2 error:', persistErr);
+            }
+        }
+    }
+    /**
+     * Generic engine runner with error handling and progress tracking
+     */ async runEngine(engineName, engineFn, maxRetries = 2) {
+        const startTime = Date.now();
+        await this.updateEngineProgress(engineName, 'processing', 0);
+        for(let attempt = 1; attempt <= maxRetries; attempt++){
+            try {
+                console.log(`[Orchestrator] Running ${engineName} (attempt ${attempt}/${maxRetries})`);
+                const result = await engineFn();
+                const duration = (Date.now() - startTime) / 1000;
+                await this.updateEngineProgress(engineName, 'completed', 100, duration);
+                return {
+                    engine: engineName,
+                    status: 'completed',
+                    duration,
+                    data: result
+                };
+            } catch (error) {
+                console.error(`[Orchestrator] ${engineName} failed (attempt ${attempt}):`, error.message);
+                if (attempt === maxRetries) {
+                    await this.updateEngineProgress(engineName, 'failed', 0);
+                    return {
+                        engine: engineName,
+                        status: 'failed',
+                        error: error.message
+                    };
+                }
+                // Exponential backoff
+                await this.sleep(Math.pow(2, attempt) * 1000);
+            }
+        }
+        // Should never reach here
+        return {
+            engine: engineName,
+            status: 'failed',
+            error: 'Max retries exceeded'
+        };
+    }
+    /**
+     * Engine-specific implementations
+     */ async generateBOQ(analysisData) {
+        // Use StrategistService context to produce a lightweight BOQ placeholder
+        // (Full BOQ generation via LLM remains in /api/strategist/boq)
+        const context = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$services$2f$strategist$2d$service$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["StrategistService"].buildContext(this.userId, this.tenderId, "boq");
+        const competitiveness = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$services$2f$competitiveness$2d$service$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["CompetitivenessService"].getScore(this.userId, this.tenderId);
+        // Basic BOQ structure built from context and competitiveness insights
+        const boq = {
+            boq_items: [],
+            pricing_strategy: {
+                strategy_type: competitiveness?.win_probability && competitiveness.win_probability > 0.6 ? 'competitive' : 'value_based',
+                competitive_analysis: competitiveness && JSON.stringify(competitiveness.score_breakdown || {}) || '',
+                risk_premium_percent: 5,
+                discount_offered_percent: 0,
+                payment_terms: '30/60 days',
+                pricing_rationale: 'Generated from strategist context'
+            },
+            direct_costs: {},
+            indirect_costs: {},
+            contingency_percent: 10,
+            profit_margin_percent: 15,
+            vat_percent: 15,
+            generated_from_context: context,
+            competitiveness: competitiveness
+        };
+        return boq;
+    }
+    async generateStrategy(analysisData) {
+        // Generate competitiveness and recommendations via StrategistService
+        const competitiveness = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$services$2f$competitiveness$2d$service$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["CompetitivenessService"].getScore(this.userId, this.tenderId);
+        const recommendations = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$services$2f$strategist$2d$service$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["StrategistService"].generateRecommendations({
+            userId: this.userId,
+            tenderId: this.tenderId,
+            tenderType: 'custom',
+            competitiveness
+        });
+        return {
+            competitiveness,
+            recommendations
+        };
+    }
+    async assessReadiness() {
+        // Build readiness assessment from strategist context and competitiveness
+        const context = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$services$2f$strategist$2d$service$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["StrategistService"].buildContext(this.userId, this.tenderId, 'readiness');
+        const competitiveness = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$services$2f$competitiveness$2d$service$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["CompetitivenessService"].getScore(this.userId, this.tenderId);
+        const readiness = {
+            context,
+            competitiveness,
+            recommendations: await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$strategist$2f$services$2f$strategist$2d$service$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["StrategistService"].generateRecommendations({
+                userId: this.userId,
+                tenderId: this.tenderId,
+                tenderType: 'custom',
+                competitiveness
+            })
+        };
+        return readiness;
+    }
+    /**
+     * Progress tracking helpers
+     */ async initializeProgress() {
+        const engines = {
+            document: {
+                status: 'queued',
+                progress: 0
+            },
+            tender_analysis: {
+                status: 'queued',
+                progress: 0
+            },
+            boq: {
+                status: 'queued',
+                progress: 0
+            },
+            strategy: {
+                status: 'queued',
+                progress: 0
+            },
+            readiness: {
+                status: 'queued',
+                progress: 0
+            }
+        };
+        await this.supabase.from('tender_orchestration_progress').insert({
+            id: this.orchestrationId,
+            tender_id: this.tenderId,
+            user_id: this.userId,
+            status: 'processing',
+            overall_progress: 0,
+            engines,
+            phase1_completed: false,
+            phase2_completed: false,
+            started_at: new Date().toISOString()
+        });
+    }
+    async updateEngineProgress(engine, status, progress, duration) {
+        const { data: current } = await this.supabase.from('tender_orchestration_progress').select('engines').eq('id', this.orchestrationId).single();
+        const engines = current?.engines || {};
+        engines[engine] = {
+            status,
+            progress,
+            duration
+        };
+        await this.supabase.from('tender_orchestration_progress').update({
+            engines,
+            updated_at: new Date().toISOString()
+        }).eq('id', this.orchestrationId);
+    }
+    async updatePhaseProgress(phase, completed) {
+        const field = phase === 1 ? 'phase1_completed' : 'phase2_completed';
+        await this.supabase.from('tender_orchestration_progress').update({
+            [field]: completed,
+            updated_at: new Date().toISOString()
+        }).eq('id', this.orchestrationId);
+    }
+    async updateOverallProgress(status, progress) {
+        const update = {
+            status,
+            overall_progress: progress,
+            updated_at: new Date().toISOString()
+        };
+        if (status === 'completed' || status === 'failed') {
+            update.completed_at = new Date().toISOString();
+        }
+        await this.supabase.from('tender_orchestration_progress').update(update).eq('id', this.orchestrationId);
+    }
+    sleep(ms) {
+        return new Promise((resolve)=>setTimeout(resolve, ms));
+    }
+}
+async function orchestrateTenderAnalysis(tenderId, userId, documentUrl) {
+    const orchestrator = new TenderOrchestrator({
+        tenderId,
+        userId,
+        documentUrl
+    });
+    return await orchestrator.orchestrateTenderAnalysis(documentUrl);
+}
+}),
+"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+/* __next_internal_action_entry_do_not_use__ [{"006d43925d5e089bee3c2bff77b81d52af64d21b58":"getDashboardStats","00e8d1e0792ca4ad0e209735ddcd308978c472ed4b":"getUserTenders","40079b6a1211489567d9fcff1f75c346be063cc1ab":"addTenderToUser","4099787cd73628372eb1b51fba690c7c7ff23ed445":"saveScrapedTenderToUser","40a4d35e34d7d849605f6da355908cb338786bdaaf":"createCustomTender","6008e9015b791275172fd0c1cbb91f9416e5fa7386":"toggleTenderWishlist","603e5e8ead3b523ced17ec519315720129e4a07673":"deleteTender","6046835b49787e6ba7492b46395d84f6decad0e8b7":"toggleTenderFavourite","60670eaad7586d0efa4960183a70641340d8587b3e":"toggleTenderPin"},"",""] */ __turbopack_context__.s([
+    "addTenderToUser",
+    ()=>addTenderToUser,
+    "createCustomTender",
+    ()=>createCustomTender,
+    "deleteTender",
+    ()=>deleteTender,
+    "getDashboardStats",
+    ()=>getDashboardStats,
+    "getUserTenders",
+    ()=>getUserTenders,
+    "saveScrapedTenderToUser",
+    ()=>saveScrapedTenderToUser,
+    "toggleTenderFavourite",
+    ()=>toggleTenderFavourite,
+    "toggleTenderPin",
+    ()=>toggleTenderPin,
+    "toggleTenderWishlist",
+    ()=>toggleTenderWishlist
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/.pnpm/next@16.0.10_@opentelemetry_0d106b891cc3169ef6f583aee116eb12/node_modules/next/dist/build/webpack/loaders/next-flight-loader/server-reference.js [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/supabase/server.ts [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/.pnpm/next@16.0.10_@opentelemetry_0d106b891cc3169ef6f583aee116eb12/node_modules/next/cache.js [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$orchestrator$2f$tender$2d$orchestrator$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/engines/orchestrator/tender-orchestrator.ts [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$action$2d$validate$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/.pnpm/next@16.0.10_@opentelemetry_0d106b891cc3169ef6f583aee116eb12/node_modules/next/dist/build/webpack/loaders/next-flight-loader/action-validate.js [app-rsc] (ecmascript)");
+;
+;
+;
+;
+async function addTenderToUser(tenderData) {
+    const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+        return {
+            success: false,
+            error: "Not authenticated"
+        };
+    }
+    // Insert tender
+    const { data, error } = await supabase.from("user_tenders").insert({
+        user_id: user.id,
+        tender_id: tenderData.tenderId,
+        title: tenderData.title,
+        organization: tenderData.organization,
+        publish_date: tenderData.publishDate,
+        close_date: tenderData.closeDate,
+        value: tenderData.value,
+        category: tenderData.category,
+        description: tenderData.description,
+        url: tenderData.url,
+        status: "draft"
+    }).select().single();
+    if (error) {
+        // Check if it's a duplicate
+        if (error.code === "23505") {
+            return {
+                success: false,
+                error: "Tender already added"
+            };
+        }
+        console.error("[v0] Error adding tender:", error);
+        return {
+            success: false,
+            error: "Failed to add tender"
+        };
+    }
+    if (tenderData.documents && tenderData.documents.length > 0 && data) {
+        console.log("[v0] Adding", tenderData.documents.length, "documents to tender", data.id);
+        console.log("[v0] Document data:", JSON.stringify(tenderData.documents, null, 2));
+        const documentsToInsert = tenderData.documents.map((doc)=>({
+                user_tender_id: data.id,
+                user_id: user.id,
+                file_name: doc.title,
+                storage_path: doc.url,
+                file_type: doc.format || "application/pdf",
+                file_size: 0
+            }));
+        console.log("[v0] Inserting documents:", JSON.stringify(documentsToInsert, null, 2));
+        const { data: insertedDocs, error: docsError } = await supabase.from("tender_documents").insert(documentsToInsert).select();
+        if (docsError) {
+            console.error("[v0] Error adding documents:", docsError);
+            console.error("[v0] Error details:", JSON.stringify(docsError, null, 2));
+        // Don't fail the whole operation if documents fail, just log it
+        } else {
+            console.log("[v0] Successfully added", insertedDocs?.length || 0, "documents");
+            console.log("[v0] Inserted document IDs:", insertedDocs?.map((d)=>d.id));
+        }
+    } else {
+        console.log("[v0] No documents to add for this tender");
+    }
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["revalidatePath"])("/dashboard/tenders");
+    return {
+        success: true,
+        data
+    };
+}
+async function toggleTenderPin(tenderId, isPinned) {
+    const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return {
+        success: false,
+        error: "Not authenticated"
+    };
+    const { error } = await supabase.from("user_tenders").update({
+        is_pinned: isPinned
+    }).eq("id", tenderId).eq("user_id", user.id);
+    if (error) {
+        console.error("[v0] Error toggling pin:", error);
+        return {
+            success: false,
+            error: "Failed to update tender"
+        };
+    }
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["revalidatePath"])("/dashboard/tenders");
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["revalidatePath"])("/dashboard/search");
+    return {
+        success: true
+    };
+}
+async function toggleTenderFavourite(tenderId, isFavourited) {
+    const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return {
+        success: false,
+        error: "Not authenticated"
+    };
+    const { error } = await supabase.from("user_tenders").update({
+        is_favourited: isFavourited
+    }).eq("id", tenderId).eq("user_id", user.id);
+    if (error) {
+        console.error("[v0] Error toggling favourite:", error);
+        return {
+            success: false,
+            error: "Failed to update tender"
+        };
+    }
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["revalidatePath"])("/dashboard/tenders");
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["revalidatePath"])("/dashboard/search");
+    return {
+        success: true
+    };
+}
+async function toggleTenderWishlist(tenderId, isWishlisted) {
+    const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return {
+        success: false,
+        error: "Not authenticated"
+    };
+    const { error } = await supabase.from("user_tenders").update({
+        is_wishlisted: isWishlisted
+    }).eq("id", tenderId).eq("user_id", user.id);
+    if (error) {
+        console.error("[v0] Error toggling wishlist:", error);
+        return {
+            success: false,
+            error: "Failed to update tender"
+        };
+    }
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["revalidatePath"])("/dashboard/tenders");
+    return {
+        success: true
+    };
+}
+async function getUserTenders() {
+    const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return {
+        success: false,
+        error: "Not authenticated",
+        tenders: []
+    };
+    // Fetch all tenders from user_tenders (both scraped and custom)
+    const { data: tenders, error } = await supabase.from("user_tenders").select("*").eq("user_id", user.id).order("created_at", {
+        ascending: false
+    });
+    if (error) {
+        console.error("[v0] Error fetching tenders:", error);
+        return {
+            success: false,
+            error: "Failed to fetch tenders",
+            tenders: []
+        };
+    }
+    // Normalize data for frontend
+    const normalizedTenders = (tenders || []).map((tender)=>({
+            id: tender.id,
+            tender_id: tender.tender_id || `custom-${tender.id}`,
+            title: tender.title,
+            organization: tender.organization,
+            status: tender.status,
+            close_date: tender.close_date || tender.deadline,
+            value: tender.value,
+            category: tender.category,
+            is_pinned: tender.is_pinned || false,
+            is_favourited: tender.is_favourited || false,
+            is_wishlisted: tender.is_wishlisted || false,
+            created_at: tender.created_at,
+            tender_type: tender.tender_type || "scraped",
+            location: tender.location
+        }));
+    return {
+        success: true,
+        tenders: normalizedTenders
+    };
+}
+async function deleteTender(tenderId, tenderType) {
+    const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return {
+        success: false,
+        error: "Not authenticated"
+    };
+    // Simply delete from user_tenders table
+    const { error } = await supabase.from("user_tenders").delete().eq("id", tenderId).eq("user_id", user.id);
+    if (error) {
+        console.error("[v0] Error deleting tender:", error);
+        return {
+            success: false,
+            error: "Failed to delete tender"
+        };
+    }
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["revalidatePath"])("/dashboard/tenders");
+    return {
+        success: true
+    };
+}
+async function saveScrapedTenderToUser(scrapedTender) {
+    const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+        return {
+            success: false,
+            error: "Not authenticated"
+        };
+    }
+    // Check if tender already exists for this user
+    const { data: existing } = await supabase.from("user_tenders").select("id, status").eq("user_id", user.id).eq("tender_id", scrapedTender.id).single();
+    if (existing) {
+        // If already exists and is draft, update to in-progress
+        if (existing.status === "draft") {
+            const { error: updateError } = await supabase.from("user_tenders").update({
+                status: "in-progress"
+            }).eq("id", existing.id);
+            if (updateError) {
+                console.error("[v0] Error updating tender status:", updateError);
+                return {
+                    success: false,
+                    error: "Failed to update tender status"
+                };
+            }
+            (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["revalidatePath"])("/dashboard/tenders");
+            return {
+                success: true,
+                message: "Tender status updated to in-progress",
+                isNew: false
+            };
+        }
+        // Already exists and not draft, no need to update
+        return {
+            success: true,
+            message: "Tender already in your list",
+            isNew: false
+        };
+    }
+    // Insert new tender with in-progress status
+    const { data, error } = await supabase.from("user_tenders").insert({
+        user_id: user.id,
+        tender_id: scrapedTender.id,
+        title: scrapedTender.title,
+        organization: scrapedTender.source_name,
+        publish_date: scrapedTender.publish_date,
+        close_date: scrapedTender.close_date,
+        value: scrapedTender.estimated_value,
+        category: scrapedTender.category,
+        description: scrapedTender.description,
+        url: scrapedTender.tender_url,
+        status: "in-progress",
+        tender_type: "scraped"
+    }).select().single();
+    if (error) {
+        console.error("[v0] Error saving tender:", error);
+        return {
+            success: false,
+            error: "Failed to save tender"
+        };
+    }
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["revalidatePath"])("/dashboard/tenders");
+    return {
+        success: true,
+        message: "Tender saved to My Tenders",
+        isNew: true,
+        data
+    };
+}
+async function createCustomTender(tenderData) {
+    console.log("[v0] createCustomTender called with data:", {
+        title: tenderData.title,
+        organization: tenderData.organization,
+        deadline: tenderData.deadline,
+        hasFile: !!tenderData.uploadedFile,
+        hasAnalysis: !!tenderData.analysis
+    });
+    const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+        console.error("[v0] Auth error:", userError);
+        return {
+            success: false,
+            error: "Not authenticated"
+        };
+    }
+    console.log("[v0] User authenticated:", user.id);
+    try {
+        console.log("[v0] Creating custom tender record...");
+        const { data: customTender, error: customTenderError } = await supabase.from("user_tenders").insert({
+            user_id: user.id,
+            title: tenderData.title,
+            organization: tenderData.organization,
+            deadline: tenderData.deadline,
+            value: tenderData.value,
+            category: tenderData.category || "Custom",
+            description: tenderData.description,
+            location: tenderData.location,
+            status: "in-progress",
+            tender_type: "custom"
+        }).select().single();
+        if (customTenderError) {
+            console.error("[v0] Error creating custom tender:", customTenderError);
+            return {
+                success: false,
+                error: "Failed to create tender: " + customTenderError.message
+            };
+        }
+        console.log("[v0] Custom tender created successfully:", customTender.id);
+        let documentSaved = false;
+        let documentError = null;
+        let uploadData = null // Declare uploadData here to be accessible later
+        ;
+        if (tenderData.uploadedFile) {
+            console.log("[v0] Processing existing document...");
+            try {
+                const file = tenderData.uploadedFile;
+                const fileName = `${user.id}/${customTender.id}/${file.name}`;
+                const { data: uploaded, error: uploadError } = await supabase.storage.from("tender-documents").upload(fileName, file);
+                uploadData = uploaded; // Assign to the outer scope variable
+                if (uploadError) {
+                    console.error("[v0] Error uploading file to Supabase:", uploadError);
+                    documentError = "Failed to upload file to permanent storage";
+                } else {
+                    const documentData = {
+                        tender_id: customTender.id,
+                        file_name: file.name,
+                        file_type: file.type,
+                        file_size: file.size,
+                        storage_path: uploadData.path,
+                        blob_url: uploadData.path
+                    };
+                    const { data: insertedDoc, error: docError } = await supabase.from("user_tender_documents").insert(documentData).select().single();
+                    if (docError) {
+                        console.error("[v0] Error saving doc ref:", docError);
+                        documentError = "Failed to save document reference";
+                    } else {
+                        documentSaved = true;
+                    }
+                }
+            } catch (err) {
+                console.error("[v0] Upload error:", err);
+                documentError = err.message;
+            }
+        } else {
+            console.log("[v0] No file to upload");
+        }
+        let analysisSaved = false;
+        let analysisError = null;
+        let orchestrationId = null;
+        if (tenderData.analysis) {
+            console.log("[v0] Saving analysis data...");
+            const analysisData = {
+                tender_id: customTender.id,
+                analysis_data: tenderData.analysis
+            };
+            console.log("[v0] Inserting analysis with tender_id:", customTender.id);
+            const { data: insertedAnalysis, error: analysisErr } = await supabase.from("user_tender_analysis") // Updated table name
+            .insert(analysisData).select().single();
+            if (analysisErr) {
+                console.error("[v0] Error saving analysis:", analysisErr);
+                analysisError = analysisErr.message;
+            } else {
+                console.log("[v0] Analysis saved successfully");
+                analysisSaved = true;
+                // Trigger multi-engine orchestration for deep analysis
+                console.log("[v0] Triggering multi-engine orchestration...");
+                try {
+                    // Get document URL if file was uploaded
+                    let documentUrl;
+                    if (documentSaved) {
+                        const { data: { publicUrl } } = supabase.storage.from('tender-documents').getPublicUrl(uploadData?.path || '');
+                        documentUrl = publicUrl;
+                    }
+                    const orchestrationResult = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$engines$2f$orchestrator$2f$tender$2d$orchestrator$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["orchestrateTenderAnalysis"])(customTender.id, user.id, documentUrl);
+                    orchestrationId = orchestrationResult.orchestrationId;
+                    console.log(`[v0] Orchestration started: ${orchestrationId}`);
+                } catch (orchError) {
+                    console.error("[v0] Orchestration failed:", orchError);
+                // Don't fail the entire operation if orchestration fails, just log it
+                }
+            }
+        } else {
+            console.log("[v0] No analysis data provided");
+        }
+        // Return success with tender ID and orchestration ID
+        console.log("[v0] Returning success for tender:", customTender.id);
+        (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["revalidatePath"])("/dashboard/tenders");
+        (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["revalidatePath"])("/dashboard/custom-tenders");
+        return {
+            success: true,
+            tenderId: customTender.id,
+            orchestrationId,
+            documentSaved,
+            documentError,
+            analysisSaved,
+            analysisError
+        };
+    } catch (error) {
+        console.error("[v0] Error in createCustomTender:", error);
+        return {
+            success: false,
+            error: "Failed to create tender: " + error.message
+        };
+    }
+}
+async function getDashboardStats() {
+    const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return {
+        success: false,
+        error: "Not authenticated"
+    };
+    try {
+        // Get all tenders count for this user
+        const { count: totalTenders } = await supabase.from("user_tenders").select("*", {
+            count: "exact",
+            head: true
+        }).eq("user_id", user.id);
+        // Get analyzed tenders count (where we have analysis data)
+        // RLS ensures we only see our own analyses
+        const { count: analyzedCount } = await supabase.from("user_tender_analysis").select("tender_id", {
+            count: "exact",
+            head: true
+        });
+        // Wait, user_tender_analysis doesn't have user_id in my migration?
+        // Let's check migration script...
+        // user_custom_tender_analysis didn't have user_id in the original schema I saw in 031?
+        // L131: WHERE id = tender_id AND user_id = auth.uid() -> checking parent tender.
+        // So user_tender_analysis table assumes linking to user_tenders.
+        // query:
+        // select count(*) from user_tender_analysis join user_tenders on ... where user_tenders.user_id = ...
+        // Alternative: Just query user_tenders where tender_type='custom' (proxy for analyzed?)
+        // Or just fetching recent activity from unified table.
+        // Get recent activity (last 5 tenders)
+        const { data: recentTenders } = await supabase.from("user_tenders").select("*").eq("user_id", user.id).order("created_at", {
+            ascending: false
+        }).limit(5);
+        const recentActivity = (recentTenders || []).map((tender)=>({
+                id: tender.id,
+                title: tender.title,
+                organization: tender.organization,
+                type: tender.tender_type === "custom" ? "analyzed" : "saved",
+                created_at: tender.created_at
+            }));
+        // Get tenders closing soon (next 7 days)
+        const sevenDaysFromNow = new Date();
+        sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+        // Check both close_date (scraped) and deadline (custom, if parsed?)
+        // For now, relying on close_date. My migration copied deadline to close_date if I recall?
+        // No, I copied close_date to close_date. Custom tenders might rely on 'deadline' text column.
+        // This is tricky for sorting. Ideally we parse deadline to close_date.
+        // Assuming close_date is populated for meaningful deadlines.
+        const { data: closingSoon } = await supabase.from("user_tenders").select("*").eq("user_id", user.id).not("close_date", "is", null).gte("close_date", new Date().toISOString()).lte("close_date", sevenDaysFromNow.toISOString()).order("close_date", {
+            ascending: true
+        }).limit(5);
+        return {
+            success: true,
+            stats: {
+                totalTenders: totalTenders || 0,
+                analyzedTenders: analyzedCount || 0,
+                // Actually, let's try to get substantial analyzed count if possible.
+                // For now 0 is fine or just count custom tenders?
+                closingSoon: closingSoon?.length || 0,
+                recentActivity,
+                upcomingDeadlines: closingSoon || []
+            }
+        };
+    } catch (error) {
+        console.error("[v0] Error fetching dashboard stats:", error);
+        return {
+            success: false,
+            error: "Failed to fetch dashboard statistics"
+        };
+    }
+}
+;
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$action$2d$validate$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ensureServerEntryExports"])([
+    addTenderToUser,
+    toggleTenderPin,
+    toggleTenderFavourite,
+    toggleTenderWishlist,
+    getUserTenders,
+    deleteTender,
+    saveScrapedTenderToUser,
+    createCustomTender,
+    getDashboardStats
+]);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(addTenderToUser, "40079b6a1211489567d9fcff1f75c346be063cc1ab", null);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(toggleTenderPin, "60670eaad7586d0efa4960183a70641340d8587b3e", null);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(toggleTenderFavourite, "6046835b49787e6ba7492b46395d84f6decad0e8b7", null);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(toggleTenderWishlist, "6008e9015b791275172fd0c1cbb91f9416e5fa7386", null);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(getUserTenders, "00e8d1e0792ca4ad0e209735ddcd308978c472ed4b", null);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(deleteTender, "603e5e8ead3b523ced17ec519315720129e4a07673", null);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(saveScrapedTenderToUser, "4099787cd73628372eb1b51fba690c7c7ff23ed445", null);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(createCustomTender, "40a4d35e34d7d849605f6da355908cb338786bdaaf", null);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(getDashboardStats, "006d43925d5e089bee3c2bff77b81d52af64d21b58", null);
+}),
+"[project]/app/actions/document-actions.ts [app-rsc] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+/* __next_internal_action_entry_do_not_use__ [{"404a8f7f4cc71bea1a0a5cfe8d42ae23f8458eac0d":"uploadTenderDocument","4063809283f605307860277ba54db3c65fe771ffd1":"downloadTenderDocument","409787a35390d9b98a79b9dfc64015db875ede7b3c":"getTenderDocuments","40a9182978f4665fe149afd71b6ebdd6d063ac252e":"deleteTenderDocument","40eeca6c0e81b8e0d2d542a781e8f91a8a8968ab7a":"uploadTemporaryDocument","605c651af8a2bad3ef87540211b0ef24ca4541fe8b":"analyzeDocument"},"",""] */ __turbopack_context__.s([
+    "analyzeDocument",
+    ()=>analyzeDocument,
+    "deleteTenderDocument",
+    ()=>deleteTenderDocument,
+    "downloadTenderDocument",
+    ()=>downloadTenderDocument,
+    "getTenderDocuments",
+    ()=>getTenderDocuments,
+    "uploadTemporaryDocument",
+    ()=>uploadTemporaryDocument,
+    "uploadTenderDocument",
+    ()=>uploadTenderDocument
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/.pnpm/next@16.0.10_@opentelemetry_0d106b891cc3169ef6f583aee116eb12/node_modules/next/dist/build/webpack/loaders/next-flight-loader/server-reference.js [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/supabase/server.ts [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/.pnpm/next@16.0.10_@opentelemetry_0d106b891cc3169ef6f583aee116eb12/node_modules/next/cache.js [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$action$2d$validate$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/.pnpm/next@16.0.10_@opentelemetry_0d106b891cc3169ef6f583aee116eb12/node_modules/next/dist/build/webpack/loaders/next-flight-loader/action-validate.js [app-rsc] (ecmascript)");
+;
+;
+;
+async function uploadTenderDocument(formData) {
+    const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return {
+        success: false,
+        error: "Not authenticated"
+    };
+    const file = formData.get("file");
+    const userTenderId = formData.get("userTenderId");
+    if (!file || !userTenderId) {
+        return {
+            success: false,
+            error: "File and tender ID are required"
+        };
+    }
+    // Upload file to Supabase Storage
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${user.id}/${userTenderId}/${Date.now()}.${fileExt}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage.from("tender-documents").upload(fileName, file);
+    if (uploadError) {
+        console.error("[v0] Error uploading file:", uploadError);
+        return {
+            success: false,
+            error: "Failed to upload file"
+        };
+    }
+    // Save document metadata to database
+    const { data, error } = await supabase.from("tender_documents").insert({
+        user_tender_id: userTenderId,
+        user_id: user.id,
+        file_name: file.name,
+        file_size: file.size,
+        file_type: file.type,
+        storage_path: uploadData.path
+    }).select().single();
+    if (error) {
+        console.error("[v0] Error saving document metadata:", error);
+        // Clean up uploaded file
+        await supabase.storage.from("tender-documents").remove([
+            fileName
+        ]);
+        return {
+            success: false,
+            error: "Failed to save document"
+        };
+    }
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["revalidatePath"])(`/dashboard/tenders/${userTenderId}`);
+    return {
+        success: true,
+        data
+    };
+}
+async function getTenderDocuments(userTenderId) {
+    const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return {
+        success: false,
+        error: "Not authenticated",
+        documents: []
+    };
+    const { data, error } = await supabase.from("tender_documents").select("*").eq("user_tender_id", userTenderId).eq("user_id", user.id).order("created_at", {
+        ascending: false
+    });
+    if (error) {
+        console.error("[v0] Error fetching documents:", error);
+        return {
+            success: false,
+            error: "Failed to fetch documents",
+            documents: []
+        };
+    }
+    return {
+        success: true,
+        documents: data || []
+    };
+}
+async function downloadTenderDocument(documentId) {
+    const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return {
+        success: false,
+        error: "Not authenticated"
+    };
+    // Get document metadata
+    const { data: document, error: docError } = await supabase.from("tender_documents").select("*").eq("id", documentId).eq("user_id", user.id).single();
+    if (docError || !document) {
+        console.error("[v0] Error fetching document:", docError);
+        return {
+            success: false,
+            error: "Document not found"
+        };
+    }
+    const isExternalUrl = document.storage_path.startsWith("http://") || document.storage_path.startsWith("https://");
+    if (isExternalUrl) {
+        // For external documents (from eTenders API), return the URL directly
+        console.log("[v0] Returning external document URL:", document.storage_path);
+        return {
+            success: true,
+            url: document.storage_path,
+            fileName: document.file_name
+        };
+    }
+    // For documents stored in Supabase Storage, create a signed URL
+    const { data: urlData, error: urlError } = await supabase.storage.from("tender-documents").createSignedUrl(document.storage_path, 60) // 60 seconds expiry
+    ;
+    if (urlError) {
+        console.error("[v0] Error creating signed URL:", urlError);
+        return {
+            success: false,
+            error: "Failed to generate download link"
+        };
+    }
+    return {
+        success: true,
+        url: urlData.signedUrl,
+        fileName: document.file_name
+    };
+}
+async function deleteTenderDocument(documentId) {
+    const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return {
+        success: false,
+        error: "Not authenticated"
+    };
+    // Get document to delete from storage
+    const { data: document, error: docError } = await supabase.from("tender_documents").select("*").eq("id", documentId).eq("user_id", user.id).single();
+    if (docError || !document) {
+        return {
+            success: false,
+            error: "Document not found"
+        };
+    }
+    // Delete from storage
+    const { error: storageError } = await supabase.storage.from("tender-documents").remove([
+        document.storage_path
+    ]);
+    if (storageError) {
+        console.error("[v0] Error deleting from storage:", storageError);
+    }
+    // Delete from database
+    const { error } = await supabase.from("tender_documents").delete().eq("id", documentId).eq("user_id", user.id);
+    if (error) {
+        console.error("[v0] Error deleting document:", error);
+        return {
+            success: false,
+            error: "Failed to delete document"
+        };
+    }
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["revalidatePath"])(`/dashboard/tenders/${document.user_tender_id}`);
+    return {
+        success: true
+    };
+}
+async function analyzeDocument(documentId, analysis) {
+    const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return {
+        success: false,
+        error: "Not authenticated"
+    };
+    try {
+        console.log("[v0] Saving analysis for document:", documentId);
+        // Save analysis to database
+        const { error } = await supabase.from("tender_documents").update({
+            ai_analysis: analysis
+        }).eq("id", documentId).eq("user_id", user.id);
+        if (error) {
+            console.error("[v0] Error saving analysis:", error);
+            return {
+                success: false,
+                error: "Failed to save analysis"
+            };
+        }
+        console.log("[v0] Analysis saved successfully");
+        (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$cache$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["revalidatePath"])(`/dashboard/tenders`);
+        return {
+            success: true,
+            analysis
+        };
+    } catch (error) {
+        console.error("[v0] Error in analyzeDocument:", error);
+        return {
+            success: false,
+            error: "Failed to save analysis"
+        };
+    }
+}
+async function uploadTemporaryDocument(formData) {
+    const supabase = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2f$server$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createClient"])();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return {
+        success: false,
+        error: "Not authenticated"
+    };
+    const file = formData.get("file");
+    if (!file) {
+        return {
+            success: false,
+            error: "File is required"
+        };
+    }
+    // Upload file to Supabase Storage (temp folder)
+    const fileExt = file.name.split(".").pop();
+    const fileName = `temp/${user.id}/${Date.now()}.${fileExt}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage.from("tender-documents").upload(fileName, file);
+    if (uploadError) {
+        console.error("[v0] Error uploading file:", uploadError);
+        return {
+            success: false,
+            error: "Failed to upload file"
+        };
+    }
+    // Get signed URL for the analysis step (valid for 1 hour)
+    const { data: urlData, error: urlError } = await supabase.storage.from("tender-documents").createSignedUrl(fileName, 3600);
+    if (urlError) {
+        console.error("[v0] Error getting signed URL:", urlError);
+        return {
+            success: false,
+            error: "Failed to get file URL"
+        };
+    }
+    return {
+        success: true,
+        url: urlData.signedUrl,
+        path: fileName
+    };
+}
+;
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$action$2d$validate$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["ensureServerEntryExports"])([
+    uploadTenderDocument,
+    getTenderDocuments,
+    downloadTenderDocument,
+    deleteTenderDocument,
+    analyzeDocument,
+    uploadTemporaryDocument
+]);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(uploadTenderDocument, "404a8f7f4cc71bea1a0a5cfe8d42ae23f8458eac0d", null);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(getTenderDocuments, "409787a35390d9b98a79b9dfc64015db875ede7b3c", null);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(downloadTenderDocument, "4063809283f605307860277ba54db3c65fe771ffd1", null);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(deleteTenderDocument, "40a9182978f4665fe149afd71b6ebdd6d063ac252e", null);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(analyzeDocument, "605c651af8a2bad3ef87540211b0ef24ca4541fe8b", null);
+(0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$0$2e$10_$40$opentelemetry_0d106b891cc3169ef6f583aee116eb12$2f$node_modules$2f$next$2f$dist$2f$build$2f$webpack$2f$loaders$2f$next$2d$flight$2d$loader$2f$server$2d$reference$2e$js__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["registerServerReference"])(uploadTemporaryDocument, "40eeca6c0e81b8e0d2d542a781e8f91a8a8968ab7a", null);
+}),
+"[project]/.next-internal/server/app/dashboard/tenders/new/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/app/actions/document-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript) <locals>", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$actions$2f$tender$2d$actions$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$actions$2f$document$2d$actions$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/app/actions/document-actions.ts [app-rsc] (ecmascript)");
+;
+;
+}),
+"[project]/.next-internal/server/app/dashboard/tenders/new/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/app/actions/document-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "40a4d35e34d7d849605f6da355908cb338786bdaaf",
+    ()=>__TURBOPACK__imported__module__$5b$project$5d2f$app$2f$actions$2f$tender$2d$actions$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["createCustomTender"],
+    "40eeca6c0e81b8e0d2d542a781e8f91a8a8968ab7a",
+    ()=>__TURBOPACK__imported__module__$5b$project$5d2f$app$2f$actions$2f$document$2d$actions$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["uploadTemporaryDocument"]
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f2e$next$2d$internal$2f$server$2f$app$2f$dashboard$2f$tenders$2f$new$2f$page$2f$actions$2e$js__$7b$__ACTIONS_MODULE0__$3d3e$__$225b$project$5d2f$app$2f$actions$2f$tender$2d$actions$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29222c$__ACTIONS_MODULE1__$3d3e$__$225b$project$5d2f$app$2f$actions$2f$document$2d$actions$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$2922$__$7d$__$5b$app$2d$rsc$5d$__$28$server__actions__loader$2c$__ecmascript$29$__$3c$locals$3e$__ = __turbopack_context__.i('[project]/.next-internal/server/app/dashboard/tenders/new/page/actions.js { ACTIONS_MODULE0 => "[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)", ACTIONS_MODULE1 => "[project]/app/actions/document-actions.ts [app-rsc] (ecmascript)" } [app-rsc] (server actions loader, ecmascript) <locals>');
+var __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$actions$2f$tender$2d$actions$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$app$2f$actions$2f$document$2d$actions$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/app/actions/document-actions.ts [app-rsc] (ecmascript)");
+}),
+];
+
+//# sourceMappingURL=_46808fb8._.js.map

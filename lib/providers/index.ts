@@ -56,62 +56,74 @@ export async function generateTextViaProvider(opts: GenerateOptions) {
         return { text: content ?? "" }
       }
 
-      // Check for Gemini/Google
+      // Prefer Gemini/Google when a key is present (allow explicit model or default)
       let geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
 
-      if (model.startsWith("gemini") && geminiKey) {
+      if (geminiKey) {
         geminiKey = geminiKey.trim()
-
-        // Use stable v1 endpoint for production reliability
-        // gemini-1.5-flash is available on v1 endpoint
-        const geminiModel = model.includes("flash") ? "gemini-1.5-flash" : "gemini-pro"
-        const apiVersion = "v1" // Changed from v1beta to stable v1
-
-        const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${geminiModel}:generateContent?key=${geminiKey}`
+        const geminiModel = process.env.GEMINI_MODEL || (model.includes("gemini") ? model : "gemini-2.5-flash")
+        const apiVersion = "v1"
+        const baseUrl = `https://generativelanguage.googleapis.com/${apiVersion}/models/${geminiModel}`
 
         console.log(`[v0] Provider: Gemini (Model: ${geminiModel}, API: ${apiVersion}) - attempt ${attempt}/${maxRetries}`)
 
-        const body = {
+        // Primary request shape: `contents` + `generationConfig` (matches models list supportedGenerationMethods)
+        const url = `${baseUrl}:generateContent?key=${geminiKey}`
+        const primaryBody = {
           contents: [
             {
               role: "user",
-              parts: [{ text: `${opts.system ? opts.system + "\n\n" : ""}${prompt}` }]
-            }
+              parts: [{ text: `${opts.system ? opts.system + "\n\n" : ""}${prompt}` }],
+            },
           ],
           generationConfig: {
             temperature: typeof opts.temperature === "number" ? opts.temperature : 0.2,
-            maxOutputTokens: opts.maxTokens || 4000
-          }
+            maxOutputTokens: opts.maxTokens || 4000,
+          },
         }
 
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-          signal: AbortSignal.timeout(30000) // 30 second timeout
-        })
+        console.log('[v0] Gemini request URL:', url)
+        try {
+          console.log('[v0] Gemini request body (truncated):', JSON.stringify(primaryBody).substring(0, 2000))
+        } catch (e) {
+          console.log('[v0] Gemini request body could not be stringified')
+        }
 
-        if (!res.ok) {
+        try {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(primaryBody),
+            signal: AbortSignal.timeout(60000),
+          })
+
           const text = await res.text()
-          console.error(`[v0] Gemini Error (${res.status}): ${text}`)
-
-          // If quota exceeded or rate limit, try fallback immediately
-          if (res.status === 429 || res.status === 403) {
-            console.log('[v0] Gemini quota/rate limit - falling back to OpenAI')
-            throw new ProviderError(`Gemini API quota/rate limit: ${res.status}`, res.status, true)
+          console.log('[v0] Gemini raw response (truncated):', String(text).substring(0, 2000))
+          if (!res.ok) {
+            console.error(`[v0] Gemini Error (${res.status}): ${text}`)
+            if (res.status === 429 || res.status === 403) {
+              throw new ProviderError(`Gemini API quota/rate limit: ${res.status}`, res.status, true)
+            }
+            throw new ProviderError(`Gemini API request failed: ${res.status} ${text}`, res.status)
           }
 
-          throw new ProviderError(`Gemini API request failed: ${res.status} ${text}`, res.status)
+          let data: any
+          try { data = JSON.parse(text) } catch (e) { data = null }
+
+          const content = data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.candidates?.[0]?.content?.text || data?.output?.[0]?.content?.text || data?.response?.output_text || data?.generated_text || (typeof data === 'string' ? data : null)
+
+          if (!content) {
+            console.error('[v0] Gemini returned no content in primary response shape:', data)
+            throw new ProviderError('Gemini returned empty response', 500)
+          }
+
+          return { text: String(content) }
+        } catch (err: any) {
+          console.error('[v0] Gemini primary request failed:', err?.message || err)
+          // Allow outer retry loop to fallback to other providers
+          if (err instanceof ProviderError && err.shouldFallback) throw err
+          lastError = err
         }
-
-        const data = await res.json()
-        const content = data?.candidates?.[0]?.content?.parts?.[0]?.text
-
-        if (!content) {
-          throw new ProviderError('Gemini returned empty response', 500)
-        }
-
-        return { text: content }
       }
 
       // Fallback: OpenAI (openai package must be installed and `OPENAI_API_KEY` set)

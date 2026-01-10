@@ -62,8 +62,23 @@ export class TenderService {
       const hints = field.extractionHints
 
       // Try regex patterns
-      for (const pattern of hints.patterns) {
-        const regex = new RegExp(pattern, "i")
+      for (const pattern of hints.patterns || []) {
+        let regex: RegExp | null = null
+        try {
+          regex = new RegExp(pattern, "i")
+        } catch (err) {
+          // If the configured pattern is invalid, escape it and try as a literal
+          try {
+            const escaped = pattern.replace(/[-\\/\\^$*+?.()|[\]{}]/g, "\\$&")
+            regex = new RegExp(escaped, "i")
+            console.warn(`[v0] TenderService: Invalid pattern '${pattern}', using escaped literal match.`)
+          } catch (err2) {
+            console.error(`[v0] TenderService: Skipping invalid pattern for ${field.name}:`, pattern, err2)
+            regex = null
+          }
+        }
+
+        if (!regex) continue
         const match = allText.match(regex)
         if (match && match[1]) {
           extractedData[field.name] = match[1].trim()
@@ -74,8 +89,10 @@ export class TenderService {
 
       // If not found, try context-based extraction
       if (!extractedData[field.name]) {
-        for (const contextWord of hints.context) {
-          const contextRegex = new RegExp(`${contextWord}[:\\s]+(.*?)(?:\\n|$)`, "i")
+        for (const contextWord of hints.context || []) {
+          // Escape context words to avoid invalid regexes
+          const safeWord = (contextWord || "").replace(/[-\\/\\^$*+?.()|[\]{}]/g, "\\$&")
+          const contextRegex = new RegExp(`${safeWord}[:\\s]+(.*?)(?:\\n|$)`, "i")
           const match = allText.match(contextRegex)
           if (match && match[1]) {
             extractedData[field.name] = match[1].trim()
@@ -95,6 +112,74 @@ export class TenderService {
 
     console.log(`[v0] TenderService: Extracted tender data with ${validation.score}% completeness`)
     return this.normalizeScrapedData(extractedData)
+  }
+
+  /**
+   * Map document-detected fields (native PDF form fields and layout-detected fields)
+   * to the tender schema. Returns a mapping object keyed by schema field name with
+   * position and confidence info to enable form rendering in the UI.
+   */
+  static mapDocumentFieldsToSchema(document: ParsedDocument) {
+    const mappings: Record<string, any> = {}
+    const hints = getAllExtractionHints()
+
+    // Index native form fields by normalized label/name
+    const nativeIndex = new Map<string, any>()
+    for (const ff of document.form_fields || []) {
+      nativeIndex.set((ff.name || ff.id || "").toLowerCase(), ff)
+    }
+
+    // Helper to try to match a schema field to a native or detected field
+    for (const h of hints) {
+      const key = h.field
+      // Try native form fields first
+      const matchKey = [h.displayName, ...(h.aliases || [])].map((s) => (s || "").toLowerCase())
+      let found: any = null
+
+      for (const k of matchKey) {
+        if (nativeIndex.has(k)) {
+          found = nativeIndex.get(k)
+          break
+        }
+      }
+
+      if (found) {
+        mappings[key] = {
+          source: "pdf_native",
+          field: key,
+          label: found.name || found.id,
+          page: found.page,
+          position: found.position,
+          position_normalized: found.position_normalized,
+          value: found.value,
+          confidence: 0.95,
+        }
+        continue
+      }
+
+      // Fallback: search detected form regions/fields in layout
+      const detected = (document.layout?.form_regions || [])
+        .flatMap((r) => r.detected_fields || [])
+        .find((df: any) => {
+          const label = (df.label?.text || "").toLowerCase()
+          return matchKey.some((k) => k && label.includes(k))
+        })
+
+      if (detected) {
+        mappings[key] = {
+          source: "detected_layout",
+          field: key,
+          label: detected.label?.text,
+          page: detected.label?.position ? document.pages.find((p) => p.page_number === detected.label.position.page)?.page_number || detected.label?.position.page : null,
+          position: detected.input?.position,
+          position_normalized: detected.input?.position_normalized,
+          value: null,
+          confidence: detected.confidence || 0.7,
+        }
+      }
+    }
+
+    return mappings
   }
 
   // Enrich tender data with AI analysis context

@@ -94,18 +94,17 @@ async function generateTextViaProvider(opts) {
                     text: content ?? ""
                 };
             }
-            // Check for Gemini/Google
+            // Prefer Gemini/Google when a key is present (allow explicit model or default)
             let geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-            if (model.startsWith("gemini") && geminiKey) {
+            if (geminiKey) {
                 geminiKey = geminiKey.trim();
-                // Use stable v1 endpoint for production reliability
-                // gemini-1.5-flash is available on v1 endpoint
-                const geminiModel = model.includes("flash") ? "gemini-1.5-flash" : "gemini-pro";
-                const apiVersion = "v1" // Changed from v1beta to stable v1
-                ;
-                const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${geminiModel}:generateContent?key=${geminiKey}`;
+                const geminiModel = process.env.GEMINI_MODEL || (model.includes("gemini") ? model : "gemini-2.5-flash");
+                const apiVersion = "v1";
+                const baseUrl = `https://generativelanguage.googleapis.com/${apiVersion}/models/${geminiModel}`;
                 console.log(`[v0] Provider: Gemini (Model: ${geminiModel}, API: ${apiVersion}) - attempt ${attempt}/${maxRetries}`);
-                const body = {
+                // Primary request shape: `contents` + `generationConfig` (matches models list supportedGenerationMethods)
+                const url = `${baseUrl}:generateContent?key=${geminiKey}`;
+                const primaryBody = {
                     contents: [
                         {
                             role: "user",
@@ -121,32 +120,43 @@ async function generateTextViaProvider(opts) {
                         maxOutputTokens: opts.maxTokens || 4000
                     }
                 };
-                const res = await fetch(url, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(body),
-                    signal: AbortSignal.timeout(30000) // 30 second timeout
-                });
-                if (!res.ok) {
+                try {
+                    const res = await fetch(url, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(primaryBody),
+                        signal: AbortSignal.timeout(60000)
+                    });
                     const text = await res.text();
-                    console.error(`[v0] Gemini Error (${res.status}): ${text}`);
-                    // If quota exceeded or rate limit, try fallback immediately
-                    if (res.status === 429 || res.status === 403) {
-                        console.log('[v0] Gemini quota/rate limit - falling back to OpenAI');
-                        throw new ProviderError(`Gemini API quota/rate limit: ${res.status}`, res.status, true);
+                    if (!res.ok) {
+                        console.error(`[v0] Gemini Error (${res.status}): ${text}`);
+                        if (res.status === 429 || res.status === 403) {
+                            throw new ProviderError(`Gemini API quota/rate limit: ${res.status}`, res.status, true);
+                        }
+                        throw new ProviderError(`Gemini API request failed: ${res.status} ${text}`, res.status);
                     }
-                    throw new ProviderError(`Gemini API request failed: ${res.status} ${text}`, res.status);
+                    let data;
+                    try {
+                        data = JSON.parse(text);
+                    } catch (e) {
+                        data = null;
+                    }
+                    const content = data?.candidates?.[0]?.content?.parts?.[0]?.text || data?.candidates?.[0]?.content?.text || data?.output?.[0]?.content?.text || data?.response?.output_text || data?.generated_text || (typeof data === 'string' ? data : null);
+                    if (!content) {
+                        console.error('[v0] Gemini returned no content in primary response shape:', data);
+                        throw new ProviderError('Gemini returned empty response', 500);
+                    }
+                    return {
+                        text: String(content)
+                    };
+                } catch (err) {
+                    console.error('[v0] Gemini primary request failed:', err?.message || err);
+                    // Allow outer retry loop to fallback to other providers
+                    if (err instanceof ProviderError && err.shouldFallback) throw err;
+                    lastError = err;
                 }
-                const data = await res.json();
-                const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!content) {
-                    throw new ProviderError('Gemini returned empty response', 500);
-                }
-                return {
-                    text: content
-                };
             }
             // Fallback: OpenAI (openai package must be installed and `OPENAI_API_KEY` set)
             const openaiKey = process.env.OPENAI_API_KEY;
@@ -1662,6 +1672,25 @@ NOTE: This PDF does not have interactive form fields. Generate formFields based 
 `;
         }
         console.log("[v0] Step 3: Calling configured AI provider via wrapper for analysis...");
+        // Validate provider configuration early to give actionable errors
+        const hasOpenAI = !!process.env.OPENAI_API_KEY;
+        const hasAzure = !!process.env.AZURE_OPENAI_ENDPOINT && !!process.env.AZURE_OPENAI_KEY && !!process.env.AZURE_OPENAI_DEPLOYMENT;
+        const hasGemini = !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
+        if (!hasOpenAI && !hasAzure && !hasGemini) {
+            console.error('[v0] No AI provider configured. Set OPENAI_API_KEY or GEMINI_API_KEY/GOOGLE_API_KEY or AZURE_OPENAI_* env vars.');
+            return Response.json({
+                error: 'No AI provider configured',
+                errorType: 'no_ai_provider_configured',
+                details: 'Set OPENAI_API_KEY or GEMINI_API_KEY/GOOGLE_API_KEY or AZURE_OPENAI_ENDPOINT+AZURE_OPENAI_KEY+AZURE_OPENAI_DEPLOYMENT in your environment.'
+            }, {
+                status: 400
+            });
+        }
+        // Determine preferred provider for logging/response (actual selection may be influenced by provider wrapper)
+        const preferredProvider = hasGemini ? 'Gemini' : hasAzure ? 'Azure' : 'OpenAI';
+        const modelToUse = hasGemini ? 'gemini-1.5-flash' : hasAzure ? 'azure-deployment' : 'gpt-4o';
+        const promptLength = (basePrompt + '\n' + truncatedText).length;
+        console.log(`[v0] Provider selection: ${preferredProvider}; model hint: ${modelToUse}; prompt length: ${promptLength} chars; truncated text length: ${truncatedText.length}`);
         try {
             const startTime = Date.now();
             const { text: aiResponse } = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$providers$2f$index$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["default"])({
@@ -1775,6 +1804,7 @@ Respond with ONLY the following JSON structure (no markdown, no code blocks, jus
             const endTime = Date.now();
             console.log("[v0] AI generation completed in", (endTime - startTime) / 1000, "seconds");
             console.log("[v0] Raw AI response length:", aiResponse.length, "characters");
+            console.log("[v0] AI response preview (first 200 chars):", aiResponse.substring(0, 200));
             console.log("[v0] First 500 chars of response:", aiResponse.substring(0, 500));
             let analysis;
             try {
@@ -1802,6 +1832,11 @@ Respond with ONLY the following JSON structure (no markdown, no code blocks, jus
                     status: 500
                 });
             }
+            // Attach provider info to analysis for frontend visibility (no secrets)
+            analysis.__meta = {
+                provider: preferredProvider,
+                model: modelToUse
+            };
             analysis.pdfFormFieldsDetected = hasPdfFormFields;
             analysis.pdfFormFieldCount = pdfFormFields.length;
             analysis.pdfFormFields = pdfFormFields;
@@ -1904,56 +1939,17 @@ Respond with ONLY the following JSON structure (no markdown, no code blocks, jus
         } catch (aiError) {
             console.error("[v0] AI GENERATION ERROR");
             console.error("[v0] Error message:", aiError?.message);
-            // Check for OpenAI Quota Exceeded (429) and provide fallback for testing
-            if (aiError?.message?.includes("429") || aiError?.message?.includes("quota")) {
-                console.warn("[v0] ⚠️ OpenAI Quota Exceeded. Using MOCK DATA for analysis to unblock testing.");
-                const mockAnalysis = {
-                    tender_summary: {
-                        tender_number: "MOCK-429-TEST",
-                        title: "Mock Tender (Quota Exceeded Fallback)",
-                        entity: "Fallback Entity",
-                        description: "This is a generated mock description because the OpenAI API key has exceeded its quota. The application flow is preserved for testing purposes.",
-                        closing_date: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0],
-                        contract_duration: "12 Months"
-                    },
-                    compliance_summary: {
-                        requirements: [
-                            "Mock Requirement 1",
-                            "Mock Requirement 2"
-                        ],
-                        disqualifiers: [
-                            "Mock Disqualifier"
-                        ],
-                        strengtheners: [
-                            "Mock Strengthener"
-                        ]
-                    },
-                    evaluation: {
-                        criteria: [
-                            {
-                                "criterion": "Price",
-                                "weight": 80
-                            },
-                            {
-                                "criterion": "BEE",
-                                "weight": 20
-                            }
-                        ]
-                    },
-                    formFields: [],
-                    pdfFormFieldsDetected: hasPdfFormFields,
-                    pdfFormFieldCount: pdfFormFields.length,
-                    pdfFormFields: pdfFormFields
-                };
-                return Response.json(mockAnalysis);
-            }
-            console.error("[v0] Error stack:", aiError?.stack?.substring(0, 500));
+            console.error("[v0] Error stack:", aiError?.stack?.substring?.(0, 1000));
             return Response.json({
                 error: "AI generation failed",
                 errorType: "ai_generation_error",
-                details: aiError?.message || "Unknown AI error"
+                details: aiError?.message || "Unknown AI error",
+                // include truncated stack for local debugging
+                stack: (aiError?.stack || '').substring(0, 1000),
+                provider: preferredProvider,
+                model: modelToUse
             }, {
-                status: 500
+                status: 502
             });
         }
     } catch (error) {

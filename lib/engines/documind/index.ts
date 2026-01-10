@@ -41,6 +41,10 @@ export async function processDocument(
   options: ParseOptions = {},
 ): Promise<ProcessDocumentResult> {
   const startTime = Date.now()
+  try {
+    const { incr } = await import("./utils/metrics")
+    incr("documind.parse.started")
+  } catch {}
   const warnings: string[] = []
 
   try {
@@ -67,7 +71,7 @@ export async function processDocument(
 
     const pages = parseResult.pages
     let ocrUsed = false
-    const ocrConfidence: number | null = null
+    let ocrConfidence: number | null = null
 
     // Perform OCR on scanned pages if enabled
     if (options.ocr_enabled !== false) {
@@ -80,6 +84,52 @@ export async function processDocument(
         }
       }
     }
+
+    // If OCR is required and available, perform OCR per-page and merge
+    if (options.ocr_enabled !== false && ocrUsed) {
+      try {
+        const { performOCR, mergeOCRWithPage } = await import("./modules/ocr-engine")
+        for (let i = 0; i < pages.length; i++) {
+          if (pageNeedsOCR(pages[i])) {
+            try {
+              // render page to image using pdf-lib is non-trivial; parsePDF provides raw pages without images
+              // Some environments support rendering via pdfjs; here we attempt a best-effort approach:
+              // If parseResult provided pageImages, prefer those; otherwise skip heavy OCR.
+              const pageInfo = pages[i]
+              if ((parseResult as any).pageImages && (parseResult as any).pageImages[i]) {
+                const img = (parseResult as any).pageImages[i]
+                const ocrPage = await performOCR(img, i + 1, { width: pageInfo.width, height: pageInfo.height }, options.ocr_language)
+                pages[i] = mergeOCRWithPage(pages[i], ocrPage)
+                ocrConfidence = ocrPage.confidence
+              } else if ((parseResult as any).rawPdf) {
+                // Try server-side rendering via puppeteer (best-effort)
+                try {
+                  const { renderPdfPageToPng } = await import("./utils/page-renderer")
+                  const png = await renderPdfPageToPng((parseResult as any).rawPdf, i + 1)
+                  const ocrPage = await performOCR(png as Buffer, i + 1, { width: pageInfo.width, height: pageInfo.height }, options.ocr_language)
+                  pages[i] = mergeOCRWithPage(pages[i], ocrPage)
+                  ocrConfidence = ocrPage.confidence
+                } catch (renderErr) {
+                  console.warn("Documind: server-side rendering for OCR failed", renderErr)
+                }
+              } else {
+                console.warn("Documind: No page image available for OCR; skipping OCR for page", i + 1)
+              }
+            } catch (ocrErr) {
+              console.error("Documind: OCR failed for page", i + 1, ocrErr)
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Documind: OCR module unavailable or failed to load", e)
+      }
+    }
+
+    try {
+      const { incr } = await import("./utils/metrics")
+      incr("documind.parse.completed")
+      if (ocrUsed) incr("documind.ocr.used")
+    } catch {}
 
     // Analyze layout
     const layoutResult = analyzeLayout(pages, parseResult.metadata.detected_type)

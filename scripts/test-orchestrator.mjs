@@ -7,7 +7,7 @@
 (async () => {
   try {
     // Import the orchestrator directly
-    const { engineOrchestrator } = await import("../lib/engines/orchestrator/index.js");
+    const { engineOrchestrator } = await import("../lib/engines/orchestrator/index.mjs");
 
     const results = [];
 

@@ -7,13 +7,19 @@ import { TenderService, validateTender, normalizeTenderData } from "../tenders"
 import { OpportunityService, CompetitivenessService, StrategistService } from "../strategist"
 import type { ScrapedTender } from "../../scrapers/base-scraper"
 import type { ParsedDocument } from "../documind/types"
+import { orchestrateTenderAnalysis } from "./tender-orchestrator"
 // Tender types: use existing TenderValidationResult from tenders; keep TenderData as any for now
 type TenderData = any
 import type { TenderValidationResult as ValidationResult } from "../tenders/types"
 
 export interface EngineOrchestrator {
   processScrapedTender(tender: ScrapedTender): Promise<ProcessedTenderResult>
-  processUploadedDocument(file: ArrayBuffer, mimeType: string, userId: string): Promise<ProcessedDocumentResult>
+  processUploadedDocument(
+    file: ArrayBuffer,
+    mimeType: string,
+    userId: string,
+    options?: { tenderId?: string; documentUrl?: string },
+  ): Promise<ProcessedDocumentResult>
   enrichTenderWithStrategy(
     tenderId: string,
     tenderType: "custom" | "scraped",
@@ -35,6 +41,7 @@ export interface ProcessedDocumentResult {
   document?: ParsedDocument
   extractedTenderData?: TenderData
   validation?: ValidationResult
+  fieldMappings?: Record<string, any>
   error?: string
 }
 
@@ -146,7 +153,12 @@ export class EngineOrchestrator {
    * Process an uploaded document through all engines
    * Flow: Documind (extract) -> Tenders Engine (validate/normalize) -> Strategist (analyze)
    */
-  async processUploadedDocument(file: ArrayBuffer, mimeType: string, userId: string): Promise<ProcessedDocumentResult> {
+  async processUploadedDocument(
+    file: ArrayBuffer,
+    mimeType: string,
+    userId: string,
+    options?: { tenderId?: string; documentUrl?: string },
+  ): Promise<ProcessedDocumentResult> {
     try {
       console.log("[v0] Orchestrator: Processing uploaded document")
 
@@ -191,11 +203,35 @@ export class EngineOrchestrator {
         `[v0] Orchestrator: Tender extracted - Score: ${validation.score}`,
       )
 
+      // Map document-detected fields to schema for UI form rendering
+      let fieldMappings: Record<string, any> | undefined = undefined
+      try {
+        fieldMappings = TenderService.mapDocumentFieldsToSchema
+          ? TenderService.mapDocumentFieldsToSchema(document)
+          : undefined
+      } catch (mapErr) {
+        console.warn('[v0] Orchestrator: field mapping failed', mapErr)
+      }
+
+      // If a tenderId was provided, kick off full tender orchestration (persisted progress, phase1/2)
+      let orchestration: any = null
+      if (options?.tenderId) {
+        try {
+          console.log('[v0] Orchestrator: launching TenderOrchestrator for tenderId', options.tenderId)
+          orchestration = await orchestrateTenderAnalysis(options.tenderId, userId, options.documentUrl)
+          console.log('[v0] Orchestrator: TenderOrchestrator started', { orchestrationId: orchestration?.orchestrationId, status: orchestration?.status })
+        } catch (orchErr) {
+          console.warn('[v0] Orchestrator: failed to start TenderOrchestrator', orchErr)
+        }
+      }
+
       return {
         success: true,
         document,
         extractedTenderData: normalizedTender,
         validation,
+        fieldMappings,
+        orchestration,
       }
     } catch (error) {
       console.error("[v0] Orchestrator: Error processing uploaded document:", error)

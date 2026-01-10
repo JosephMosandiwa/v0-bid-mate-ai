@@ -3,6 +3,7 @@
 // ============================================
 
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import type { StrategistCompetitivenessScore } from "../types"
 
 export class CompetitivenessService {
@@ -67,39 +68,132 @@ export class CompetitivenessService {
     const improvementSuggestions = this.generateImprovementSuggestions(scoreBreakdown)
 
     // Save score
-    const { data, error } = await supabase
-      .from("strategist_competitiveness_scores")
-      .upsert(
-        {
-          user_id: params.userId,
-          tender_id: params.tenderId,
-          documentation_score: documentationScore,
-          pricing_score: pricingScore,
-          compliance_score: complianceScore,
-          experience_score: experienceScore,
-          capacity_score: capacityScore,
-          score_breakdown: scoreBreakdown,
-          improvement_suggestions: improvementSuggestions,
-          win_probability: winProbability,
-          win_probability_factors: {
-            base_score: overallScore,
-            experience_bonus: preferences?.experience_level === "advanced" ? 0.1 : 0,
-            compliance_penalty: complianceScore < 0.5 ? -0.2 : 0,
-          },
-          calculated_at: new Date().toISOString(),
-          valid_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Valid for 7 days
-        },
-        { onConflict: "user_id" },
-      )
-      .select()
-      .single()
+    // Use both user_id and tender_id as the conflict target so the
+    // upsert matches a composite unique constraint (if present).
+    // Fall back to user_id alone if tenderId is not provided.
+    const conflictTarget = params.tenderId ? "user_id,tender_id" : "user_id"
 
-    if (error) {
-      console.error("[Competitiveness] Error saving score:", error)
-      return null
+    // Attempt upsert using ON CONFLICT when possible, but fall back to select+insert/update
+    const admin = createAdminClient()
+
+    try {
+      const { data, error } = await admin
+        .from("strategist_competitiveness_scores")
+        .upsert(
+          {
+            user_id: params.userId,
+            tender_id: params.tenderId,
+            documentation_score: documentationScore,
+            pricing_score: pricingScore,
+            compliance_score: complianceScore,
+            experience_score: experienceScore,
+            capacity_score: capacityScore,
+            score_breakdown: scoreBreakdown,
+            improvement_suggestions: improvementSuggestions,
+            win_probability: winProbability,
+            win_probability_factors: {
+              base_score: overallScore,
+              experience_bonus: preferences?.experience_level === "advanced" ? 0.1 : 0,
+              compliance_penalty: complianceScore < 0.5 ? -0.2 : 0,
+            },
+            calculated_at: new Date().toISOString(),
+            valid_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Valid for 7 days
+          },
+          { onConflict: conflictTarget },
+        )
+        .select()
+        .single()
+
+      if (error) {
+        // If ON CONFLICT target doesn't match a unique constraint, fall back
+        if (error.code === "42P10") {
+          console.warn("[Competitiveness] ON CONFLICT failed (no matching unique constraint), falling back to manual upsert")
+        } else {
+          console.error("[Competitiveness] Error saving score:", error)
+          return null
+        }
+      } else {
+        return data
+      }
+    } catch (e: any) {
+      console.warn("[Competitiveness] Exception during upsert attempt with admin client, falling back:", e?.message || e)
     }
 
-    return data
+    // Fallback: try to find an existing row then update or insert
+    try {
+      const { data: existing } = await admin
+        .from("strategist_competitiveness_scores")
+        .select("*")
+        .eq("user_id", params.userId)
+        .eq("tender_id", params.tenderId)
+        .maybeSingle()
+
+      if (existing) {
+        const { data: updated, error: updErr } = await admin
+          .from("strategist_competitiveness_scores")
+          .update({
+            documentation_score: documentationScore,
+            pricing_score: pricingScore,
+            compliance_score: complianceScore,
+            experience_score: experienceScore,
+            capacity_score: capacityScore,
+            score_breakdown: scoreBreakdown,
+            improvement_suggestions: improvementSuggestions,
+            win_probability: winProbability,
+            win_probability_factors: {
+              base_score: overallScore,
+              experience_bonus: preferences?.experience_level === "advanced" ? 0.1 : 0,
+              compliance_penalty: complianceScore < 0.5 ? -0.2 : 0,
+            },
+            calculated_at: new Date().toISOString(),
+            valid_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          })
+          .eq("id", existing.id)
+          .select()
+          .single()
+
+        if (updErr) {
+          console.error("[Competitiveness] Error updating existing score:", updErr)
+          return null
+        }
+
+        return updated
+      } else {
+        const { data: inserted, error: insErr } = await admin
+          .from("strategist_competitiveness_scores")
+          .insert({
+            user_id: params.userId,
+            tender_id: params.tenderId,
+            documentation_score: documentationScore,
+            pricing_score: pricingScore,
+            compliance_score: complianceScore,
+            experience_score: experienceScore,
+            capacity_score: capacityScore,
+            score_breakdown: scoreBreakdown,
+            improvement_suggestions: improvementSuggestions,
+            win_probability: winProbability,
+            win_probability_factors: {
+              base_score: overallScore,
+              experience_bonus: preferences?.experience_level === "advanced" ? 0.1 : 0,
+              compliance_penalty: complianceScore < 0.5 ? -0.2 : 0,
+            },
+            calculated_at: new Date().toISOString(),
+            valid_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          })
+          .select()
+          .single()
+
+        if (insErr) {
+          console.error("[Competitiveness] Error inserting score:", insErr)
+          return null
+        }
+
+        return inserted
+      }
+    } catch (finalErr) {
+      console.error("[Competitiveness] Final fallback failed:", finalErr)
+      return null
+    }
   }
 
   /**

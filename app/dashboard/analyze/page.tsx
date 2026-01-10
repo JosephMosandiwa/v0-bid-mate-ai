@@ -22,8 +22,16 @@ interface AnalysisResult {
 export default function AnalyzePage() {
   const [documentText, setDocumentText] = useState("")
   const [analyzing, setAnalyzing] = useState(false)
-  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
+  const [analysis, setAnalysis] = useState<any | null>(null)
   const [error, setError] = useState("")
+
+  // Derived display fields to support both legacy and new analysis shapes
+  const displaySummary = analysis?.tender_summary?.description || analysis?.summary || ""
+  const displayDeadlines = (analysis?.action_plan?.critical_dates || analysis?.deadlines || []).map((d: any) => (typeof d === 'string' ? d : `${d.date || ''}${d.event ? ` — ${d.event}` : ''}`))
+  const displayEvaluation = (analysis?.evaluation?.criteria || analysis?.evaluationCriteria || []).map((c: any) => (typeof c === 'string' ? c : c.criterion || ''))
+  const displayRequirements = analysis?.compliance_summary?.requirements || analysis?.keyRequirements || []
+  const displayCompliance = analysis?.compliance_summary?.requirements || analysis?.complianceChecklist || []
+  const displayRecommendations = (analysis?.action_plan?.preparation_tasks?.map((t: any) => t.task) || analysis?.recommendations || [])
 
   const handleAnalyze = async () => {
     if (!documentText.trim()) {
@@ -199,14 +207,14 @@ export default function AnalyzePage() {
                   <TabsContent value="summary" className="space-y-4">
                     <div>
                       <h3 className="font-semibold text-foreground mb-2">Executive Summary</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{analysis.summary}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{displaySummary}</p>
                     </div>
 
-                    {analysis.deadlines.length > 0 && (
+                    {displayDeadlines.length > 0 && (
                       <div>
                         <h3 className="font-semibold text-foreground mb-2">Key Deadlines</h3>
                         <ul className="space-y-2">
-                          {analysis.deadlines.map((deadline, index) => (
+                          {displayDeadlines.map((deadline: string, index: number) => (
                             <li key={index} className="flex items-start gap-2 text-sm">
                               <div className="h-1.5 w-1.5 rounded-full bg-destructive mt-1.5" />
                               <span className="text-muted-foreground">{deadline}</span>
@@ -216,11 +224,11 @@ export default function AnalyzePage() {
                       </div>
                     )}
 
-                    {analysis.evaluationCriteria.length > 0 && (
+                    {displayEvaluation.length > 0 && (
                       <div>
                         <h3 className="font-semibold text-foreground mb-2">Evaluation Criteria</h3>
                         <ul className="space-y-2">
-                          {analysis.evaluationCriteria.map((criteria, index) => (
+                          {displayEvaluation.map((criteria: string, index: number) => (
                             <li key={index} className="flex items-start gap-2 text-sm">
                               <div className="h-1.5 w-1.5 rounded-full bg-accent mt-1.5" />
                               <span className="text-muted-foreground">{criteria}</span>
@@ -235,7 +243,7 @@ export default function AnalyzePage() {
                     <div>
                       <h3 className="font-semibold text-foreground mb-2">Key Requirements</h3>
                       <ul className="space-y-2">
-                        {analysis.keyRequirements.map((req, index) => (
+                        {displayRequirements.map((req: string, index: number) => (
                           <li key={index} className="flex items-start gap-2 text-sm">
                             <div className="h-1.5 w-1.5 rounded-full bg-primary mt-1.5" />
                             <span className="text-muted-foreground">{req}</span>
@@ -244,11 +252,11 @@ export default function AnalyzePage() {
                       </ul>
                     </div>
 
-                    {analysis.complianceChecklist.length > 0 && (
+                    {displayCompliance.length > 0 && (
                       <div>
                         <h3 className="font-semibold text-foreground mb-2">Compliance Checklist</h3>
                         <ul className="space-y-2">
-                          {analysis.complianceChecklist.map((item, index) => (
+                          {displayCompliance.map((item: string, index: number) => (
                             <li key={index} className="flex items-start gap-2 text-sm">
                               <div className="h-1.5 w-1.5 rounded-full bg-secondary mt-1.5" />
                               <span className="text-muted-foreground">{item}</span>
@@ -263,7 +271,7 @@ export default function AnalyzePage() {
                     <div>
                       <h3 className="font-semibold text-foreground mb-2">Strategic Recommendations</h3>
                       <ul className="space-y-3">
-                        {analysis.recommendations.map((rec, index) => (
+                        {displayRecommendations.map((rec: string, index: number) => (
                           <li key={index} className="flex items-start gap-2 text-sm">
                             <div className="h-1.5 w-1.5 rounded-full bg-secondary mt-1.5" />
                             <span className="text-muted-foreground">{rec}</span>
@@ -273,6 +281,13 @@ export default function AnalyzePage() {
                     </div>
                   </TabsContent>
                 </Tabs>
+
+                {analysis?.diagnostics && (
+                  <div className="mt-6">
+                    <h4 className="font-medium">Diagnostics</h4>
+                    <pre className="text-xs mt-2 whitespace-pre-wrap">{JSON.stringify(analysis.diagnostics, null, 2)}</pre>
+                  </div>
+                )}
 
                 <div className="mt-6 pt-6 border-t border-border">
                   <Button className="w-full bg-transparent" variant="outline">

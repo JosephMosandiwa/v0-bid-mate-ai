@@ -33,9 +33,12 @@ import {
   analyzeDocument,
 } from "@/app/actions/document-actions"
 import { DynamicTenderForm } from "@/components/dynamic-tender-form"
+import ExtractionFieldCard from "@/components/tender-details/ExtractionFieldCard"
+import TenderDocumentViewer from "@/components/tender-details/TenderDocumentViewer"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "@/lib/providers"
 import { Input } from "@/components/ui/input"
+import { Progress } from "@/components/ui/progress"
 import { TenderContextStrategistPanel } from "@/components/strategist/tender-context-panel"
 
 // Mock data - will be replaced with database queries
@@ -103,6 +106,8 @@ export default function TenderDetailPage() {
   const [documents, setDocuments] = useState<any[]>([])
   const [analysis, setAnalysis] = useState<any>(null)
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<number>(0)
+  const [currentStep, setCurrentStep] = useState<"idle" | "upload" | "analyze" | "create">("idle")
   const [analyzing, setAnalyzing] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [chatInput, setChatInput] = useState("")
@@ -137,12 +142,28 @@ export default function TenderDetailPage() {
 
     setSelectedFile(file)
     setUploading(true)
+    setUploadProgress(0)
+    setCurrentStep("upload")
 
     const formData = new FormData()
     formData.append("file", file)
     formData.append("userTenderId", id)
 
-    const result = await uploadTenderDocument(formData)
+
+    let result
+    try {
+      result = await uploadTenderDocument(formData)
+      clearInterval(progressInterval)
+      setUploadProgress(100)
+      await new Promise((r) => setTimeout(r, 250))
+      setCurrentStep("analyze")
+    } catch (err) {
+      clearInterval(progressInterval)
+      setUploadProgress(0)
+      setCurrentStep("idle")
+      setUploading(false)
+      throw err
+    }
 
     if (result.success) {
       await loadTenderData()
@@ -151,7 +172,10 @@ export default function TenderDetailPage() {
 
       // Auto-analyze PDF documents
       if (file.type === "application/pdf") {
+        // mark analyze step
+        setCurrentStep("analyze")
         await handleAnalyzeDocument(result.data.id, file)
+        setCurrentStep("idle")
       }
     } else {
       alert(result.error || "Failed to upload document")
@@ -286,6 +310,19 @@ export default function TenderDetailPage() {
     } finally {
       setAnalyzing(null)
     }
+  }
+
+  // Helper to render diagnostics for currently loaded analysis
+  function AnalysisDiagnostics({ data }: { data: any }) {
+    if (!data) return null
+    const diag = data.diagnostics || data?.ai_analysis?.diagnostics || null
+    if (!diag) return null
+    return (
+      <div className="mt-4 p-3 rounded border bg-muted/5">
+        <h4 className="text-sm font-medium mb-2">Analysis Diagnostics</h4>
+        <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(diag, null, 2)}</pre>
+      </div>
+    )
   }
 
   const handleAnalyzeFromInsights = async (doc: any) => {
@@ -436,7 +473,7 @@ export default function TenderDetailPage() {
     <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Main Content */}
-        <div className="flex-1 space-y-4 md:space-y-6">
+          <div className="flex-1 space-y-4 md:space-y-6">
           <div>
             <div className="flex items-center gap-4 mb-4">
               <Button variant="ghost" size="icon" asChild>
@@ -530,55 +567,47 @@ export default function TenderDetailPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {analysis?.tender_summary?.tender_number && (
-                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Tender Number:</span>
-                      <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
-                        {analysis.tender_summary.tender_number}
-                      </span>
-                    </div>
-                  )}
-                  {(analysis?.tender_summary?.title || tender.title) && (
-                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Title:</span>
-                      <span className="text-sm">{analysis?.tender_summary?.title || tender.title}</span>
-                    </div>
-                  )}
-                  {(analysis?.tender_summary?.entity || tender.source_name) && (
-                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Organization:</span>
-                      <span className="text-sm">{analysis?.tender_summary?.entity || tender.source_name}</span>
-                    </div>
-                  )}
-                  {(analysis?.tender_summary?.closing_date || tender.close_date) && (
-                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Closing Date:</span>
-                      <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">
-                        {new Date(analysis?.tender_summary?.closing_date || tender.close_date).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                  {analysis?.tender_summary?.category && (
-                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Category:</span>
-                      <Badge variant="outline">{analysis.tender_summary.category}</Badge>
-                    </div>
-                  )}
-                  {tender.source_url && (
-                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Source:</span>
-                      <a
-                        href={tender.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline truncate"
-                      >
-                        {tender.source_url}
-                      </a>
-                    </div>
-                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <ExtractionFieldCard
+                      tenderId={id}
+                      fieldKey="title"
+                      label="Title"
+                      value={(analysis?.tender_summary?.title as string) || tender.title}
+                      confidence={analysis?.tender_summary_confidence?.title}
+                      onSaved={(k, v) => setAnalysis((a: any) => ({ ...a, tender_summary: { ...a?.tender_summary, title: v } }))}
+                    />
+
+                    <ExtractionFieldCard
+                      tenderId={id}
+                      fieldKey="entity"
+                      label="Organization"
+                      value={(analysis?.tender_summary?.entity as string) || tender.source_name}
+                      confidence={analysis?.tender_summary_confidence?.entity}
+                      onSaved={(k, v) => setAnalysis((a: any) => ({ ...a, tender_summary: { ...a?.tender_summary, entity: v } }))}
+                    />
+
+                    <ExtractionFieldCard
+                      tenderId={id}
+                      fieldKey="closing_date"
+                      label="Closing Date"
+                      value={analysis?.tender_summary?.closing_date || tender.close_date}
+                      confidence={analysis?.tender_summary_confidence?.closing_date}
+                      onSaved={(k, v) => setAnalysis((a: any) => ({ ...a, tender_summary: { ...a?.tender_summary, closing_date: v } }))}
+                    />
+
+                    <ExtractionFieldCard
+                      tenderId={id}
+                      fieldKey="tender_number"
+                      label="Tender Number"
+                      value={analysis?.tender_summary?.tender_number || "Not specified"}
+                      confidence={analysis?.tender_summary_confidence?.tender_number}
+                      onSaved={(k, v) => setAnalysis((a: any) => ({ ...a, tender_summary: { ...a?.tender_summary, tender_number: v } }))}
+                    />
+                  </div>
                 </CardContent>
               </Card>
+
+              <AnalysisDiagnostics data={analysis} />
 
               {analysis?.eligibility_requirements && analysis.eligibility_requirements.length > 0 && (
                 <Card>
@@ -626,39 +655,66 @@ export default function TenderDetailPage() {
             </TabsContent>
 
             {analysis?.action_plan && (
-              <TabsContent value="action-plan" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>AI-Generated Action Plan</CardTitle>
-                    <CardDescription>Step-by-step tasks to complete your bid</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {analysis.action_plan.map((item: any, i: number) => (
-                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg border">
-                          <div className={`p-1 rounded ${getPriorityColor(item.priority)}`}>
-                            {getPriorityIcon(item.priority)}
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{item.task}</p>
-                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                              <Badge variant="outline" className="text-xs">
-                                {item.category}
-                              </Badge>
-                              {item.deadline && (
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  {item.deadline}
-                                </span>
-                              )}
+              (() => {
+                // Normalize possible shapes for action_plan coming from the analyzer.
+                // The analyzer may return either an array of task objects or an object
+                // with keys like `preparation_tasks` and `critical_dates`.
+                const raw = analysis.action_plan
+                let actionPlanItems: any[] = []
+
+                if (Array.isArray(raw)) {
+                  actionPlanItems = raw
+                } else if (raw && typeof raw === "object") {
+                  // Prefer `preparation_tasks` as list of actionable items
+                  if (Array.isArray(raw.preparation_tasks) && raw.preparation_tasks.length > 0) {
+                    actionPlanItems = raw.preparation_tasks
+                  } else if (Array.isArray(raw.tasks) && raw.tasks.length > 0) {
+                    actionPlanItems = raw.tasks
+                  } else if (Array.isArray(raw.critical_dates) && raw.critical_dates.length > 0) {
+                    // Map critical dates into a simple task-like structure
+                    actionPlanItems = raw.critical_dates.map((d: any) => ({ task: d, priority: "medium", deadline: d }))
+                  }
+                }
+
+                return (
+                  <TabsContent value="action-plan" className="space-y-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>AI-Generated Action Plan</CardTitle>
+                        <CardDescription>Step-by-step tasks to complete your bid</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {actionPlanItems.length === 0 && (
+                            <div className="text-sm text-muted-foreground">No actionable tasks found.</div>
+                          )}
+                          {actionPlanItems.map((item: any, i: number) => (
+                            <div key={i} className="flex items-start gap-3 p-3 rounded-lg border">
+                              <div className={`p-1 rounded ${getPriorityColor(item.priority)}`}>
+                                {getPriorityIcon(item.priority)}
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-medium text-sm">{item.task || item.title || item.description}</p>
+                                <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                  <Badge variant="outline" className="text-xs">
+                                    {item.category || item.type || ""}
+                                  </Badge>
+                                  {item.deadline && (
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="h-3 w-3" />
+                                      {item.deadline}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                          </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                )
+              })()
             )}
 
             {analysis && (
@@ -716,54 +772,52 @@ export default function TenderDetailPage() {
                       </p>
                       <p className="text-xs text-muted-foreground">PDF, DOC, DOCX, XLS, XLSX</p>
                     </label>
+
+                    {(uploading || uploadProgress > 0) && (
+                      <div className="mt-4 space-y-2">
+                        <div className="flex items-center justify-between text-sm text-muted-foreground">
+                          <div>Upload Progress</div>
+                          <div>{uploadProgress}%</div>
+                        </div>
+                        <Progress value={uploadProgress} />
+
+                        <div className="flex gap-3 text-sm pt-2 justify-center">
+                          <div className={`px-2 py-1 rounded ${currentStep === 'upload' ? 'bg-primary text-primary-foreground' : 'bg-muted/10 text-muted-foreground'}`}>Upload</div>
+                          <div className={`px-2 py-1 rounded ${currentStep === 'analyze' ? 'bg-primary text-primary-foreground' : 'bg-muted/10 text-muted-foreground'}`}>Analyze</div>
+                          <div className={`px-2 py-1 rounded ${currentStep === 'create' ? 'bg-primary text-primary-foreground' : 'bg-muted/10 text-muted-foreground'}`}>Create</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {documents.length > 0 && (
                     <div className="space-y-2">
-                      {documents.map((doc) => (
-                        <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg border">
-                          <div className="flex items-center gap-3">
-                            <FileText className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                              <p className="text-sm font-medium">{doc.file_name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {(doc.file_size / 1024 / 1024).toFixed(2)} MB
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {doc.ai_analysis && (
-                              <Badge variant="secondary" className="text-xs">
-                                <Sparkles className="h-3 w-3 mr-1" />
-                                Analyzed
-                              </Badge>
-                            )}
-                            {!doc.ai_analysis && doc.file_type === "application/pdf" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleAnalyzeFromInsights(doc)}
-                                disabled={analyzing === doc.id}
-                              >
-                                {analyzing === doc.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <Sparkles className="h-4 w-4 mr-1" />
-                                    Analyze
-                                  </>
-                                )}
-                              </Button>
-                            )}
-                            <Button size="icon" variant="ghost" onClick={() => handleDownload(doc.id)}>
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" onClick={() => handleDelete(doc.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+                      <TenderDocumentViewer
+                        documents={documents}
+                        highlights={
+                          analysis?.formFields?.length > 0
+                            ? analysis.formFields.map((f: any) => ({
+                                fieldKey: f.id || f.pdfFieldName || f.id,
+                                label: f.label,
+                                snippet: f.description || f.placeholder || "",
+                              }))
+                            : (analysis?.pdfFormFields || []).map((f: any) => ({
+                                fieldKey: f.name,
+                                label: f.name,
+                                snippet: f.type,
+                              }))
+                        }
+                        onHighlightClick={(fieldKey: string) => {
+                          const el = document.getElementById(`field-${fieldKey}`)
+                          if (el) {
+                            el.scrollIntoView({ behavior: "smooth", block: "center" })
+                            el.classList.add("ring-2", "ring-primary")
+                            setTimeout(() => {
+                              el.classList.remove("ring-2", "ring-primary")
+                            }, 2000)
+                          }
+                        }}
+                      />
                     </div>
                   )}
                 </CardContent>

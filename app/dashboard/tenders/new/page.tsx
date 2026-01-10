@@ -25,6 +25,7 @@ export default function NewTenderPage() {
   const [analysis, setAnalysis] = useState<any>(null)
   const [orchestrationId, setOrchestrationId] = useState<string | null>(null)
   const [tenderId, setTenderId] = useState<string | null>(null)
+  
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -52,13 +53,6 @@ export default function NewTenderPage() {
       console.log("[v0] Step 1: Uploading PDF to Supabase storage...")
       const uploadFormData = new FormData()
       uploadFormData.append("file", file)
-
-      // Use the existing action or a new one? 
-      // I'll assume I'm creating 'uploadTemporaryDocument' in document-actions.ts correctly next.
-      // But verify I can import it.
-      // For now, I'll keep the logic here but call a new API route /api/tenders/upload-temp to be safe/consistent with fetch?
-      // No, server actions are better.
-      // Let's import { uploadTemporaryDocument } from "@/app/actions/document-actions"
 
       const uploadResult = await uploadTemporaryDocument(uploadFormData)
 
@@ -110,7 +104,16 @@ export default function NewTenderPage() {
       console.log("[v0] Analysis has formFields:", analysisData.formFields?.length || 0)
       setAnalysis(analysisData)
 
+      if (analysisData?.diagnostics && (analysisData.diagnostics.parseAttempts || analysisData.diagnostics.parseErrors?.length)) {
+        toast({
+          title: "Analysis needs review",
+          description: "The analyzer made parse attempts; please review extracted fields before proceeding.",
+          variant: "warning",
+        })
+      }
+
       console.log("[v0] Step 3: Creating tender record with analysis...")
+      
 
       const result = await createCustomTender({
         title: analysisData.tender_summary?.title || file.name.replace(".pdf", ""),
@@ -231,6 +234,8 @@ export default function NewTenderPage() {
                 </div>
               )}
             </div>
+
+            {/* Upload progress removed; using simple loading state */}
 
             {loading && (
               <Alert className="border-blue-500/50 bg-blue-500/10">

@@ -6,6 +6,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server"
+import { StrategistService, CompetitivenessService } from "@/lib/engines/strategist"
 
 export interface OrchestrationOptions {
     tenderId: string
@@ -283,48 +284,67 @@ export class TenderOrchestrator {
      */
 
     private async generateBOQ(analysisData: any): Promise<any> {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/strategist/boq`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                tender_id: this.tenderId,
-                tenderTitle: analysisData?.tender_summary?.title || 'Tender',
-                analysisData,
-            })
-        })
+        // Use StrategistService context to produce a lightweight BOQ placeholder
+        // (Full BOQ generation via LLM remains in /api/strategist/boq)
+        const context = await StrategistService.buildContext(this.userId, this.tenderId, "boq")
+        const competitiveness = await CompetitivenessService.getScore(this.userId, this.tenderId)
 
-        if (!response.ok) {
-            throw new Error(`BOQ generation failed: ${response.statusText}`)
+        // Basic BOQ structure built from context and competitiveness insights
+        const boq = {
+            boq_items: [],
+            pricing_strategy: {
+                strategy_type: competitiveness?.win_probability && competitiveness.win_probability > 0.6 ? 'competitive' : 'value_based',
+                competitive_analysis: (competitiveness && JSON.stringify(competitiveness.score_breakdown || {})) || '',
+                risk_premium_percent: 5,
+                discount_offered_percent: 0,
+                payment_terms: '30/60 days',
+                pricing_rationale: 'Generated from strategist context'
+            },
+            direct_costs: {},
+            indirect_costs: {},
+            contingency_percent: 10,
+            profit_margin_percent: 15,
+            vat_percent: 15,
+            generated_from_context: context,
+            competitiveness: competitiveness,
         }
 
-        return await response.json()
+        return boq
     }
 
     private async generateStrategy(analysisData: any): Promise<any> {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/strategist/strategy`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                tender_id: this.tenderId,
-                title: 'Bid Strategy'
-            })
+        // Generate competitiveness and recommendations via StrategistService
+        const competitiveness = await CompetitivenessService.getScore(this.userId, this.tenderId)
+        const recommendations = await StrategistService.generateRecommendations({
+            userId: this.userId,
+            tenderId: this.tenderId,
+            tenderType: 'custom',
+            competitiveness
         })
 
-        if (!response.ok) {
-            throw new Error(`Strategy generation failed: ${response.statusText}`)
+        return {
+            competitiveness,
+            recommendations
         }
-
-        return await response.json()
     }
 
     private async assessReadiness(): Promise<any> {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/strategist/readiness?tender_id=${this.tenderId}`)
+        // Build readiness assessment from strategist context and competitiveness
+        const context = await StrategistService.buildContext(this.userId, this.tenderId, 'readiness')
+        const competitiveness = await CompetitivenessService.getScore(this.userId, this.tenderId)
 
-        if (!response.ok) {
-            throw new Error(`Readiness assessment failed: ${response.statusText}`)
+        const readiness = {
+            context,
+            competitiveness,
+            recommendations: await StrategistService.generateRecommendations({
+                userId: this.userId,
+                tenderId: this.tenderId,
+                tenderType: 'custom',
+                competitiveness
+            }),
         }
 
-        return await response.json()
+        return readiness
     }
 
     /**

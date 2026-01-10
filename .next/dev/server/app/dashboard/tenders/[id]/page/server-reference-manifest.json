@@ -1,6 +1,6 @@
 {
   "node": {
-    "40ef9db1733294d72c0e09cb151c53a191e03e0228": {
+    "404a8f7f4cc71bea1a0a5cfe8d42ae23f8458eac0d": {
       "workers": {
         "app/dashboard/tenders/[id]/page": {
           "moduleId": "[project]/.next-internal/server/app/dashboard/tenders/[id]/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/document-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -15,7 +15,7 @@
       "exportedName": "uploadTenderDocument",
       "filename": "app/actions/document-actions.ts"
     },
-    "40bd4349e69bf94346d5748771c6f820ca4b7a614b": {
+    "4063809283f605307860277ba54db3c65fe771ffd1": {
       "workers": {
         "app/dashboard/tenders/[id]/page": {
           "moduleId": "[project]/.next-internal/server/app/dashboard/tenders/[id]/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/document-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -30,7 +30,7 @@
       "exportedName": "downloadTenderDocument",
       "filename": "app/actions/document-actions.ts"
     },
-    "407f88633cdf843df2a278a67732dc7d45cca80b1a": {
+    "40a9182978f4665fe149afd71b6ebdd6d063ac252e": {
       "workers": {
         "app/dashboard/tenders/[id]/page": {
           "moduleId": "[project]/.next-internal/server/app/dashboard/tenders/[id]/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/document-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -45,7 +45,7 @@
       "exportedName": "deleteTenderDocument",
       "filename": "app/actions/document-actions.ts"
     },
-    "6075536310bb9f61beb19224fe5c0ce35d37626c2b": {
+    "605c651af8a2bad3ef87540211b0ef24ca4541fe8b": {
       "workers": {
         "app/dashboard/tenders/[id]/page": {
           "moduleId": "[project]/.next-internal/server/app/dashboard/tenders/[id]/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/document-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -60,7 +60,7 @@
       "exportedName": "analyzeDocument",
       "filename": "app/actions/document-actions.ts"
     },
-    "4060312bd46fc40ec5491a64b4d4a1575650502b8b": {
+    "4099787cd73628372eb1b51fba690c7c7ff23ed445": {
       "workers": {
         "app/dashboard/tenders/[id]/page": {
           "moduleId": "[project]/.next-internal/server/app/dashboard/tenders/[id]/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/document-actions.ts [app-rsc] (ecmascript)\", ACTIONS_MODULE1 => \"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",

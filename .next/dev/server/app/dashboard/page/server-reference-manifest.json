@@ -1,6 +1,6 @@
 {
   "node": {
-    "00052b433a8d3627d42c4602d3a6d40abd8c843384": {
+    "006d43925d5e089bee3c2bff77b81d52af64d21b58": {
       "workers": {
         "app/dashboard/page": {
           "moduleId": "[project]/.next-internal/server/app/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -15,7 +15,7 @@
       "exportedName": "getDashboardStats",
       "filename": "app/actions/tender-actions.ts"
     },
-    "005a2aadafbb6faa45a02e6cd4449af94b0aef8dc2": {
+    "00e8d1e0792ca4ad0e209735ddcd308978c472ed4b": {
       "workers": {
         "app/dashboard/page": {
           "moduleId": "[project]/.next-internal/server/app/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -30,7 +30,7 @@
       "exportedName": "getUserTenders",
       "filename": "app/actions/tender-actions.ts"
     },
-    "403db14cb99710538e989f04eececb7b800fbb320c": {
+    "40079b6a1211489567d9fcff1f75c346be063cc1ab": {
       "workers": {
         "app/dashboard/page": {
           "moduleId": "[project]/.next-internal/server/app/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -45,7 +45,7 @@
       "exportedName": "addTenderToUser",
       "filename": "app/actions/tender-actions.ts"
     },
-    "4060312bd46fc40ec5491a64b4d4a1575650502b8b": {
+    "4099787cd73628372eb1b51fba690c7c7ff23ed445": {
       "workers": {
         "app/dashboard/page": {
           "moduleId": "[project]/.next-internal/server/app/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -60,7 +60,7 @@
       "exportedName": "saveScrapedTenderToUser",
       "filename": "app/actions/tender-actions.ts"
     },
-    "40e39e6b203aafe32c7bc01f01043759da8563a3c7": {
+    "40a4d35e34d7d849605f6da355908cb338786bdaaf": {
       "workers": {
         "app/dashboard/page": {
           "moduleId": "[project]/.next-internal/server/app/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -75,7 +75,7 @@
       "exportedName": "createCustomTender",
       "filename": "app/actions/tender-actions.ts"
     },
-    "60277855b49813fe487ce40f597a8c6ccae651cc90": {
+    "6008e9015b791275172fd0c1cbb91f9416e5fa7386": {
       "workers": {
         "app/dashboard/page": {
           "moduleId": "[project]/.next-internal/server/app/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -90,7 +90,7 @@
       "exportedName": "toggleTenderWishlist",
       "filename": "app/actions/tender-actions.ts"
     },
-    "60723eb04469c5ed6a93a3606bc24e6caa02ce5c0f": {
+    "603e5e8ead3b523ced17ec519315720129e4a07673": {
       "workers": {
         "app/dashboard/page": {
           "moduleId": "[project]/.next-internal/server/app/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -105,7 +105,7 @@
       "exportedName": "deleteTender",
       "filename": "app/actions/tender-actions.ts"
     },
-    "60ab41ac7fcad5f2c43b740b4e480963e1cbe14487": {
+    "6046835b49787e6ba7492b46395d84f6decad0e8b7": {
       "workers": {
         "app/dashboard/page": {
           "moduleId": "[project]/.next-internal/server/app/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
@@ -120,7 +120,7 @@
       "exportedName": "toggleTenderFavourite",
       "filename": "app/actions/tender-actions.ts"
     },
-    "60b0f135c75d05c230071fa31fc5abb4f61209affc": {
+    "60670eaad7586d0efa4960183a70641340d8587b3e": {
       "workers": {
         "app/dashboard/page": {
           "moduleId": "[project]/.next-internal/server/app/dashboard/page/actions.js { ACTIONS_MODULE0 => \"[project]/app/actions/tender-actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
