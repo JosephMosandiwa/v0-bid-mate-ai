@@ -306,38 +306,37 @@ export async function POST(request: Request) {
         const pdfArrayBuffer = await pdfResponse.arrayBuffer()
         console.log("[v0] PDF fetched successfully, size:", (pdfArrayBuffer.byteLength / 1024).toFixed(2), "KB")
 
+        // Create copies of the ArrayBuffer to avoid detachment issues
+        // ArrayBuffer gets detached after being transferred to worker threads
+        const pdfBytesForDensity = new Uint8Array(pdfArrayBuffer).slice().buffer
+        const pdfBytesForExtract = new Uint8Array(pdfArrayBuffer).slice().buffer
+
         console.log("[v0] Step 2: Analyzing PDF text density...")
-        const densityAnalysis = await analyzePdfTextDensity(pdfArrayBuffer)
+        const densityAnalysis = await analyzePdfTextDensity(pdfBytesForDensity)
 
         console.log("[v0] Step 3: Extracting text...")
         
         if (densityAnalysis.isScanned || densityAnalysis.scannedPages.length > 0) {
-          // PDF has scanned/image content - use GPT-4o vision
-          console.log("[v0] PDF contains scanned/image pages - using GPT-4o vision for OCR...")
+          // PDF has scanned/image content - use Gemini vision
+          console.log("[v0] PDF contains scanned/image pages - using Gemini 2.5 Pro for OCR...")
           
           const visionText = await extractTextWithVision(documentUrl, densityAnalysis.scannedPages)
           
           if (visionText && visionText.length > 100) {
-            // Also get any text-based content
-            const { text: regularText } = await extractText(pdfArrayBuffer, { mergePages: true })
-            
-            // Combine vision OCR with regular text extraction
-            if (regularText && regularText.length > visionText.length) {
-              textToAnalyze = regularText
-              console.log("[v0] Using regular text extraction (more content):", regularText.length, "chars")
-            } else {
-              textToAnalyze = visionText
-              console.log("[v0] Using vision OCR text:", visionText.length, "chars")
-            }
+            textToAnalyze = visionText
+            console.log("[v0] Using Gemini vision OCR text:", visionText.length, "chars")
           } else {
             // Vision failed, try regular extraction as fallback
-            const { text } = await extractText(pdfArrayBuffer, { mergePages: true })
+            console.log("[v0] Vision OCR failed, falling back to unpdf extraction...")
+            const pdf = await getDocumentProxy(new Uint8Array(pdfBytesForExtract))
+            const { text } = await extractText(pdf, { mergePages: true })
             textToAnalyze = text
           }
         } else {
           // Standard text-based PDF - use unpdf
           console.log("[v0] PDF is text-based - using unpdf...")
-          const { text, totalPages } = await extractText(pdfArrayBuffer, { mergePages: true })
+          const pdf = await getDocumentProxy(new Uint8Array(pdfBytesForExtract))
+          const { text, totalPages } = await extractText(pdf, { mergePages: true })
           textToAnalyze = text
           console.log("[v0] Text extracted from", totalPages, "pages")
         }
@@ -382,7 +381,7 @@ export async function POST(request: Request) {
             error: "Failed to extract text from PDF",
             errorType: "pdf_extraction_error",
             details: extractError?.message || "Could not read PDF content",
-            hint: "The PDF might be corrupted or password-protected.",
+            hint: "The PDF might be corrupted, password-protected, or contain only images. Try uploading a text-based PDF.",
           },
           { status: 500 },
         )
