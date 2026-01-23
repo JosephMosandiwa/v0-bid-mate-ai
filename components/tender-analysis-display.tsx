@@ -59,30 +59,30 @@ export function TenderAnalysisDisplay({ analysis, tender }: TenderAnalysisDispla
     : null
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Tender Summary Card */}
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
+        <CardHeader className="pb-3 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
             <div>
-              <CardTitle className="text-xl flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 Tender Summary
               </CardTitle>
-              <CardDescription>Key information extracted from tender documents</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">Key information extracted from tender documents</CardDescription>
             </div>
             {daysUntilClose !== null && (
               <Badge
                 variant={daysUntilClose <= 7 ? "destructive" : daysUntilClose <= 14 ? "secondary" : "outline"}
-                className="text-sm"
+                className="text-xs sm:text-sm w-fit"
               >
                 {daysUntilClose > 0 ? `${daysUntilClose} days left` : daysUntilClose === 0 ? "Closes today" : "Closed"}
               </Badge>
             )}
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
+        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
             {tender_summary?.tender_number && (
               <InfoRow icon={FileCheck} label="Tender Number" value={tender_summary.tender_number} highlight />
             )}
@@ -131,17 +131,17 @@ export function TenderAnalysisDisplay({ analysis, tender }: TenderAnalysisDispla
         </CardContent>
       </Card>
 
-      {/* Compliance Requirements */}
+{/* Compliance Requirements */}
       {compliance_summary && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
+          <CardHeader className="pb-3 p-4 sm:p-6">
+            <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               Compliance Requirements
             </CardTitle>
-            <CardDescription>Mandatory requirements, disqualifiers, and strengthening factors</CardDescription>
+            <CardDescription className="text-xs sm:text-sm">Mandatory requirements, disqualifiers, and strengthening factors</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0 sm:pt-0">
             {/* Requirements */}
             {compliance_summary.requirements?.length > 0 && (
               <div>
@@ -202,14 +202,14 @@ export function TenderAnalysisDisplay({ analysis, tender }: TenderAnalysisDispla
       {/* Evaluation Criteria */}
       {evaluation && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" />
+          <CardHeader className="pb-3 p-4 sm:p-6">
+            <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+              <Target className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               Evaluation Criteria
             </CardTitle>
-            <CardDescription>How your bid will be scored and evaluated</CardDescription>
+            <CardDescription className="text-xs sm:text-sm">How your bid will be scored and evaluated</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
             {evaluation.criteria?.length > 0 && (
               <div className="space-y-3">
                 {evaluation.criteria.map((criterion: any, i: number) => (
@@ -224,7 +224,7 @@ export function TenderAnalysisDisplay({ analysis, tender }: TenderAnalysisDispla
               </div>
             )}
             <Separator />
-            <div className="grid gap-3 md:grid-cols-2 text-sm">
+            <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2 text-xs sm:text-sm">
               {evaluation.threshold && evaluation.threshold !== "Not specified" && (
                 <div>
                   <span className="text-muted-foreground">Minimum Threshold:</span>

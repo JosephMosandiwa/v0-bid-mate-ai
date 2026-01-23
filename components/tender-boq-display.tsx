@@ -152,33 +152,33 @@ export function TenderBOQDisplay({ boq, tenderId, onSave }: TenderBOQDisplayProp
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between">
+      <CardHeader className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5 text-primary" />
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <FileSpreadsheet className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               Bill of Quantities
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               {boq.document_name && <span>{boq.document_name}</span>}
               {boq.page_location && <span className="ml-2 text-xs">({boq.page_location})</span>}
             </CardDescription>
           </div>
           <div className="flex gap-2">
             {hasChanges && (
-              <Button size="sm" onClick={handleSave} disabled={isSaving}>
-                <Save className="h-4 w-4 mr-2" />
-                {isSaving ? "Saving..." : "Save Pricing"}
+              <Button size="sm" onClick={handleSave} disabled={isSaving} className="text-xs sm:text-sm">
+                <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                {isSaving ? "Saving..." : "Save"}
               </Button>
             )}
-            <Button size="sm" variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Export
+            <Button size="sm" variant="outline" className="text-xs sm:text-sm bg-transparent">
+              <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">Export</span>
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0 sm:pt-0">
         {/* BOQ Info */}
         <div className="flex flex-wrap gap-2">
           {boq.structure && (
@@ -216,16 +216,16 @@ export function TenderBOQDisplay({ boq, tenderId, onSave }: TenderBOQDisplayProp
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="overflow-x-auto">
-                    <Table>
+                  <div className="overflow-x-auto -mx-4 sm:mx-0">
+                    <Table className="min-w-[600px] sm:min-w-0">
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-16">Item</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead className="w-20">Unit</TableHead>
-                          <TableHead className="w-20 text-right">Qty</TableHead>
-                          <TableHead className="w-32 text-right">Rate</TableHead>
-                          <TableHead className="w-32 text-right">Amount</TableHead>
+                          <TableHead className="w-12 sm:w-16 text-xs sm:text-sm">Item</TableHead>
+                          <TableHead className="text-xs sm:text-sm">Description</TableHead>
+                          <TableHead className="w-16 sm:w-20 text-xs sm:text-sm">Unit</TableHead>
+                          <TableHead className="w-16 sm:w-20 text-right text-xs sm:text-sm">Qty</TableHead>
+                          <TableHead className="w-24 sm:w-32 text-right text-xs sm:text-sm">Rate</TableHead>
+                          <TableHead className="w-24 sm:w-32 text-right text-xs sm:text-sm">Amount</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>

@@ -368,14 +368,15 @@ export default function UnifiedTenderDetailPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b bg-card">
-        <div className="container max-w-7xl mx-auto p-6">
-          <div className="flex items-start justify-between gap-4 mb-6">
-            <div className="space-y-1">
+        <div className="container max-w-7xl mx-auto p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+            <div className="space-y-1 min-w-0 flex-1">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                 <Button variant="ghost" size="sm" asChild className="h-auto p-0 hover:bg-transparent">
                   <Link href="/dashboard/tenders" className="flex items-center gap-1 hover:text-foreground">
                     <ArrowLeft className="h-4 w-4" />
-                    Back to Tenders
+                    <span className="hidden xs:inline">Back to Tenders</span>
+                    <span className="xs:hidden">Back</span>
                   </Link>
                 </Button>
                 <span>/</span>
@@ -383,19 +384,19 @@ export default function UnifiedTenderDetailPage() {
                   {detectedType || "tender"}
                 </Badge>
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{tenderInfo.title}</h1>
-              <p className="text-muted-foreground">{tenderInfo.organization}</p>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight line-clamp-2">{tenderInfo.title}</h1>
+              <p className="text-sm sm:text-base text-muted-foreground truncate">{tenderInfo.organization}</p>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleSave} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                Save
+            <div className="flex gap-2 flex-shrink-0">
+              <Button variant="outline" size="sm" onClick={handleSave} disabled={saving} className="flex-1 sm:flex-none bg-transparent">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <Save className="h-4 w-4 sm:mr-2" />}
+                <span className="hidden sm:inline">Save</span>
               </Button>
               {tenderInfo.tenderUrl && (
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="outline" size="sm" asChild className="flex-1 sm:flex-none bg-transparent">
                   <a href={tenderInfo.tenderUrl} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Source
+                    <ExternalLink className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Source</span>
                   </a>
                 </Button>
               )}
@@ -403,7 +404,7 @@ export default function UnifiedTenderDetailPage() {
           </div>
 
           {/* Key Info Cards */}
-          <div className="grid gap-3 grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
+          <div className="grid gap-2 sm:gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             <Card className="bg-background">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -487,9 +488,30 @@ export default function UnifiedTenderDetailPage() {
       </div>
 
       {/* Main Content with Sidebar */}
-      <div className="flex">
-        {/* Sidebar Navigation */}
-        <div className="w-56 border-r bg-muted/20 min-h-[calc(100vh-300px)] hidden md:block">
+      <div className="flex flex-col md:flex-row">
+        {/* Mobile Navigation - Horizontal scrollable tabs */}
+        <div className="md:hidden border-b bg-muted/20 sticky top-0 z-10">
+          <div className="p-2 flex gap-1 overflow-x-auto scrollbar-hide">
+            {sections.map((section) => {
+              const Icon = section.icon
+              return (
+                <Button
+                  key={section.id}
+                  variant={activeSection === section.id ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setActiveSection(section.id)}
+                  className="flex-shrink-0 text-xs px-2 py-1 h-8"
+                >
+                  <Icon className="h-3.5 w-3.5 mr-1" />
+                  <span className="whitespace-nowrap">{section.label}</span>
+                </Button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Desktop Sidebar Navigation */}
+        <div className="w-56 border-r bg-muted/20 min-h-[calc(100vh-300px)] hidden md:block flex-shrink-0">
           <nav className="p-4 space-y-1 sticky top-0">
             {sections.map((section) => {
               const Icon = section.icon
@@ -512,28 +534,9 @@ export default function UnifiedTenderDetailPage() {
           </nav>
         </div>
 
-        {/* Mobile Navigation */}
-        <div className="md:hidden border-b bg-muted/20 p-2 flex gap-1 overflow-x-auto w-full">
-          {sections.map((section) => {
-            const Icon = section.icon
-            return (
-              <Button
-                key={section.id}
-                variant={activeSection === section.id ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setActiveSection(section.id)}
-                className="flex-shrink-0"
-              >
-                <Icon className="h-4 w-4 mr-1" />
-                {section.label}
-              </Button>
-            )
-          })}
-        </div>
-
         {/* Content Area */}
-        <main className="flex-1 p-6 overflow-y-auto">
-          <div className="container max-w-5xl mx-auto space-y-6">
+        <main className="flex-1 p-4 sm:p-6 overflow-y-auto min-w-0">
+          <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
             
             {/* Analyzing Alert */}
             {analyzing && (
@@ -548,10 +551,10 @@ export default function UnifiedTenderDetailPage() {
 
             {/* Overview Section */}
             {activeSection === "overview" && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold mb-2">Tender Overview</h2>
-                  <p className="text-muted-foreground">Key information and AI-powered insights</p>
+                  <h2 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">Tender Overview</h2>
+                  <p className="text-sm sm:text-base text-muted-foreground">Key information and AI-powered insights</p>
                 </div>
 
                 {/* Description */}

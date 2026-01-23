@@ -49,27 +49,27 @@ export function TenderProgressTracker({
 
   return (
     <Card className={cn("border-primary/20", className)}>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2 sm:pb-3 p-3 sm:p-6">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">Tender Progress</CardTitle>
-          <Badge variant="secondary" className="gap-1">
+          <CardTitle className="text-xs sm:text-sm font-medium">Tender Progress</CardTitle>
+          <Badge variant="secondary" className="gap-1 text-xs">
             <StatusIcon className="h-3 w-3" />
-            {currentStatus.label}
+            <span className="hidden xs:inline">{currentStatus.label}</span>
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 sm:space-y-4 p-3 sm:p-6 pt-0 sm:pt-0">
         {/* Progress Bar */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
+        <div className="space-y-1.5 sm:space-y-2">
+          <div className="flex items-center justify-between text-xs sm:text-sm">
             <span className="text-muted-foreground">Completion</span>
             <span className="font-medium">{progressPercent}%</span>
           </div>
-          <Progress value={progressPercent} className="h-2" />
+          <Progress value={progressPercent} className="h-1.5 sm:h-2" />
         </div>
 
-        {/* Progress Steps */}
-        <div className="space-y-2">
+        {/* Progress Steps - Hidden on mobile, shown on tablet+ */}
+        <div className="hidden sm:block space-y-2">
           {PROGRESS_STEPS.map((step) => {
             const StepIcon = step.icon
             const isActive = status === step.key
@@ -101,6 +101,29 @@ export function TenderProgressTracker({
                   <Badge variant="outline" className="text-xs">
                     Current
                   </Badge>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Compact Progress Steps - Mobile only */}
+        <div className="sm:hidden flex items-center justify-between gap-1">
+          {PROGRESS_STEPS.map((step, index) => {
+            const isCompleted = progressPercent >= step.percent
+            return (
+              <div key={step.key} className="flex items-center">
+                <div
+                  className={cn(
+                    "h-2 w-2 rounded-full",
+                    isCompleted ? "bg-primary" : "bg-muted"
+                  )}
+                />
+                {index < PROGRESS_STEPS.length - 1 && (
+                  <div className={cn(
+                    "h-0.5 w-4 xs:w-6",
+                    isCompleted ? "bg-primary" : "bg-muted"
+                  )} />
                 )}
               </div>
             )
