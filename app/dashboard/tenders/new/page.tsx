@@ -159,8 +159,8 @@ const result = await createCustomTender({
           description: "AI has analyzed your document and extracted all details.",
         })
 
-        console.log("[v0] Redirecting to:", `/dashboard/custom-tenders/${result.tenderId}`)
-        router.push(`/dashboard/custom-tenders/${result.tenderId}`)
+        console.log("[v0] Redirecting to:", `/dashboard/tenders/${result.tenderId}?type=custom`)
+        router.push(`/dashboard/tenders/${result.tenderId}?type=custom`)
       } else {
         console.error("[v0] ❌ Tender creation failed:", result.error)
         throw new Error(result.error || "Failed to create tender")

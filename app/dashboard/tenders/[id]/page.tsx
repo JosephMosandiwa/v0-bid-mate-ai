@@ -1,14 +1,18 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
-import { useParams } from "next/navigation"
-import { useRouter } from "next/navigation"
+import React from "react"
+import { Suspense } from "react"
+
+import { useState, useEffect, useRef } from "react"
+import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Progress } from "@/components/ui/progress"
 import {
   ArrowLeft,
   Building2,
@@ -22,970 +26,889 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  ClipboardList,
   Calculator,
   Target,
   FormInput,
+  LayoutDashboard,
+  ClipboardCheck,
+  FolderOpen,
+  Award,
+  Edit3,
+  Save,
+  MapPin,
+  DollarSign,
+  Phone,
+  Mail,
+  ExternalLink,
+  ChevronRight,
 } from "lucide-react"
 import Link from "next/link"
-import {
-  uploadTenderDocument,
-  getTenderDocuments,
-  downloadTenderDocument,
-  deleteTenderDocument,
-  analyzeDocument,
-} from "@/app/actions/document-actions"
-import { DynamicTenderForm } from "@/components/dynamic-tender-form"
-import { useChat } from "@ai-sdk/react"
-import { DefaultChatTransport } from "ai"
-import { Input } from "@/components/ui/input"
-import { TenderContextStrategistPanel } from "@/components/strategist/tender-context-panel"
+import { useToast } from "@/hooks/use-toast"
+import { cn } from "@/lib/utils"
 import { TenderAnalysisDisplay } from "@/components/tender-analysis-display"
 import { TenderBOQDisplay } from "@/components/tender-boq-display"
 import { TenderProjectPlanDisplay } from "@/components/tender-project-plan-display"
 import { TenderFillableForms } from "@/components/tender-fillable-forms"
+import { TenderContextStrategistPanel } from "@/components/strategist/tender-context-panel"
+import { TenderProgressTracker } from "@/components/tender/progress-tracker"
 
-// Mock data - will be replaced with database queries
-const mockTender = {
-  id: "1",
-  title: "Medical Supplies Procurement",
-  organization: "Department of Health",
-  status: "in-progress",
-  deadline: "2025-02-15",
-  value: "R 2,500,000",
-  analyzed: true,
-  createdAt: "2025-01-05",
-  description:
-    "Procurement of medical supplies including surgical equipment, pharmaceuticals, and protective gear for provincial hospitals.",
-  requirements: [
-    "Valid tax clearance certificate",
-    "BEE Level 2 or higher",
-    "Minimum 5 years experience in medical supply",
-    "ISO 9001 certification",
-  ],
-  documents: [
-    {
-      id: "1",
-      file_name: "Tender Document.pdf",
-      file_size: 2500000,
-      file_type: "application/pdf",
-      created_at: "2025-01-05",
-      ai_analysis: {
-        summary: "AI Analysis Summary",
-        keyRequirements: ["Key Requirement 1", "Key Requirement 2"],
-        recommendations: ["Recommendation 1", "Recommendation 2"],
-        actionableTasks: [
-          { task: "Task 1", priority: "high", category: "Category 1", deadline: "2025-01-10" },
-          { task: "Task 2", priority: "medium", category: "Category 2", deadline: "2025-01-15" },
-        ],
-        deadlines: ["Deadline 1", "Deadline 2"],
-        complianceChecklist: ["Item 1", "Item 2"],
-      },
-    },
-    {
-      id: "2",
-      file_name: "Company Profile.pdf",
-      file_size: 1200000,
-      file_type: "application/pdf",
-      created_at: "2025-01-06",
-      ai_analysis: null,
-    },
-    {
-      id: "3",
-      file_name: "Tax Clearance.pdf",
-      file_size: 800000,
-      file_type: "application/pdf",
-      created_at: "2025-01-06",
-      ai_analysis: null,
-    },
-  ],
+interface TenderDocument {
+  id: string
+  file_name?: string
+  document_name?: string
+  file_type?: string
+  document_type?: string
+  file_size?: number
+  blob_url?: string
+  original_url?: string
+  storage_path?: string
+  created_at?: string
+  downloaded_at?: string
 }
 
-export default function TenderDetailPage() {
-  const params = useParams()
-  const id = params.id as string
-  const router = useRouter()
+const Loading = () => null;
 
+export default function UnifiedTenderDetailPage() {
+  const params = useParams()
+  const router = useRouter()
+  const { toast } = useToast()
+  
+  const id = params.id as string
+  const [tenderType, setTenderType] = useState<"scraped" | "custom" | null>(null);
+  
   const [tender, setTender] = useState<any>(null)
-  const [documents, setDocuments] = useState<any[]>([])
+  const [documents, setDocuments] = useState<TenderDocument[]>([])
   const [analysis, setAnalysis] = useState<any>(null)
-  const [uploading, setUploading] = useState(false)
-  const [analyzing, setAnalyzing] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [chatInput, setChatInput] = useState("")
-  const [selectedFile, setSelectedFile] = useState<File | null>(null) // Declare setSelectedFile variable
+  const [analyzing, setAnalyzing] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [activeSection, setActiveSection] = useState("overview")
+  const [detectedType, setDetectedType] = useState<"scraped" | "custom" | null>(null)
+  const [formProgress, setFormProgress] = useState(0)
+  
+  const analysisInitiated = useRef(false)
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const type = searchParams.get("type") as "scraped" | "custom" | null;
+    setTenderType(type);
+  }, []);
+
+  // Load tender data based on type
+  useEffect(() => {
     loadTenderData()
-    loadDocuments()
-  }, [id])
+  }, [id, tenderType])
 
   const loadTenderData = async () => {
+    setLoading(true)
     try {
-      // Fetch tender and analysis from database
-      const response = await fetch(`/api/tenders/scraped/${id}`)
-      if (response.ok) {
-        const data = await response.json()
-        setTender(data.tender)
-        setAnalysis(data.analysis)
+      // Try scraped tender first if no type specified or type is scraped
+      if (!tenderType || tenderType === "scraped") {
+        const scrapedResponse = await fetch(`/api/tenders/scraped/${id}`)
+        if (scrapedResponse.ok) {
+          const data = await scrapedResponse.json()
+          if (data.tender) {
+            setTender({ ...data.tender, tender_type: "scraped" })
+            setAnalysis(data.analysis?.analysis_data || data.analysis || null)
+            setDetectedType("scraped")
+            await loadScrapedDocuments()
+            setLoading(false)
+            return
+          }
+        }
       }
+
+      // Try custom tender
+      if (!tenderType || tenderType === "custom") {
+        const customResponse = await fetch(`/api/custom-tenders/${id}`)
+        if (customResponse.ok) {
+          const data = await customResponse.json()
+          if (data.tender) {
+            setTender({ ...data.tender, tender_type: "custom" })
+            setAnalysis(data.analysis?.analysis_data || data.analysis || null)
+            setDocuments(data.documents || [])
+            setDetectedType("custom")
+            setLoading(false)
+            return
+          }
+        }
+      }
+
+      // Tender not found
+      toast({
+        title: "Tender Not Found",
+        description: "The requested tender could not be found.",
+        variant: "destructive",
+      })
+      router.push("/dashboard/tenders")
     } catch (error) {
       console.error("[v0] Error loading tender:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load tender details.",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
   }
 
-  const loadDocuments = async () => {
-    const result = await getTenderDocuments(id)
-    if (result.success) {
-      setDocuments(result.documents || [])
+  const loadScrapedDocuments = async () => {
+    try {
+      const response = await fetch(`/api/tenders/${id}/documents`)
+      if (response.ok) {
+        const data = await response.json()
+        setDocuments(data.documents || [])
+      }
+    } catch (error) {
+      console.error("[v0] Error loading documents:", error)
+    }
+  }
+
+  // Auto-analyze if no analysis exists
+  useEffect(() => {
+    if (!loading && tender && !analysis && documents.length > 0 && !analysisInitiated.current && !analyzing) {
+      triggerAnalysis()
+    }
+  }, [loading, tender, analysis, documents])
+
+  const triggerAnalysis = async () => {
+    if (analysisInitiated.current || analyzing) return
+    analysisInitiated.current = true
+    setAnalyzing(true)
+
+    try {
+      const firstDoc = documents[0]
+      const documentUrl = firstDoc.blob_url || firstDoc.storage_path || firstDoc.original_url
+      
+      if (!documentUrl) {
+        console.error("[v0] No document URL available for analysis")
+        return
+      }
+
+      const response = await fetch("/api/analyze-tender", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentUrl }),
+      })
+
+      if (response.ok) {
+        const analysisResult = await response.json()
+        setAnalysis(analysisResult)
+
+        // Save analysis to database
+        const saveEndpoint = detectedType === "custom" 
+          ? `/api/custom-tenders/${id}/analysis`
+          : `/api/tenders/${id}/analysis`
+        
+        await fetch(saveEndpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ analysis: analysisResult }),
+        })
+
+        toast({
+          title: "Analysis Complete",
+          description: "Tender document has been analyzed successfully.",
+        })
+      }
+    } catch (error) {
+      console.error("[v0] Analysis error:", error)
+      toast({
+        title: "Analysis Failed",
+        description: "Failed to analyze tender document.",
+        variant: "destructive",
+      })
+    } finally {
+      setAnalyzing(false)
     }
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
 
-    setSelectedFile(file)
     setUploading(true)
-
-    const formData = new FormData()
-    formData.append("file", file)
-    formData.append("userTenderId", id)
-
-    const result = await uploadTenderDocument(formData)
-
-    if (result.success) {
-      await loadDocuments()
-      setSelectedFile(null)
-      e.target.value = ""
-
-      // Auto-analyze PDF documents
-      if (file.type === "application/pdf") {
-        await handleAnalyzeDocument(result.data.id, file)
-      }
-    } else {
-      alert(result.error || "Failed to upload document")
-    }
-
-    setUploading(false)
-  }
-
-  const handleDownload = async (documentId: string) => {
-    const result = await downloadTenderDocument(documentId)
-    if (result.success && result.url) {
-      window.open(result.url, "_blank")
-    } else {
-      alert(result.error || "Failed to download document")
-    }
-  }
-
-  const handleDelete = async (documentId: string) => {
-    if (!confirm("Are you sure you want to delete this document?")) return
-
-    const result = await deleteTenderDocument(documentId)
-    if (result.success) {
-      await loadDocuments()
-    } else {
-      alert(result.error || "Failed to delete document")
-    }
-  }
-
-  const handleAnalyzeDocument = async (documentId: string, file: File) => {
-    setAnalyzing(documentId)
-
     try {
-      console.log("[v0] Starting document analysis for:", file.name, "Type:", file.type, "Size:", file.size)
+      for (const file of files) {
+        const formData = new FormData()
+        formData.append("file", file)
+        formData.append("tenderId", id)
+        formData.append("tenderType", detectedType || "scraped")
 
-      // Extract text from PDF using the API
-      const formData = new FormData()
-      formData.append("file", file)
-
-      console.log("[v0] Sending PDF to extraction API...")
-      const extractResponse = await fetch("/api/extract-pdf", {
-        method: "POST",
-        body: formData,
-      })
-
-      console.log("[v0] Extract API response status:", extractResponse.status)
-
-      if (!extractResponse.ok) {
-        let errorData
-        try {
-          errorData = await extractResponse.json()
-        } catch {
-          errorData = { error: `HTTP ${extractResponse.status}: ${extractResponse.statusText}` }
-        }
-        console.error("[v0] PDF extraction failed:", errorData)
-        throw new Error(errorData.error || "Failed to extract text from PDF")
-      }
-
-      const { text } = await extractResponse.json()
-      console.log("[v0] Extracted text length:", text.length)
-      console.log("[v0] Text preview:", text.substring(0, 200))
-
-      if (!text || text.length < 50) {
-        throw new Error("Could not extract sufficient text from PDF. Please ensure the PDF contains searchable text.")
-      }
-
-      console.log("[v0] Sending text to analysis API...")
-      const analyzeResponse = await fetch("/api/analyze-tender", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ documentText: text }),
-      })
-
-      console.log("[v0] Analyze API response status:", analyzeResponse.status)
-      console.log("[v0] Analyze API response headers:", Object.fromEntries(analyzeResponse.headers.entries()))
-
-      const responseClone = analyzeResponse.clone()
-
-      if (!analyzeResponse.ok) {
-        let errorData
-        try {
-          errorData = await analyzeResponse.json()
-        } catch (jsonError) {
-          console.error("[v0] Failed to parse error response as JSON:", jsonError)
-          const responseText = await responseClone.text()
-          console.error("[v0] Error response body:", responseText)
-          errorData = { error: `HTTP ${analyzeResponse.status}: ${analyzeResponse.statusText}` }
-        }
-        console.error("[v0] Analysis API failed:", errorData)
-        throw new Error(errorData.error || "Failed to analyze document")
-      }
-
-      let analysis
-      try {
-        const contentType = analyzeResponse.headers.get("content-type")
-        console.log("[v0] Response content-type:", contentType)
-
-        if (!contentType || !contentType.includes("application/json")) {
-          const responseText = await responseClone.text()
-          console.error("[v0] Response is not JSON. Content-Type:", contentType)
-          console.error("[v0] Response body:", responseText)
-          throw new Error("Server returned non-JSON response. Expected JSON but got: " + contentType)
-        }
-
-        analysis = await analyzeResponse.json()
-        console.log("[v0] Analysis received:", analysis)
-      } catch (jsonError) {
-        console.error("[v0] Failed to parse analysis response as JSON:", jsonError)
-        try {
-          const responseText = await responseClone.text()
-          console.error("[v0] Response body was:", responseText)
-        } catch (textError) {
-          console.error("[v0] Could not read response body:", textError)
-        }
-        throw new Error("Failed to parse analysis response. The server returned invalid JSON.")
-      }
-
-      const result = await analyzeDocument(documentId, analysis)
-      console.log("[v0] Save result:", result)
-
-      if (result.success) {
-        await loadDocuments()
-        alert("Document analyzed successfully!")
-      } else {
-        console.error("[v0] Failed to save analysis:", result.error)
-        throw new Error(result.error || "Failed to save analysis")
-      }
-    } catch (error: any) {
-      console.error("[v0] Error analyzing document:", error)
-      alert(error.message || "Failed to analyze document")
-    } finally {
-      setAnalyzing(null)
-    }
-  }
-
-  const handleAnalyzeFromInsights = async (doc: any) => {
-    setAnalyzing(doc.id)
-    try {
-      console.log("[v0] Analyzing document from insights:", doc.file_name)
-      console.log("[v0] Storage path:", doc.storage_path)
-      console.log("[v0] File type:", doc.file_type)
-
-      // Check if it's an external document or uploaded document
-      const isExternalUrl = doc.storage_path.startsWith("http://") || doc.storage_path.startsWith("https://")
-
-      if (isExternalUrl) {
-        console.log("[v0] Fetching external document via proxy:", doc.storage_path)
-
-        const proxyResponse = await fetch("/api/proxy-document", {
+        const response = await fetch("/api/upload-to-blob", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ url: doc.storage_path }),
+          body: formData,
         })
 
-        console.log("[v0] Proxy response status:", proxyResponse.status)
-
-        if (!proxyResponse.ok) {
-          const error = await proxyResponse.json()
-          console.error("[v0] Proxy failed:", error)
-          throw new Error(error.error || "Failed to fetch external document")
+        if (response.ok) {
+          toast({
+            title: "Document Uploaded",
+            description: `${file.name} has been uploaded successfully.`,
+          })
         }
-
-        const { data, type } = await proxyResponse.json()
-        console.log("[v0] Received document from proxy, type:", type, "data length:", data.length)
-
-        // Convert base64 back to blob
-        const binaryString = atob(data)
-        const bytes = new Uint8Array(binaryString.length)
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i)
-        }
-        const blob = new Blob([bytes], { type })
-        const file = new File([blob], doc.file_name, { type })
-
-        console.log("[v0] Created file from blob:", file.name, file.size, file.type)
-        await handleAnalyzeDocument(doc.id, file)
-      } else {
-        // For uploaded documents, download from Supabase Storage
-        console.log("[v0] Downloading uploaded document from Supabase")
-        const downloadResult = await downloadTenderDocument(doc.id)
-
-        if (!downloadResult.success || !downloadResult.url) {
-          console.error("[v0] Download failed:", downloadResult.error)
-          throw new Error(downloadResult.error || "Failed to download document")
-        }
-
-        console.log("[v0] Download URL obtained, fetching file...")
-        const fileResponse = await fetch(downloadResult.url)
-
-        if (!fileResponse.ok) {
-          throw new Error(`Failed to fetch file: ${fileResponse.statusText}`)
-        }
-
-        const blob = await fileResponse.blob()
-        const file = new File([blob], doc.file_name, { type: doc.file_type })
-
-        console.log("[v0] File downloaded:", file.name, file.size, file.type)
-        await handleAnalyzeDocument(doc.id, file)
       }
-    } catch (error: any) {
-      console.error("[v0] Error in handleAnalyzeFromInsights:", error)
-      alert(error.message || "Failed to analyze document")
-      setAnalyzing(null)
+      
+      // Reload documents
+      if (detectedType === "scraped") {
+        await loadScrapedDocuments()
+      } else {
+        await loadTenderData()
+      }
+    } catch (error) {
+      console.error("[v0] Upload error:", error)
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload document.",
+        variant: "destructive",
+      })
+    } finally {
+      setUploading(false)
+      e.target.value = ""
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "draft":
-        return "bg-muted text-muted-foreground"
-      case "in-progress":
-        return "bg-accent/10 text-accent"
-      case "submitted":
-        return "bg-secondary/10 text-secondary"
-      default:
-        return "bg-muted text-muted-foreground"
+  const handleDownload = (doc: TenderDocument) => {
+    const url = doc.blob_url || doc.storage_path || doc.original_url
+    if (url) {
+      window.open(url, "_blank")
     }
   }
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "bg-red-500/10 text-red-500 border-red-500/20"
-      case "medium":
-        return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-      case "low":
-        return "bg-green-500/10 text-green-500 border-green-500/20"
-      default:
-        return "bg-muted text-muted-foreground"
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const endpoint = detectedType === "custom" 
+        ? `/api/custom-tenders/${id}`
+        : `/api/tenders/scraped/${id}`
+      
+      const response = await fetch(endpoint, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tender),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Saved",
+          description: "Tender details saved successfully.",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save tender details.",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
     }
   }
 
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return <AlertCircle className="h-4 w-4" />
-      case "medium":
-        return <Clock className="h-4 w-4" />
-      case "low":
-        return <CheckCircle2 className="h-4 w-4" />
-      default:
-        return null
-    }
-  }
-
-  const { messages, sendMessage, status } = useChat({
-    transport: new DefaultChatTransport({
-      api: "/api/ai-assistant",
-      body: {
-        tenderContext: {
-          title: tender?.title || "Tender",
-          organization: tender?.source_name,
-          description: tender?.description,
-        },
-      },
-    }),
-  })
+  // Navigation sections
+  const sections = [
+    { id: "overview", label: "Overview", icon: LayoutDashboard },
+    { id: "analysis", label: "AI Analysis", icon: Sparkles },
+    { id: "requirements", label: "Requirements", icon: ClipboardCheck },
+    { id: "documents", label: "Documents", icon: FolderOpen },
+    { id: "boq", label: "BOQ & Pricing", icon: Calculator, show: analysis?.boq?.found },
+    { id: "project-plan", label: "Project Plan", icon: Target, show: analysis?.project_plan },
+    { id: "forms", label: "Response Forms", icon: FormInput, show: analysis?.fillable_fields?.length > 0 },
+  ].filter(s => s.show !== false)
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground">Loading tender details...</p>
+        </div>
       </div>
     )
   }
 
   if (!tender) {
     return (
-      <div className="p-6 md:p-8">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Tender not found</AlertDescription>
-        </Alert>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
+          <h2 className="text-2xl font-semibold">Tender Not Found</h2>
+          <p className="text-muted-foreground">This tender could not be loaded.</p>
+          <Button asChild>
+            <Link href="/dashboard/tenders">Back to Tenders</Link>
+          </Button>
+        </div>
       </div>
     )
   }
 
+  // Extract key info from tender or analysis
+  const tenderInfo = {
+    title: tender.title || analysis?.tender_summary?.title || "Untitled Tender",
+    organization: tender.organization || tender.source_name || analysis?.tender_summary?.entity || "Unknown Organization",
+    reference: tender.tender_reference || analysis?.tender_summary?.tender_number || tender.id,
+    closeDate: tender.close_date || tender.closing_date || analysis?.tender_summary?.closing_date,
+    value: tender.estimated_value || tender.value || analysis?.tender_summary?.estimated_value,
+    province: tender.province || tender.source_province || analysis?.tender_summary?.province,
+    location: tender.location || tender.delivery_location,
+    status: tender.status || "active",
+    contactEmail: tender.contact_email || analysis?.tender_summary?.contact_email,
+    contactPhone: tender.contact_phone || analysis?.tender_summary?.contact_phone,
+    contactPerson: tender.contact_person || analysis?.tender_summary?.contact_person,
+    description: tender.description || analysis?.tender_summary?.description,
+    tenderUrl: tender.tender_url || tender.source_url,
+  }
+
+  const daysUntilClose = tenderInfo.closeDate 
+    ? Math.ceil((new Date(tenderInfo.closeDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null
+
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Main Content */}
-        <div className="flex-1 space-y-4 md:space-y-6">
-          <div>
-            <div className="flex items-center gap-4 mb-4">
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/dashboard/tenders">
-                  <ArrowLeft className="h-5 w-5" />
-                </Link>
-              </Button>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-                {analysis?.tender_summary?.title || tender.title || "Tender"}
-              </h1>
-            </div>
-            <div className="flex flex-wrap gap-2 mb-4">
-              <Badge className="bg-primary/10 text-primary">Scraped</Badge>
-              {tender.category && <Badge variant="outline">{tender.category}</Badge>}
-              {analysis && (
-                <Badge variant="secondary" className="flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  AI Analyzed
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="border-b bg-card">
+        <div className="container max-w-7xl mx-auto p-6">
+          <div className="flex items-start justify-between gap-4 mb-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                <Button variant="ghost" size="sm" asChild className="h-auto p-0 hover:bg-transparent">
+                  <Link href="/dashboard/tenders" className="flex items-center gap-1 hover:text-foreground">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Tenders
+                  </Link>
+                </Button>
+                <span>/</span>
+                <Badge variant="outline" className="capitalize">
+                  {detectedType || "tender"}
                 </Badge>
-              )}
+              </div>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{tenderInfo.title}</h1>
+              <p className="text-muted-foreground">{tenderInfo.organization}</p>
             </div>
-            {(analysis?.tender_summary?.description || tender.description) && (
-              <p className="text-muted-foreground mb-4">
-                {analysis?.tender_summary?.description || tender.description}
-              </p>
-            )}
-            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-              {(analysis?.tender_summary?.entity || tender.source_name) && (
-                <span className="flex items-center gap-1">
-                  <Building2 className="h-4 w-4" />
-                  {analysis?.tender_summary?.entity || tender.source_name}
-                </span>
-              )}
-              {(analysis?.tender_summary?.closing_date || tender.close_date) && (
-                <span className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  Closes: {new Date(analysis?.tender_summary?.closing_date || tender.close_date).toLocaleDateString()}
-                </span>
-              )}
-              {tender.estimated_value && (
-                <span className="flex items-center gap-1">
-                  <span>Value: {tender.estimated_value}</span>
-                </span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleSave} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Save
+              </Button>
+              {tenderInfo.tenderUrl && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={tenderInfo.tenderUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Source
+                  </a>
+                </Button>
               )}
             </div>
           </div>
 
-          {analyzing && (
-            <Alert>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <AlertDescription>Analyzing tender documents with AI... This may take a minute.</AlertDescription>
-            </Alert>
-          )}
-
-          <Tabs defaultValue="overview" className="space-y-4 md:space-y-6">
-            <TabsList>
-              <TabsTrigger value="overview">
-                <FileText className="h-4 w-4 mr-2" />
-                Overview
-              </TabsTrigger>
-              {analysis?.action_plan && (
-                <TabsTrigger value="action-plan">
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Action Plan
-                </TabsTrigger>
-              )}
-              {analysis && (
-                <TabsTrigger value="analysis">
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  AI Insights
-                </TabsTrigger>
-              )}
-              <TabsTrigger value="documents">
-                <FileText className="h-4 w-4 mr-2" />
-                Documents ({documents.length})
-              </TabsTrigger>
-              {analysis?.boq && (
-                <TabsTrigger value="boq">
-                  <Calculator className="h-4 w-4 mr-2" />
-                  BOQ
-                </TabsTrigger>
-              )}
-              {analysis?.project_plan && (
-                <TabsTrigger value="project-plan">
-                  <Target className="h-4 w-4 mr-2" />
-                  Project Plan
-                </TabsTrigger>
-              )}
-              {(analysis?.fillable_fields?.length > 0 || analysis?.formFields?.length > 0) && (
-                <TabsTrigger value="forms">
-                  <FormInput className="h-4 w-4 mr-2" />
-                  Forms
-                </TabsTrigger>
-              )}
-            </TabsList>
-
-            <TabsContent value="overview" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tender Information</CardTitle>
-                  <CardDescription>
-                    {analysis ? "Information extracted from tender document" : "Basic tender information"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {analysis?.tender_summary?.tender_number && (
-                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Tender Number:</span>
-                      <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
-                        {analysis.tender_summary.tender_number}
-                      </span>
-                    </div>
-                  )}
-                  {(analysis?.tender_summary?.title || tender.title) && (
-                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Title:</span>
-                      <span className="text-sm">{analysis?.tender_summary?.title || tender.title}</span>
-                    </div>
-                  )}
-                  {(analysis?.tender_summary?.entity || tender.source_name) && (
-                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Organization:</span>
-                      <span className="text-sm">{analysis?.tender_summary?.entity || tender.source_name}</span>
-                    </div>
-                  )}
-                  {(analysis?.tender_summary?.closing_date || tender.close_date) && (
-                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Closing Date:</span>
-                      <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">
-                        {new Date(analysis?.tender_summary?.closing_date || tender.close_date).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                  {analysis?.tender_summary?.category && (
-                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Category:</span>
-                      <Badge variant="outline">{analysis.tender_summary.category}</Badge>
-                    </div>
-                  )}
-                  {tender.source_url && (
-                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Source:</span>
-                      <a
-                        href={tender.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline truncate"
-                      >
-                        {tender.source_url}
-                      </a>
-                    </div>
-                  )}
-                  {tender.tender_reference && (
-                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Reference:</span>
-                      <span className="text-sm font-mono bg-muted px-2 py-1 rounded">{tender.tender_reference}</span>
-                    </div>
-                  )}
-                  {tender.estimated_value && (
-                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Estimated Value:</span>
-                      <span className="text-sm font-semibold text-green-600 dark:text-green-400">{tender.estimated_value}</span>
-                    </div>
-                  )}
-                  {tender.status && (
-                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                      <span className="text-sm font-medium text-muted-foreground">Status:</span>
-                      <Badge variant="outline" className="w-fit capitalize">{tender.status}</Badge>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Location and Procurement Details */}
-              {(tender.province || tender.location || tender.delivery_location || tender.procurement_method) && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Building2 className="h-5 w-5 text-primary" />
-                      Location and Procurement
-                    </CardTitle>
-                    <CardDescription>Delivery and procurement details</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {tender.province && (
-                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                        <span className="text-sm font-medium text-muted-foreground">Province:</span>
-                        <span className="text-sm">{tender.province}</span>
-                      </div>
-                    )}
-                    {tender.location && (
-                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                        <span className="text-sm font-medium text-muted-foreground">Location:</span>
-                        <span className="text-sm">{tender.location}</span>
-                      </div>
-                    )}
-                    {tender.delivery_location && tender.delivery_location !== tender.location && (
-                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                        <span className="text-sm font-medium text-muted-foreground">Delivery Location:</span>
-                        <span className="text-sm">{tender.delivery_location}</span>
-                      </div>
-                    )}
-                    {tender.procurement_method && (
-                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                        <span className="text-sm font-medium text-muted-foreground">Procurement Method:</span>
-                        <Badge variant="secondary" className="w-fit">{tender.procurement_method}</Badge>
-                      </div>
-                    )}
-                    {tender.procurement_category && (
-                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                        <span className="text-sm font-medium text-muted-foreground">Procurement Category:</span>
-                        <span className="text-sm">{tender.procurement_category}</span>
-                      </div>
-                    )}
-                    {tender.tender_type && (
-                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                        <span className="text-sm font-medium text-muted-foreground">Tender Type:</span>
-                        <span className="text-sm">{tender.tender_type}</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Contact Information */}
-              {(tender.contact_person || tender.contact_email || tender.contact_phone || tender.organization) && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-primary" />
-                      Contact Information
-                    </CardTitle>
-                    <CardDescription>Enquiry and submission contact details</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {tender.organization && (
-                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                        <span className="text-sm font-medium text-muted-foreground">Organization:</span>
-                        <span className="text-sm font-medium">{tender.organization}</span>
-                      </div>
-                    )}
-                    {tender.contact_person && (
-                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                        <span className="text-sm font-medium text-muted-foreground">Contact Person:</span>
-                        <span className="text-sm">{tender.contact_person}</span>
-                      </div>
-                    )}
-                    {tender.contact_email && (
-                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                        <span className="text-sm font-medium text-muted-foreground">Email:</span>
-                        <a href={`mailto:${tender.contact_email}`} className="text-sm text-primary hover:underline">
-                          {tender.contact_email}
-                        </a>
-                      </div>
-                    )}
-                    {tender.contact_phone && (
-                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                        <span className="text-sm font-medium text-muted-foreground">Phone:</span>
-                        <a href={`tel:${tender.contact_phone}`} className="text-sm text-primary hover:underline">
-                          {tender.contact_phone}
-                        </a>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Special Conditions */}
-              {tender.special_conditions && tender.special_conditions !== "N/A" && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <AlertCircle className="h-5 w-5 text-orange-500" />
-                      Special Conditions
-                    </CardTitle>
-                    <CardDescription>Important conditions and requirements</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm whitespace-pre-wrap">{tender.special_conditions}</p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Source Documents from API */}
-              {tender.document_urls && tender.document_urls.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Download className="h-5 w-5 text-primary" />
-                      Official Tender Documents
-                    </CardTitle>
-                    <CardDescription>Documents available from the tender source</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {tender.document_urls.map((doc: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50">
-                          <div className="flex items-center gap-3">
-                            <FileText className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                              <p className="text-sm font-medium">{doc.title || `Document ${index + 1}`}</p>
-                              {doc.type && <p className="text-xs text-muted-foreground">{doc.type}</p>}
-                            </div>
-                          </div>
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                              <Download className="h-4 w-4 mr-2" />
-                              Download
-                            </a>
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {analysis?.eligibility_requirements && analysis.eligibility_requirements.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                      Eligibility Requirements
-                    </CardTitle>
-                    <CardDescription>Requirements you must meet to qualify</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {analysis.eligibility_requirements.map((req: string, i: number) => (
-                        <li key={i} className="flex items-start gap-2 text-sm">
-                          <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                          <span>{req}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              )}
-
-              {analysis?.required_documents && analysis.required_documents.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-primary" />
-                      Required Documents
-                    </CardTitle>
-                    <CardDescription>Documents you need to submit</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="grid gap-2 sm:grid-cols-2">
-                      {analysis.required_documents.map((doc: string, i: number) => (
-                        <li key={i} className="flex items-start gap-2 text-sm p-2 rounded-lg bg-muted/50">
-                          <FileText className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                          <span>{doc}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            {analysis?.action_plan && (
-              <TabsContent value="action-plan" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>AI-Generated Action Plan</CardTitle>
-                    <CardDescription>Step-by-step tasks to complete your bid</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {analysis.action_plan.map((item: any, i: number) => (
-                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg border">
-                          <div className={`p-1 rounded ${getPriorityColor(item.priority)}`}>
-                            {getPriorityIcon(item.priority)}
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{item.task}</p>
-                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                              <Badge variant="outline" className="text-xs">
-                                {item.category}
-                              </Badge>
-                              {item.deadline && (
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  {item.deadline}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
-
-            {analysis && (
-              <TabsContent value="analysis" className="space-y-4">
-                <TenderAnalysisDisplay analysis={analysis} tender={tender} />
-              </TabsContent>
-            )}
-
-            <TabsContent value="documents" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tender Documents</CardTitle>
-                  <CardDescription>Upload and manage your tender documents</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                    <Input
-                      type="file"
-                      accept=".pdf,.doc,.docx,.xls,.xlsx"
-                      onChange={handleFileUpload}
-                      disabled={uploading}
-                      className="hidden"
-                      id="file-upload"
-                    />
-                    <label htmlFor="file-upload" className="cursor-pointer">
-                      <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground mb-1">
-                        {uploading ? "Uploading..." : "Click to upload or drag and drop"}
+          {/* Key Info Cards */}
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
+            <Card className="bg-background">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Closing Date</p>
+                    <p className="text-sm font-medium truncate">
+                      {tenderInfo.closeDate ? new Date(tenderInfo.closeDate).toLocaleDateString() : "N/A"}
+                    </p>
+                    {daysUntilClose !== null && daysUntilClose > 0 && (
+                      <p className={cn(
+                        "text-xs",
+                        daysUntilClose <= 7 ? "text-destructive" : daysUntilClose <= 14 ? "text-orange-500" : "text-muted-foreground"
+                      )}>
+                        {daysUntilClose} days left
                       </p>
-                      <p className="text-xs text-muted-foreground">PDF, DOC, DOCX, XLS, XLSX</p>
-                    </label>
+                    )}
                   </div>
+                </div>
+              </CardContent>
+            </Card>
 
-                  {documents.length > 0 && (
-                    <div className="space-y-2">
-                      {documents.map((doc) => (
-                        <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg border">
-                          <div className="flex items-center gap-3">
-                            <FileText className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                              <p className="text-sm font-medium">{doc.file_name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {(doc.file_size / 1024 / 1024).toFixed(2)} MB
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {doc.ai_analysis && (
-                              <Badge variant="secondary" className="text-xs">
-                                <Sparkles className="h-3 w-3 mr-1" />
-                                Analyzed
-                              </Badge>
-                            )}
-                            {!doc.ai_analysis && doc.file_type === "application/pdf" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleAnalyzeFromInsights(doc)}
-                                disabled={analyzing === doc.id}
-                              >
-                                {analyzing === doc.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <Sparkles className="h-4 w-4 mr-1" />
-                                    Analyze
-                                  </>
-                                )}
-                              </Button>
-                            )}
-                            <Button size="icon" variant="ghost" onClick={() => handleDownload(doc.id)}>
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" onClick={() => handleDelete(doc.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+            <Card className="bg-background">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Estimated Value</p>
+                    <p className="text-sm font-medium truncate">{tenderInfo.value || "Not specified"}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* BOQ Tab */}
-            {analysis?.boq && (
-              <TabsContent value="boq" className="space-y-4">
-                <TenderBOQDisplay 
-                  boq={analysis.boq} 
-                  tenderId={id}
-                  onSave={(boqData) => {
-                    console.log("[v0] Saving BOQ data:", boqData)
-                    // TODO: Save to tender_boq table
-                  }}
-                />
-              </TabsContent>
-            )}
+            <Card className="bg-background">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Location</p>
+                    <p className="text-sm font-medium truncate">{tenderInfo.province || tenderInfo.location || "N/A"}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Project Plan Tab */}
-            {analysis?.project_plan && (
-              <TabsContent value="project-plan" className="space-y-4">
-                <TenderProjectPlanDisplay projectPlan={analysis.project_plan} />
-              </TabsContent>
-            )}
+            <Card className="bg-background">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Reference</p>
+                    <p className="text-sm font-medium font-mono truncate">{tenderInfo.reference}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Fillable Forms Tab */}
-            {(analysis?.fillable_fields?.length > 0 || analysis?.formFields?.length > 0) && (
-              <TabsContent value="forms" className="space-y-4">
-                <TenderFillableForms
-                  fillableFields={analysis.fillable_fields || analysis.formFields}
-                  formsSummary={analysis.forms_summary}
-                  documentsIdentified={analysis.documents_identified}
-                  tenderId={id}
-                  onSave={(formData) => {
-                    console.log("[v0] Saving form data:", formData)
-                    // TODO: Save to tender_responses table
-                  }}
-                />
-              </TabsContent>
-            )}
-          </Tabs>
-        </div>
+            <Card className="bg-background">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">Status</p>
+                    <Badge variant="outline" className="capitalize mt-1">{tenderInfo.status}</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-        <div className="lg:w-80 xl:w-96 flex-shrink-0">
-          <div className="lg:sticky lg:top-4">
-            <TenderContextStrategistPanel
-              tender={{
-                id: id,
-                title: analysis?.tender_summary?.title || tender.title || "Tender",
-                organization: analysis?.tender_summary?.entity || tender.source_name,
-                description: analysis?.tender_summary?.description || tender.description,
-                deadline: analysis?.tender_summary?.closing_date || tender.close_date,
-                value: tender.estimated_value,
-                requirements: analysis?.eligibility_requirements || [],
-                analysis: analysis,
-              }}
+          {/* Progress Tracker */}
+          <div className="mt-4">
+            <TenderProgressTracker 
+              tenderId={id} 
+              tenderType={detectedType || "scraped"} 
+              progress={formProgress} 
             />
           </div>
         </div>
       </div>
+
+      {/* Main Content with Sidebar */}
+      <div className="flex">
+        {/* Sidebar Navigation */}
+        <div className="w-56 border-r bg-muted/20 min-h-[calc(100vh-300px)] hidden md:block">
+          <nav className="p-4 space-y-1 sticky top-0">
+            {sections.map((section) => {
+              const Icon = section.icon
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+                    activeSection === section.id
+                      ? "bg-primary text-primary-foreground font-medium"
+                      : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {section.label}
+                </button>
+              )
+            })}
+          </nav>
+        </div>
+
+        {/* Mobile Navigation */}
+        <div className="md:hidden border-b bg-muted/20 p-2 flex gap-1 overflow-x-auto w-full">
+          {sections.map((section) => {
+            const Icon = section.icon
+            return (
+              <Button
+                key={section.id}
+                variant={activeSection === section.id ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setActiveSection(section.id)}
+                className="flex-shrink-0"
+              >
+                <Icon className="h-4 w-4 mr-1" />
+                {section.label}
+              </Button>
+            )
+          })}
+        </div>
+
+        {/* Content Area */}
+        <main className="flex-1 p-6 overflow-y-auto">
+          <div className="container max-w-5xl mx-auto space-y-6">
+            
+            {/* Analyzing Alert */}
+            {analyzing && (
+              <Alert className="border-primary/50 bg-primary/5">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <AlertTitle>Analyzing Tender Document</AlertTitle>
+                <AlertDescription>
+                  AI is reading and extracting all information from your tender documents. This may take a moment...
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Overview Section */}
+            {activeSection === "overview" && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Tender Overview</h2>
+                  <p className="text-muted-foreground">Key information and AI-powered insights</p>
+                </div>
+
+                {/* Description */}
+                {tenderInfo.description && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Description</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{tenderInfo.description}</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Contact Information */}
+                {(tenderInfo.contactPerson || tenderInfo.contactEmail || tenderInfo.contactPhone) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Contact Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {tenderInfo.contactPerson && (
+                        <div className="flex items-center gap-3">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">{tenderInfo.contactPerson}</span>
+                        </div>
+                      )}
+                      {tenderInfo.contactEmail && (
+                        <div className="flex items-center gap-3">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          <a href={`mailto:${tenderInfo.contactEmail}`} className="text-sm text-primary hover:underline">
+                            {tenderInfo.contactEmail}
+                          </a>
+                        </div>
+                      )}
+                      {tenderInfo.contactPhone && (
+                        <div className="flex items-center gap-3">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <a href={`tel:${tenderInfo.contactPhone}`} className="text-sm text-primary hover:underline">
+                            {tenderInfo.contactPhone}
+                          </a>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Quick Actions */}
+                {analysis?.actionable_tasks && analysis.actionable_tasks.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Priority Actions</CardTitle>
+                      <CardDescription>AI-recommended tasks to win this tender</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {analysis.actionable_tasks.slice(0, 5).map((task: any, index: number) => (
+                          <div
+                            key={index}
+                            className="flex items-start gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                          >
+                            <Badge
+                              variant={
+                                task.priority === "high" ? "destructive" :
+                                task.priority === "medium" ? "default" : "secondary"
+                              }
+                              className="mt-0.5"
+                            >
+                              {task.priority}
+                            </Badge>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm">{task.task}</p>
+                              {task.rationale && (
+                                <p className="text-xs text-muted-foreground mt-1">{task.rationale}</p>
+                              )}
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Tender Strategist Panel */}
+                <TenderContextStrategistPanel
+                  tenderId={id}
+                  tenderType={detectedType || "scraped"}
+                  tenderTitle={tenderInfo.title}
+                  tenderDescription={tenderInfo.description}
+                  analysis={analysis}
+                />
+              </div>
+            )}
+
+            {/* AI Analysis Section */}
+            {activeSection === "analysis" && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">AI Analysis</h2>
+                  <p className="text-muted-foreground">Comprehensive breakdown of tender requirements and opportunities</p>
+                </div>
+                
+                {analysis ? (
+                  <TenderAnalysisDisplay analysis={analysis} tender={tender} />
+                ) : (
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <Sparkles className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No Analysis Available</h3>
+                      <p className="text-muted-foreground mb-4">
+                        Upload a tender document to get AI-powered analysis
+                      </p>
+                      <Button onClick={triggerAnalysis} disabled={analyzing || documents.length === 0}>
+                        {analyzing ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Analyzing...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Analyze Documents
+                          </>
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {/* Requirements Section */}
+            {activeSection === "requirements" && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Compliance Requirements</h2>
+                  <p className="text-muted-foreground">Mandatory requirements and evaluation criteria</p>
+                </div>
+                
+                {analysis?.compliance_summary ? (
+                  <>
+                    {/* Mandatory Requirements */}
+                    {analysis.compliance_summary.requirements?.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                            Mandatory Requirements
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            {analysis.compliance_summary.requirements.map((req: string, i: number) => (
+                              <div key={i} className="flex items-start gap-3 p-2 rounded hover:bg-muted/50">
+                                <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                <span className="text-sm">{req}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Disqualifiers */}
+                    {analysis.compliance_summary.disqualifiers?.length > 0 && (
+                      <Card className="border-destructive/50">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-destructive">
+                            <AlertCircle className="h-5 w-5" />
+                            Disqualification Criteria
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            {analysis.compliance_summary.disqualifiers.map((item: string, i: number) => (
+                              <div key={i} className="flex items-start gap-3 p-2 rounded bg-destructive/5">
+                                <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                                <span className="text-sm">{item}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Evaluation Criteria */}
+                    {analysis.evaluation?.criteria?.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Evaluation Criteria</CardTitle>
+                          <CardDescription>How your bid will be scored</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            {analysis.evaluation.criteria.map((criterion: any, i: number) => (
+                              <div key={i} className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                  <span className="font-medium">{criterion.name || criterion.category}</span>
+                                  <span className="text-muted-foreground">{criterion.points || criterion.weight} points</span>
+                                </div>
+                                <Progress 
+                                  value={(criterion.points || criterion.weight) / (analysis.evaluation.total_points || 100) * 100} 
+                                  className="h-2"
+                                />
+                                {criterion.description && (
+                                  <p className="text-xs text-muted-foreground">{criterion.description}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                ) : (
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <ClipboardCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">Requirements Not Extracted</h3>
+                      <p className="text-muted-foreground">
+                        Upload and analyze a tender document to see requirements
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {/* Documents Section */}
+            {activeSection === "documents" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold mb-2">Documents</h2>
+                    <p className="text-muted-foreground">Tender documents and supporting files</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="doc-upload" className="cursor-pointer">
+                      <div className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+                        {uploading ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Upload className="h-4 w-4 mr-2" />
+                        )}
+                        Upload Document
+                      </div>
+                    </Label>
+                    <Input
+                      id="doc-upload"
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx"
+                      multiple
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      disabled={uploading}
+                    />
+                  </div>
+                </div>
+
+                {documents.length > 0 ? (
+                  <div className="space-y-3">
+                    {documents.map((doc) => (
+                      <Card key={doc.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <FileText className="h-8 w-8 text-primary flex-shrink-0" />
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">
+                                  {doc.file_name || doc.document_name || "Untitled Document"}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {doc.file_type || doc.document_type || "Document"}
+                                  {doc.file_size && ` - ${(doc.file_size / 1024).toFixed(1)} KB`}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDownload(doc)}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <FolderOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No Documents</h3>
+                      <p className="text-muted-foreground mb-4">
+                        Upload tender documents to get started
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {/* BOQ Section */}
+            {activeSection === "boq" && analysis?.boq && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Bill of Quantities</h2>
+                  <p className="text-muted-foreground">Pricing schedule extracted from tender documents</p>
+                </div>
+                <TenderBOQDisplay 
+                  boq={analysis.boq} 
+                  tenderId={id}
+                  onSave={(data) => console.log("BOQ saved:", data)}
+                />
+              </div>
+            )}
+
+            {/* Project Plan Section */}
+            {activeSection === "project-plan" && analysis?.project_plan && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Project Plan</h2>
+                  <p className="text-muted-foreground">AI-generated implementation plan for this tender</p>
+                </div>
+                <TenderProjectPlanDisplay projectPlan={analysis.project_plan} />
+              </div>
+            )}
+
+            {/* Forms Section */}
+            {activeSection === "forms" && analysis?.fillable_fields?.length > 0 && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Response Forms</h2>
+                  <p className="text-muted-foreground">Fill in the required tender response fields</p>
+                </div>
+                <TenderFillableForms
+                  fillableFields={analysis.fillable_fields}
+                  formsSummary={analysis.forms_summary}
+                  documentsIdentified={analysis.documents_identified}
+                  tenderId={id}
+                  onSave={(data) => {
+                    const completed = Object.keys(data).filter(k => data[k]).length
+                    setFormProgress(Math.round((completed / analysis.fillable_fields.length) * 100))
+                  }}
+                />
+              </div>
+            )}
+
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
+
+export { Loading };

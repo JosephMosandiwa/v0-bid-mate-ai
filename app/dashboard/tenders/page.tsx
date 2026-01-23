@@ -191,11 +191,9 @@ export default function TendersPage() {
   }
 
   const getTenderDetailUrl = (tender: UserTender) => {
-    if (tender.tender_type === "custom") {
-      return `/dashboard/custom-tenders/${tender.id}`
-    }
-    // Scraped tenders
-    return `/dashboard/tenders/${tender.tender_id}`
+    // Route all tenders to the unified detail page
+    const tenderId = tender.tender_type === "custom" ? tender.id : tender.tender_id
+    return `/dashboard/tenders/${tenderId}?type=${tender.tender_type || "scraped"}`
   }
 
   if (loading) {
