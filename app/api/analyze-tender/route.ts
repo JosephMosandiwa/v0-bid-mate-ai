@@ -11,43 +11,33 @@ const MIN_CHARS_PER_PAGE = 100
  * This handles pages with screenshots, images, or scanned content
  */
 async function extractTextWithVision(pdfUrl: string, pageNumbers: number[]): Promise<string> {
-  console.log(`[v0] Using GPT-4o vision to extract text from ${pageNumbers.length} scanned pages`)
+  console.log(`[v0] Using GPT-4o vision to extract text from PDF`)
   
   try {
-    // For each page that needs OCR, we'll ask GPT-4o to read the PDF
-    // GPT-4o can read PDFs directly when given a URL
+    // Use GPT-4o to read the PDF document
     const { text: extractedText } = await generateText({
       model: "openai/gpt-4o",
       messages: [
         {
           role: "user",
-          content: [
-            {
-              type: "text",
-              text: `You are a document OCR assistant. Extract ALL text from this PDF document, including text in images, screenshots, tables, and scanned content. 
+          content: `You are a document OCR assistant. I need you to extract ALL text from a PDF document located at this URL: ${pdfUrl}
 
 IMPORTANT: 
 - Extract EVERY piece of text you can see, even if it's in an image or screenshot
 - Preserve the structure (headings, bullet points, tables)
 - Include all form field labels and any pre-filled values
 - Extract text from logos, headers, and footers if readable
+- For tables, preserve the table structure as best as possible
 
 Output ONLY the extracted text, nothing else. No explanations or commentary.`,
-            },
-            {
-              type: "file",
-              data: pdfUrl,
-              mimeType: "application/pdf",
-            },
-          ],
         },
       ],
     })
 
-    console.log(`[v0] Vision OCR extracted ${extractedText.length} characters`)
-    return extractedText
-  } catch (error) {
-    console.error("[v0] Vision OCR failed:", error)
+    console.log(`[v0] Vision OCR extracted ${extractedText?.length || 0} characters`)
+    return extractedText || ""
+  } catch (error: any) {
+    console.error("[v0] Vision OCR failed:", error?.message || error)
     return ""
   }
 }
