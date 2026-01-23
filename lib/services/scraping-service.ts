@@ -291,10 +291,16 @@ export class ScrapingService {
 
       await this.updateSourceStats(sourceId, result)
 
+      // Count new vs duplicates
+      const newTenders = savedTenders.filter((t: any) => t.isNew)
+      const duplicateTenders = savedTenders.filter((t: any) => t.isDuplicate)
+      
       return {
         success: result.success,
         scrapedCount: result.scrapedCount,
         savedCount: savedTenders.length,
+        newCount: newTenders.length,
+        duplicateCount: duplicateTenders.length,
         error: result.error,
       }
     } catch (error) {
@@ -337,8 +343,13 @@ export class ScrapingService {
       const tender = tenders[i]
       console.log(`\n[v0] ScrapingService: ========== Tender ${i + 1}/${tenders.length} ==========`)
       console.log(`[v0] ScrapingService: Title: ${tender.title}`)
+      console.log(`[v0] ScrapingService: Tender Reference: ${tender.tender_reference || tender.tenderReference || 'N/A'}`)
+      console.log(`[v0] ScrapingService: Close Date: ${tender.close_date || tender.closeDate || 'N/A'}`)
+      console.log(`[v0] ScrapingService: Organization: ${tender.organization || 'N/A'}`)
 
       const result = await engineOrchestrator.processScrapedTender(tender)
+      
+      console.log(`[v0] ScrapingService: Process result - success: ${result.success}, has tender: ${!!result.tender}, error: ${result.error || 'none'}`)
 
       if (result.tender) {
         console.log(
@@ -392,6 +403,44 @@ export class ScrapingService {
       } else {
         console.warn(`[v0] ScrapingService: ⚠️ Warning - Could not process tender: ${tender.title}`)
         console.warn(`[v0] ScrapingService:   Error: ${result.error || "Unknown error"}`)
+        console.warn(`[v0] ScrapingService:   Result details:`, JSON.stringify(result, null, 2))
+        
+        // If processing failed but we have basic data, still try to save the tender with minimal validation
+        if (tender.title) {
+          console.log(`[v0] ScrapingService: Attempting to save with minimal validation...`)
+          const minimalTender = {
+            source_id: sourceId,
+            source_name: source.name,
+            source_url: source.tender_page_url,
+            source_level: source.level,
+            source_province: tender.province || source.province,
+            tender_reference: tender.tender_reference || tender.tenderReference,
+            title: tender.title,
+            description: tender.description,
+            organization: tender.organization || source.name,
+            category: tender.category,
+            province: tender.province,
+            location: tender.location || tender.delivery_location,
+            publish_date: tender.publish_date,
+            close_date: tender.close_date,
+            estimated_value: tender.estimated_value,
+            tender_url: tender.tender_url,
+            contact_person: tender.contact_person,
+            contact_email: tender.contact_email,
+            contact_phone: tender.contact_phone,
+            document_urls: tender.document_urls,
+            procurement_method: tender.procurement_method,
+            tender_type: tender.tender_type,
+            status: tender.status || 'active',
+            is_active: true,
+            quality_score: 30,
+            quality_grade: 'C',
+            data_completeness: 0.3,
+            raw_data: tender.raw_data || tender,
+          }
+          validatedTenders.push(minimalTender)
+          console.log(`[v0] ScrapingService: Added tender with minimal validation: ${tender.title?.substring(0, 50)}...`)
+        }
       }
     }
 

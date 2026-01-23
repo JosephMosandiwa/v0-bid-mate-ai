@@ -25,27 +25,30 @@ export class TenderService {
 
   // Map scraped data to standard tender format
   static normalizeScrapedData(rawData: any): any {
-    const normalized: any = {}
+    // Start with all original fields preserved
+    const normalized: any = { ...rawData }
 
-    // Map each field from the schema
+    // Map schema fields using aliases if the main field is missing
     for (const field of TENDER_SCHEMA.fields) {
-      // Try to find the field using its name or aliases
-      let value = rawData[field.name]
+      // If field already has a value, skip
+      if (normalized[field.name]) continue
 
-      if (!value) {
-        // Try aliases
-        for (const alias of field.extractionHints.aliases) {
-          const aliasKey = Object.keys(rawData).find((key) => key.toLowerCase() === alias.toLowerCase())
-          if (aliasKey) {
-            value = rawData[aliasKey]
-            break
-          }
+      // Try aliases
+      for (const alias of field.extractionHints.aliases) {
+        const aliasKey = Object.keys(rawData).find((key) => key.toLowerCase() === alias.toLowerCase())
+        if (aliasKey && rawData[aliasKey]) {
+          normalized[field.name] = rawData[aliasKey]
+          break
         }
       }
+    }
 
-      if (value) {
-        normalized[field.name] = value
-      }
+    // Ensure required fields have values (even if empty string)
+    if (!normalized.title) {
+      normalized.title = rawData.title || rawData.name || rawData.subject || 'Untitled Tender'
+    }
+    if (!normalized.organization) {
+      normalized.organization = rawData.organization || rawData.entity || rawData.department || rawData.buyer || 'Unknown Organization'
     }
 
     return normalized
