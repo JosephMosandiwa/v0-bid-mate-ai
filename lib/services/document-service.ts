@@ -9,6 +9,20 @@ export interface TenderDocument {
   original_url: string
   blob_url: string
   file_size?: number
+  downloaded_at?: string
+}
+
+// Rich document metadata from APIs like eTender OCDS
+export interface APIDocumentMetadata {
+  id?: string
+  title?: string
+  description?: string
+  url: string
+  documentType?: string
+  format?: string
+  datePublished?: string
+  dateModified?: string
+  language?: string
 }
 
 export class DocumentService {
@@ -20,11 +34,13 @@ export class DocumentService {
 
   /**
    * Download a document from a URL and upload it to Vercel Blob
+   * Optionally accepts rich metadata from API sources like eTender OCDS
    */
   async downloadAndStoreDocument(
     url: string,
     tenderId: string,
     scraperApiKey?: string,
+    metadata?: APIDocumentMetadata,
   ): Promise<TenderDocument | null> {
     try {
       console.log("[DocumentService] Downloading document:", url)
@@ -61,12 +77,13 @@ export class DocumentService {
         return null
       }
 
-      // Extract filename from URL or generate one
+      // Extract filename from metadata, URL, or generate one
       const urlPath = new URL(url).pathname
-      const filename = urlPath.split("/").pop() || `document-${Date.now()}`
+      const urlFilename = urlPath.split("/").pop() || `document-${Date.now()}`
+      const filename = metadata?.title || urlFilename
 
-      // Determine file type from extension or content-type
-      const extension = filename.split(".").pop()?.toLowerCase() || "pdf"
+      // Determine file type from metadata, extension, or content-type
+      const extension = metadata?.format || filename.split(".").pop()?.toLowerCase() || "pdf"
       const contentType = response.headers.get("content-type") || "application/pdf"
 
       // Create a File object for Vercel Blob
@@ -79,14 +96,15 @@ export class DocumentService {
 
       console.log("[DocumentService] Document uploaded to Blob:", blobResult.url)
 
-      // Save document metadata to database
+      // Save document metadata to database - use rich metadata from API if available
       const document: TenderDocument = {
         tender_id: tenderId,
-        document_name: filename,
-        document_type: extension,
+        document_name: metadata?.title || filename,
+        document_type: metadata?.documentType || extension,
         original_url: url,
         blob_url: blobResult.url,
         file_size: fileSize,
+        downloaded_at: new Date().toISOString(),
       }
 
       const { data, error } = await this.supabase.from("tender_documents").insert(document).select().single()
@@ -110,10 +128,10 @@ export class DocumentService {
 
   /**
    * Download multiple documents for a tender
-   * Accepts both string[] and {title: string, url: string}[] formats
+   * Accepts both string[] and rich APIDocumentMetadata[] formats from eTender API
    */
   async downloadTenderDocuments(
-    documentUrls: (string | { title?: string; url: string })[],
+    documentUrls: (string | APIDocumentMetadata)[],
     tenderId: string,
     scraperApiKey?: string,
   ): Promise<TenderDocument[]> {
@@ -121,19 +139,28 @@ export class DocumentService {
 
     const documents: TenderDocument[] = []
 
-    // Normalize URLs to strings
-    const urls = documentUrls
-      .map((doc) => (typeof doc === "string" ? doc : doc.url))
-      .filter((url): url is string => Boolean(url))
-
     // Download documents sequentially to avoid rate limiting
-    for (const url of urls) {
+    for (const doc of documentUrls) {
       try {
-        const document = await this.downloadAndStoreDocument(url, tenderId, scraperApiKey)
+        const url = typeof doc === "string" ? doc : doc.url
+        if (!url) continue
+        
+        // Check if document already exists
+        const exists = await this.documentExists(tenderId, url)
+        if (exists) {
+          console.log(`[DocumentService] Document already exists, skipping: ${url}`)
+          continue
+        }
+        
+        // Extract metadata if available
+        const metadata = typeof doc === "string" ? undefined : doc
+        
+        const document = await this.downloadAndStoreDocument(url, tenderId, scraperApiKey, metadata)
         if (document) {
           documents.push(document)
         }
       } catch (error) {
+        const url = typeof doc === "string" ? doc : doc.url
         console.error(`[DocumentService] Failed to download ${url}:`, error)
       }
 
@@ -141,7 +168,7 @@ export class DocumentService {
       await new Promise((resolve) => setTimeout(resolve, 1000))
     }
 
-    console.log(`[DocumentService] Successfully downloaded ${documents.length}/${urls.length} documents`)
+    console.log(`[DocumentService] Successfully downloaded ${documents.length}/${documentUrls.length} documents`)
     return documents
   }
 

@@ -129,34 +129,70 @@ export class ScrapingService {
   private calculateMatchScore(tender: any, userPrefs: any): number {
     let score = 0
 
-    // Province match (25%)
-    if (userPrefs.provinces?.length && tender.source_province) {
+    // Province match (20%) - using both province and delivery_location
+    if (userPrefs.provinces?.length) {
+      const tenderProvince = tender.province || tender.source_province || tender.delivery_location || ""
       const provinceMatch = userPrefs.provinces.some((p: string) =>
-        tender.source_province?.toLowerCase().includes(p.toLowerCase()),
+        tenderProvince?.toLowerCase().includes(p.toLowerCase()),
       )
-      if (provinceMatch) score += 0.25
+      if (provinceMatch) score += 0.2
     }
 
-    // Industry match (30%)
-    if (userPrefs.industries?.length && tender.category) {
-      const categoryLower = tender.category.toLowerCase()
-      const industryMatch = userPrefs.industries.some(
-        (ind: string) => categoryLower.includes(ind.toLowerCase()) || ind.toLowerCase().includes(categoryLower),
+    // Industry/Category match (25%) - using category and procurement_category
+    if (userPrefs.industries?.length) {
+      const categoryFields = [
+        tender.category,
+        tender.procurement_category,
+        tender.tender_type,
+        tender.description,
+      ].filter(Boolean).join(" ").toLowerCase()
+      
+      const industryMatch = userPrefs.industries.some((ind: string) => 
+        categoryFields.includes(ind.toLowerCase())
       )
-      if (industryMatch) score += 0.3
+      if (industryMatch) score += 0.25
     }
 
-    // Value match (20%)
+    // Value match based on annual turnover (15%)
     if (userPrefs.annual_turnover && tender.estimated_value) {
-      score += 0.2
+      const valueStr = tender.estimated_value.replace(/[^0-9]/g, "")
+      const tenderValue = parseFloat(valueStr) || 0
+      
+      // Match if tender value is appropriate for company size
+      const turnoverRanges: Record<string, [number, number]> = {
+        "under_500k": [0, 500000],
+        "500k_1m": [0, 1000000],
+        "1m_5m": [0, 5000000],
+        "5m_20m": [500000, 20000000],
+        "over_20m": [1000000, Infinity],
+      }
+      
+      const range = turnoverRanges[userPrefs.annual_turnover]
+      if (range && tenderValue >= range[0] && tenderValue <= range[1]) {
+        score += 0.15
+      }
     }
 
-    // Deadline proximity (25%)
+    // Deadline proximity (20%) - more time = better match
     if (tender.close_date) {
       const daysUntilClose = Math.ceil((new Date(tender.close_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-      if (daysUntilClose > 14) score += 0.25
-      else if (daysUntilClose > 7) score += 0.15
+      if (daysUntilClose > 21) score += 0.2
+      else if (daysUntilClose > 14) score += 0.15
+      else if (daysUntilClose > 7) score += 0.1
       else score += 0.05
+    }
+
+    // Procurement method preference (10%)
+    if (tender.procurement_method) {
+      const openMethods = ["open", "selective", "limited"]
+      if (openMethods.some(m => tender.procurement_method.toLowerCase().includes(m))) {
+        score += 0.1
+      }
+    }
+
+    // Document availability bonus (10%)
+    if (tender.document_urls && tender.document_urls.length > 0) {
+      score += 0.1
     }
 
     return Math.min(score, 1)
@@ -165,18 +201,44 @@ export class ScrapingService {
   private getMatchReasons(tender: any, userPrefs: any): string[] {
     const reasons: string[] = []
 
-    if (userPrefs.provinces?.some((p: string) => tender.source_province?.toLowerCase().includes(p.toLowerCase()))) {
-      reasons.push("Matches your preferred province")
+    // Province matching with actual province name
+    const tenderProvince = tender.province || tender.source_province || tender.delivery_location
+    if (tenderProvince && userPrefs.provinces?.some((p: string) => tenderProvince?.toLowerCase().includes(p.toLowerCase()))) {
+      reasons.push(`Located in ${tenderProvince}`)
     }
 
-    if (userPrefs.industries?.some((ind: string) => tender.category?.toLowerCase().includes(ind.toLowerCase()))) {
-      reasons.push("Matches your industry focus")
+    // Industry matching with specific category
+    if (tender.category && userPrefs.industries?.some((ind: string) => tender.category?.toLowerCase().includes(ind.toLowerCase()))) {
+      reasons.push(`Matches your ${tender.category} expertise`)
     }
 
+    // Procurement method info
+    if (tender.procurement_method) {
+      reasons.push(`${tender.procurement_method} procurement`)
+    }
+
+    // Deadline info
     if (tender.close_date) {
       const daysUntilClose = Math.ceil((new Date(tender.close_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-      if (daysUntilClose > 14) reasons.push("Good preparation time available")
+      if (daysUntilClose > 21) reasons.push(`${daysUntilClose} days to prepare your bid`)
+      else if (daysUntilClose > 14) reasons.push("Good preparation time available")
       else if (daysUntilClose > 7) reasons.push("Adequate preparation time")
+      else reasons.push(`Only ${daysUntilClose} days left - act fast!`)
+    }
+
+    // Value info
+    if (tender.estimated_value) {
+      reasons.push(`Contract value: ${tender.estimated_value}`)
+    }
+
+    // Documents available
+    if (tender.document_urls && tender.document_urls.length > 0) {
+      reasons.push(`${tender.document_urls.length} tender document(s) available`)
+    }
+
+    // Contact info available
+    if (tender.contact_email || tender.contact_phone) {
+      reasons.push("Direct contact information available")
     }
 
     return reasons
@@ -280,19 +342,53 @@ export class ScrapingService {
 
       if (result.tender) {
         console.log(
-          `[v0] ScrapingService: ✓ Tender ACCEPTED - ${result.tender.title} (${result.validation?.grade}, ${result.validation?.completeness * 100}% complete)`,
+          `[v0] ScrapingService: Tender ACCEPTED - ${result.tender.title} (${result.validation?.grade}, ${Math.round((result.validation?.completeness || 0) * 100)}% complete)`,
         )
-        validatedTenders.push({
+        
+        // Build comprehensive tender object with ALL available fields
+        const enrichedTender = {
+          // Source information
           source_id: sourceId,
           source_name: source.name,
           source_url: source.tender_page_url,
           source_level: source.level,
-          source_province: source.province,
+          source_province: tender.province || source.province,
+          
+          // Core tender data from engine processing
           ...result.tender,
+          
+          // Rich data fields from eTender API
+          province: tender.province,
+          delivery_location: tender.delivery_location,
+          special_conditions: tender.special_conditions,
+          procurement_method: tender.procurement_method,
+          procurement_category: tender.procurement_category,
+          tender_type: tender.tender_type,
+          status: tender.status,
+          
+          // Contact information
+          contact_person: tender.contact_person,
+          contact_email: tender.contact_email,
+          contact_phone: tender.contact_phone,
+          
+          // Location and organization
+          location: tender.location || tender.delivery_location,
+          organization: tender.organization,
+          
+          // Documents
+          document_urls: tender.document_urls,
+          
+          // Quality tracking
           is_active: true,
           quality_score: result.validation?.completeness || 0,
           quality_grade: result.validation?.grade || "C",
-        })
+          data_completeness: result.validation?.completeness || 0,
+          
+          // Raw data for full traceability
+          raw_data: tender.raw_data,
+        }
+        
+        validatedTenders.push(enrichedTender)
       } else {
         console.warn(`[v0] ScrapingService: ⚠️ Warning - Could not process tender: ${tender.title}`)
         console.warn(`[v0] ScrapingService:   Error: ${result.error || "Unknown error"}`)

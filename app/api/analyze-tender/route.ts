@@ -1,7 +1,97 @@
 import { generateText } from "ai"
-import { extractText } from "unpdf"
+import { extractText, getDocumentProxy } from "unpdf"
 import { PDFDocument } from "pdf-lib"
 import { getAnalysisPrompt } from "@/lib/prompts"
+
+// Minimum characters per page to consider it "text-based" vs "scanned/image"
+const MIN_CHARS_PER_PAGE = 100
+
+/**
+ * Extract text from scanned/image-based PDF pages using GPT-4o vision
+ * This handles pages with screenshots, images, or scanned content
+ */
+async function extractTextWithVision(pdfUrl: string, pageNumbers: number[]): Promise<string> {
+  console.log(`[v0] Using GPT-4o vision to extract text from ${pageNumbers.length} scanned pages`)
+  
+  try {
+    // For each page that needs OCR, we'll ask GPT-4o to read the PDF
+    // GPT-4o can read PDFs directly when given a URL
+    const { text: extractedText } = await generateText({
+      model: "openai/gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `You are a document OCR assistant. Extract ALL text from this PDF document, including text in images, screenshots, tables, and scanned content. 
+
+IMPORTANT: 
+- Extract EVERY piece of text you can see, even if it's in an image or screenshot
+- Preserve the structure (headings, bullet points, tables)
+- Include all form field labels and any pre-filled values
+- Extract text from logos, headers, and footers if readable
+
+Output ONLY the extracted text, nothing else. No explanations or commentary.`,
+            },
+            {
+              type: "file",
+              data: pdfUrl,
+              mimeType: "application/pdf",
+            },
+          ],
+        },
+      ],
+    })
+
+    console.log(`[v0] Vision OCR extracted ${extractedText.length} characters`)
+    return extractedText
+  } catch (error) {
+    console.error("[v0] Vision OCR failed:", error)
+    return ""
+  }
+}
+
+/**
+ * Check if PDF pages are scanned/image-based by analyzing text density
+ */
+async function analyzePdfTextDensity(pdfBytes: ArrayBuffer): Promise<{
+  isScanned: boolean
+  totalPages: number
+  scannedPages: number[]
+  textPerPage: number[]
+}> {
+  try {
+    const pdf = await getDocumentProxy(new Uint8Array(pdfBytes))
+    const result = await extractText(pdf, { mergePages: false })
+    const pageTexts = Array.isArray(result.text) ? result.text : [result.text]
+    
+    const textPerPage = pageTexts.map(t => (t || "").length)
+    const scannedPages: number[] = []
+    
+    textPerPage.forEach((charCount, index) => {
+      if (charCount < MIN_CHARS_PER_PAGE) {
+        scannedPages.push(index + 1)
+      }
+    })
+    
+    const avgCharsPerPage = textPerPage.reduce((a, b) => a + b, 0) / textPerPage.length
+    const isScanned = avgCharsPerPage < MIN_CHARS_PER_PAGE || scannedPages.length > textPerPage.length / 2
+    
+    console.log(`[v0] PDF analysis: ${textPerPage.length} pages, avg ${Math.round(avgCharsPerPage)} chars/page`)
+    console.log(`[v0] Scanned pages detected: ${scannedPages.length} (${scannedPages.join(", ") || "none"})`)
+    
+    return {
+      isScanned,
+      totalPages: textPerPage.length,
+      scannedPages,
+      textPerPage,
+    }
+  } catch (error) {
+    console.error("[v0] PDF density analysis failed:", error)
+    return { isScanned: true, totalPages: 0, scannedPages: [], textPerPage: [] }
+  }
+}
 
 async function extractPdfFormFields(pdfUrl: string): Promise<{
   fields: Array<{
@@ -131,7 +221,7 @@ export async function POST(request: Request) {
     let textToAnalyze = documentText
 
     if (documentUrl && (!documentText || documentText === "")) {
-      console.log("[v0] No text provided - extracting from PDF URL using unpdf...")
+      console.log("[v0] No text provided - extracting from PDF URL...")
       console.log("[v0] PDF URL:", documentUrl)
 
       try {
@@ -145,30 +235,62 @@ export async function POST(request: Request) {
         const pdfArrayBuffer = await pdfResponse.arrayBuffer()
         console.log("[v0] PDF fetched successfully, size:", (pdfArrayBuffer.byteLength / 1024).toFixed(2), "KB")
 
-        console.log("[v0] Step 2: Extracting text using unpdf library...")
+        console.log("[v0] Step 2: Analyzing PDF text density...")
+        const densityAnalysis = await analyzePdfTextDensity(pdfArrayBuffer)
 
-        const { text, totalPages } = await extractText(pdfArrayBuffer, { mergePages: true })
+        console.log("[v0] Step 3: Extracting text...")
+        
+        if (densityAnalysis.isScanned || densityAnalysis.scannedPages.length > 0) {
+          // PDF has scanned/image content - use GPT-4o vision
+          console.log("[v0] PDF contains scanned/image pages - using GPT-4o vision for OCR...")
+          
+          const visionText = await extractTextWithVision(documentUrl, densityAnalysis.scannedPages)
+          
+          if (visionText && visionText.length > 100) {
+            // Also get any text-based content
+            const { text: regularText } = await extractText(pdfArrayBuffer, { mergePages: true })
+            
+            // Combine vision OCR with regular text extraction
+            if (regularText && regularText.length > visionText.length) {
+              textToAnalyze = regularText
+              console.log("[v0] Using regular text extraction (more content):", regularText.length, "chars")
+            } else {
+              textToAnalyze = visionText
+              console.log("[v0] Using vision OCR text:", visionText.length, "chars")
+            }
+          } else {
+            // Vision failed, try regular extraction as fallback
+            const { text } = await extractText(pdfArrayBuffer, { mergePages: true })
+            textToAnalyze = text
+          }
+        } else {
+          // Standard text-based PDF - use unpdf
+          console.log("[v0] PDF is text-based - using unpdf...")
+          const { text, totalPages } = await extractText(pdfArrayBuffer, { mergePages: true })
+          textToAnalyze = text
+          console.log("[v0] Text extracted from", totalPages, "pages")
+        }
 
-        textToAnalyze = text
-        console.log("[v0] ✓ Text extracted successfully using unpdf")
-        console.log("[v0] Total pages:", totalPages)
-        console.log("[v0] Extracted text length:", textToAnalyze.length, "characters")
-        console.log("[v0] First 500 characters:", textToAnalyze.substring(0, 500))
+        console.log("[v0] Total extracted text length:", textToAnalyze?.length || 0, "characters")
+        console.log("[v0] First 500 characters:", textToAnalyze?.substring(0, 500))
 
         if (!textToAnalyze || textToAnalyze.trim().length < 50) {
-          throw new Error(
-            `Insufficient text extracted from PDF - only got ${textToAnalyze?.length || 0} characters. The PDF might be scanned/image-based.`,
-          )
+          // Last resort - try vision on entire document
+          console.log("[v0] Insufficient text - trying full vision OCR as last resort...")
+          const visionText = await extractTextWithVision(documentUrl, [])
+          
+          if (visionText && visionText.length > 50) {
+            textToAnalyze = visionText
+            console.log("[v0] Vision OCR successful:", visionText.length, "characters")
+          } else {
+            throw new Error(
+              `Insufficient text extracted from PDF - only got ${textToAnalyze?.length || 0} characters. Vision OCR also failed.`,
+            )
+          }
         }
 
         const wordCount = textToAnalyze.trim().split(/\s+/).length
-        const avgWordsPerPage = Math.round(wordCount / totalPages)
-        console.log("[v0] Word count:", wordCount)
-        console.log("[v0] Average words per page:", avgWordsPerPage)
-
-        if (avgWordsPerPage < 50) {
-          console.warn("[v0] ⚠️ WARNING: Low word density - PDF might be partially scanned")
-        }
+        console.log("[v0] Final word count:", wordCount)
       } catch (extractError: any) {
         console.error("[v0] PDF TEXT EXTRACTION FAILED")
         console.error("[v0] Error message:", extractError?.message)
@@ -178,7 +300,7 @@ export async function POST(request: Request) {
             error: "Failed to extract text from PDF",
             errorType: "pdf_extraction_error",
             details: extractError?.message || "Could not read PDF content",
-            hint: "The PDF might be scanned/image-based, corrupted, or password-protected. Try converting it to a text-based PDF first.",
+            hint: "The PDF might be corrupted or password-protected.",
           },
           { status: 500 },
         )
@@ -243,7 +365,7 @@ NOTE: This PDF does not have interactive form fields. Generate formFields based 
       const startTime = Date.now()
 
       const { text: aiResponse } = await generateText({
-        model: "openai/gpt-4o-mini",
+        model: "openai/gpt-4o",
         prompt: `${basePrompt}
 
 ${pdfFieldsInstruction}
@@ -332,6 +454,135 @@ Respond with ONLY the following JSON structure (no markdown, no code blocks, jus
     "payment_schedule": "string or Not specified",
     "retention_amount": "string or Not specified",
     "payment_timeframe": "string or Not specified"
+  },
+  "documents_identified": [
+    {
+      "document_name": "Name of document",
+      "document_type": "SBD1|SBD2|SBD3|SBD4|SBD6.1|SBD6.2|SBD8|SBD9|TOR|BOQ|GCC|SCC|Specifications|Other",
+      "page_range": "e.g., Pages 1-5",
+      "is_returnable": true/false,
+      "has_fillable_fields": true/false,
+      "description": "Brief description"
+    }
+  ],
+  "boq": {
+    "found": true/false,
+    "document_name": "Name of BOQ document if found",
+    "page_location": "Page numbers",
+    "structure": "itemized|schedule_of_rates|lump_sum|mixed",
+    "currency": "ZAR",
+    "vat_treatment": "exclusive|inclusive",
+    "sections": [
+      {
+        "section_number": "1",
+        "section_name": "Section name",
+        "items": [
+          {
+            "item_number": "1.1",
+            "description": "Item description",
+            "unit": "each|m2|m3|hours|lump sum",
+            "quantity": 0,
+            "rate": null,
+            "amount": null,
+            "notes": ""
+          }
+        ],
+        "section_subtotal": null
+      }
+    ],
+    "summary": {
+      "subtotal": null,
+      "contingency_percent": 5,
+      "contingency_amount": null,
+      "vat_percent": 15,
+      "vat_amount": null,
+      "total_inclusive": null
+    },
+    "pricing_instructions": ""
+  },
+  "project_plan": {
+    "project_overview": {
+      "title": "Project title",
+      "objective": "Project objective",
+      "scope_summary": "Brief scope",
+      "contract_type": "Fixed price|Time & Materials",
+      "contract_duration_months": 0
+    },
+    "phases": [
+      {
+        "phase_number": 1,
+        "phase_name": "Phase name",
+        "duration_weeks": 0,
+        "key_activities": ["Activity 1"],
+        "deliverables": ["Deliverable 1"],
+        "milestones": [
+          {
+            "name": "Milestone name",
+            "target_date": "Week X",
+            "payment_linked": false,
+            "payment_percent": 0
+          }
+        ],
+        "resources_required": ["Resource 1"],
+        "risks": [
+          {
+            "risk": "Risk description",
+            "mitigation": "Mitigation strategy"
+          }
+        ]
+      }
+    ],
+    "resource_requirements": {
+      "key_personnel": [
+        {
+          "role": "Role name",
+          "qualifications_required": "Qualifications",
+          "quantity": 1,
+          "duration": "Full project"
+        }
+      ],
+      "equipment": [],
+      "materials": [],
+      "subcontractors": []
+    },
+    "budget_breakdown": {
+      "labour_percent": 40,
+      "materials_percent": 35,
+      "equipment_percent": 10,
+      "overheads_percent": 10,
+      "profit_percent": 5
+    },
+    "quality_management": {
+      "standards_applicable": [],
+      "inspections": [],
+      "testing_requirements": [],
+      "documentation_required": []
+    },
+    "health_safety_environment": {
+      "hse_plan_required": false,
+      "certifications_required": [],
+      "specific_hazards": [],
+      "environmental_requirements": []
+    }
+  },
+  "fillable_fields": [
+    {
+      "id": "unique_field_id",
+      "document_source": "SBD 1",
+      "page_number": 1,
+      "field_label": "Field Label",
+      "field_type": "text|number|date|currency|checkbox|signature|dropdown|textarea",
+      "is_required": true,
+      "validation_hint": "Validation hint",
+      "example_value": "Example",
+      "section": "Company Information|Financial|Technical|Declaration|Pricing",
+      "auto_fill_source": "company_name|registration_number|vat_number|etc"
+    }
+  ],
+  "forms_summary": {
+    "total_fields": 0,
+    "required_fields": 0,
+    "by_document": {}
   },
   "formFields": [
     {
@@ -461,6 +712,25 @@ Respond with ONLY the following JSON structure (no markdown, no code blocks, jus
           retention_amount: "Not specified",
           payment_timeframe: "Not specified",
         },
+        documents_identified: [],
+        boq: {
+          found: false,
+          document_name: null,
+          page_location: null,
+          structure: null,
+          currency: "ZAR",
+          vat_treatment: "exclusive",
+          sections: [],
+          summary: null,
+          pricing_instructions: null,
+        },
+        project_plan: null,
+        fillable_fields: [],
+        forms_summary: {
+          total_fields: 0,
+          required_fields: 0,
+          by_document: {},
+        },
         formFields: [],
       }
 
@@ -483,6 +753,11 @@ Respond with ONLY the following JSON structure (no markdown, no code blocks, jus
       console.log("[v0] Requirements count:", analysis.compliance_summary?.requirements?.length || 0)
       console.log("[v0] Disqualifiers count:", analysis.compliance_summary?.disqualifiers?.length || 0)
       console.log("[v0] Criteria count:", analysis.evaluation?.criteria?.length || 0)
+      console.log("[v0] Documents identified:", analysis.documents_identified?.length || 0)
+      console.log("[v0] BOQ found:", analysis.boq?.found || false)
+      console.log("[v0] BOQ sections:", analysis.boq?.sections?.length || 0)
+      console.log("[v0] Project plan phases:", analysis.project_plan?.phases?.length || 0)
+      console.log("[v0] Fillable fields count:", analysis.fillable_fields?.length || 0)
       console.log("[v0] Form fields count:", analysis.formFields?.length || 0)
       console.log("[v0] PDF form fields detected:", hasPdfFormFields)
       console.log("[v0] PDF form field count:", pdfFormFields.length)

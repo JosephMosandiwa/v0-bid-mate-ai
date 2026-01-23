@@ -18,60 +18,81 @@ export default function NewTenderPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
+  const [uploadedUrls, setUploadedUrls] = useState<string[]>([])
+  const [analysis, setAnalysis] = useState<any>(null)
+  const [uploadProgress, setUploadProgress] = useState<string>("")
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
-  const [analysis, setAnalysis] = useState<any>(null)
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
 
-    if (file.type !== "application/pdf") {
+    // Validate all files are PDFs
+    const invalidFiles = files.filter(f => f.type !== "application/pdf")
+    if (invalidFiles.length > 0) {
       toast({
         title: "Invalid File Type",
-        description: "Please upload a PDF file",
+        description: "All files must be PDFs",
         variant: "destructive",
       })
       return
     }
 
-    setUploadedFile(file)
+    setUploadedFiles(files)
     setLoading(true)
+    setUploadProgress(`Uploading ${files.length} document(s)...`)
 
     try {
       console.log("[v0] ================================================")
       console.log("[v0] STARTING CUSTOM TENDER UPLOAD PROCESS")
       console.log("[v0] ================================================")
-      console.log("[v0] File name:", file.name)
-      console.log("[v0] File size:", (file.size / 1024 / 1024).toFixed(2), "MB")
-
-      console.log("[v0] Step 1: Uploading PDF to blob storage...")
-      const uploadFormData = new FormData()
-      uploadFormData.append("file", file)
-
-      const blobResponse = await fetch("/api/upload-to-blob", {
-        method: "POST",
-        body: uploadFormData,
+      files.forEach(file => {
+        console.log("[v0] File name:", file.name)
+        console.log("[v0] File size:", (file.size / 1024 / 1024).toFixed(2), "MB")
       })
 
-      if (!blobResponse.ok) {
-        const errorText = await blobResponse.text()
-        console.error("[v0] Blob upload error:", errorText)
-        throw new Error("Failed to upload file to storage")
+      console.log("[v0] Step 1: Uploading PDFs to blob storage...")
+      const uploadedDocUrls: string[] = []
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        setUploadProgress(`Uploading document ${i + 1} of ${files.length}: ${file.name}`)
+        
+        const uploadFormData = new FormData()
+        uploadFormData.append("file", file)
+
+        const blobResponse = await fetch("/api/upload-to-blob", {
+          method: "POST",
+          body: uploadFormData,
+        })
+
+        if (!blobResponse.ok) {
+          const errorText = await blobResponse.text()
+          console.error("[v0] Blob upload error:", errorText)
+          throw new Error(`Failed to upload file: ${file.name}`)
+        }
+
+        const { url } = await blobResponse.json()
+        console.log(`[v0] ✓ File ${i + 1} uploaded:`, file.name)
+        uploadedDocUrls.push(url)
       }
+      
+      console.log("[v0] ✓ All files uploaded to blob successfully")
+      setUploadedUrls(uploadedDocUrls)
+      
+      // Use the first document for analysis (main tender document)
+      const primaryDocUrl = uploadedDocUrls[0]
 
-      const { url } = await blobResponse.json()
-      console.log("[v0] ✓ File uploaded to blob successfully")
-      console.log("[v0] Blob URL:", url)
-      setBlobUrl(url)
-
+      setUploadProgress("Analyzing primary tender document...")
       toast({
         title: "Analyzing Document",
         description: "AI is reading and analyzing your tender document...",
       })
 
-      console.log("[v0] Step 2: Sending PDF to AI for direct analysis...")
-      console.log("[v0] Using OpenAI GPT-4o to read PDF directly from URL")
+      console.log("[v0] Step 2: Sending primary PDF to AI for analysis...")
+      console.log("[v0] Primary document URL:", primaryDocUrl)
 
       const analysisResponse = await fetch("/api/analyze-tender", {
         method: "POST",
@@ -79,8 +100,8 @@ export default function NewTenderPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          documentUrl: url,
-          documentText: "", // Let the API handle PDF reading
+          documentUrl: primaryDocUrl,
+          documentText: "",
         }),
       })
 
@@ -106,14 +127,15 @@ export default function NewTenderPage() {
 
       console.log("[v0] Step 3: Creating tender record with analysis...")
 
-      const result = await createCustomTender({
-        title: analysisData.tender_summary?.title || file.name.replace(".pdf", ""),
+const result = await createCustomTender({
+        title: analysisData.tender_summary?.title || files[0].name.replace(".pdf", ""),
         organization: analysisData.tender_summary?.entity || "Unknown Organization",
         deadline: analysisData.tender_summary?.closing_date || "",
         value: analysisData.tender_summary?.contract_duration || "",
         description: analysisData.tender_summary?.description || "",
         category: "Custom",
-        uploadedFile: file,
+        uploadedFiles: files,
+        uploadedUrls: uploadedDocUrls,
         analysis: analysisData,
       })
 
@@ -157,9 +179,10 @@ export default function NewTenderPage() {
         variant: "destructive",
       })
 
-      setUploadedFile(null)
-      setBlobUrl(null)
+      setUploadedFiles([])
+      setUploadedUrls([])
       setAnalysis(null)
+      setUploadProgress("")
     } finally {
       setLoading(false)
     }
@@ -198,20 +221,25 @@ export default function NewTenderPage() {
                 }`}
               >
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                {loading ? "Processing..." : uploadedFile ? "Change Document" : "Upload PDF"}
+                {loading ? "Processing..." : uploadedFiles.length > 0 ? "Change Documents" : "Upload PDFs"}
               </Label>
               <Input
                 id="pdf-upload"
                 type="file"
                 accept="application/pdf"
+                multiple
                 onChange={handleFileUpload}
                 className="hidden"
                 disabled={loading}
               />
-              {uploadedFile && !loading && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <FileText className="h-4 w-4" />
-                  {uploadedFile.name}
+              {uploadedFiles.length > 0 && !loading && (
+                <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                  {uploadedFiles.map((file, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      {file.name}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -220,12 +248,12 @@ export default function NewTenderPage() {
               <Alert className="border-blue-500/50 bg-blue-500/10">
                 <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
                 <AlertDescription className="text-blue-500">
-                  Processing your tender document... This may take a moment.
+                  {uploadProgress || "Processing your tender documents... This may take a moment."}
                 </AlertDescription>
               </Alert>
             )}
 
-            {uploadedFile && !loading && analysis && (
+            {uploadedFiles.length > 0 && !loading && analysis && (
               <Alert className="border-green-500/50 bg-green-500/10">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
                 <AlertDescription className="text-green-500">

@@ -15,7 +15,7 @@ export interface ScrapedTender {
   contact_email?: string
   contact_phone?: string
   tender_url?: string
-  document_urls?: Array<{ title: string; url: string }>
+  document_urls?: Array<{ title: string; url: string; type?: string; format?: string }>
   raw_data?: any
   // Additional fields for comprehensive data capture
   organization?: string
@@ -31,6 +31,17 @@ export interface ScrapedTender {
   compulsory_briefing?: string
   tender_type?: string
   procurement_category?: string
+  // New fields for eTender API rich data
+  province?: string
+  delivery_location?: string
+  special_conditions?: string
+  procurement_method?: string
+  status?: string
+  // Engine tracking fields
+  quality_score?: number
+  data_completeness?: number
+  documind_processed?: boolean
+  strategist_matched?: boolean
 }
 
 export interface ScraperResult {

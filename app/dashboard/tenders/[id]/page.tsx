@@ -23,6 +23,9 @@ import {
   AlertCircle,
   Clock,
   ClipboardList,
+  Calculator,
+  Target,
+  FormInput,
 } from "lucide-react"
 import Link from "next/link"
 import {
@@ -37,6 +40,10 @@ import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
 import { Input } from "@/components/ui/input"
 import { TenderContextStrategistPanel } from "@/components/strategist/tender-context-panel"
+import { TenderAnalysisDisplay } from "@/components/tender-analysis-display"
+import { TenderBOQDisplay } from "@/components/tender-boq-display"
+import { TenderProjectPlanDisplay } from "@/components/tender-project-plan-display"
+import { TenderFillableForms } from "@/components/tender-fillable-forms"
 
 // Mock data - will be replaced with database queries
 const mockTender = {
@@ -518,10 +525,22 @@ export default function TenderDetailPage() {
                 <FileText className="h-4 w-4 mr-2" />
                 Documents ({documents.length})
               </TabsTrigger>
-              {analysis?.formFields && analysis.formFields.length > 0 && (
-                <TabsTrigger value="form">
-                  <ClipboardList className="h-4 w-4 mr-2" />
-                  Response Form
+              {analysis?.boq && (
+                <TabsTrigger value="boq">
+                  <Calculator className="h-4 w-4 mr-2" />
+                  BOQ
+                </TabsTrigger>
+              )}
+              {analysis?.project_plan && (
+                <TabsTrigger value="project-plan">
+                  <Target className="h-4 w-4 mr-2" />
+                  Project Plan
+                </TabsTrigger>
+              )}
+              {(analysis?.fillable_fields?.length > 0 || analysis?.formFields?.length > 0) && (
+                <TabsTrigger value="forms">
+                  <FormInput className="h-4 w-4 mr-2" />
+                  Forms
                 </TabsTrigger>
               )}
             </TabsList>
@@ -582,8 +601,170 @@ export default function TenderDetailPage() {
                       </a>
                     </div>
                   )}
+                  {tender.tender_reference && (
+                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                      <span className="text-sm font-medium text-muted-foreground">Reference:</span>
+                      <span className="text-sm font-mono bg-muted px-2 py-1 rounded">{tender.tender_reference}</span>
+                    </div>
+                  )}
+                  {tender.estimated_value && (
+                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                      <span className="text-sm font-medium text-muted-foreground">Estimated Value:</span>
+                      <span className="text-sm font-semibold text-green-600 dark:text-green-400">{tender.estimated_value}</span>
+                    </div>
+                  )}
+                  {tender.status && (
+                    <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                      <span className="text-sm font-medium text-muted-foreground">Status:</span>
+                      <Badge variant="outline" className="w-fit capitalize">{tender.status}</Badge>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
+
+              {/* Location and Procurement Details */}
+              {(tender.province || tender.location || tender.delivery_location || tender.procurement_method) && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Building2 className="h-5 w-5 text-primary" />
+                      Location and Procurement
+                    </CardTitle>
+                    <CardDescription>Delivery and procurement details</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {tender.province && (
+                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                        <span className="text-sm font-medium text-muted-foreground">Province:</span>
+                        <span className="text-sm">{tender.province}</span>
+                      </div>
+                    )}
+                    {tender.location && (
+                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                        <span className="text-sm font-medium text-muted-foreground">Location:</span>
+                        <span className="text-sm">{tender.location}</span>
+                      </div>
+                    )}
+                    {tender.delivery_location && tender.delivery_location !== tender.location && (
+                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                        <span className="text-sm font-medium text-muted-foreground">Delivery Location:</span>
+                        <span className="text-sm">{tender.delivery_location}</span>
+                      </div>
+                    )}
+                    {tender.procurement_method && (
+                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                        <span className="text-sm font-medium text-muted-foreground">Procurement Method:</span>
+                        <Badge variant="secondary" className="w-fit">{tender.procurement_method}</Badge>
+                      </div>
+                    )}
+                    {tender.procurement_category && (
+                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                        <span className="text-sm font-medium text-muted-foreground">Procurement Category:</span>
+                        <span className="text-sm">{tender.procurement_category}</span>
+                      </div>
+                    )}
+                    {tender.tender_type && (
+                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                        <span className="text-sm font-medium text-muted-foreground">Tender Type:</span>
+                        <span className="text-sm">{tender.tender_type}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Contact Information */}
+              {(tender.contact_person || tender.contact_email || tender.contact_phone || tender.organization) && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-primary" />
+                      Contact Information
+                    </CardTitle>
+                    <CardDescription>Enquiry and submission contact details</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {tender.organization && (
+                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                        <span className="text-sm font-medium text-muted-foreground">Organization:</span>
+                        <span className="text-sm font-medium">{tender.organization}</span>
+                      </div>
+                    )}
+                    {tender.contact_person && (
+                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                        <span className="text-sm font-medium text-muted-foreground">Contact Person:</span>
+                        <span className="text-sm">{tender.contact_person}</span>
+                      </div>
+                    )}
+                    {tender.contact_email && (
+                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                        <span className="text-sm font-medium text-muted-foreground">Email:</span>
+                        <a href={`mailto:${tender.contact_email}`} className="text-sm text-primary hover:underline">
+                          {tender.contact_email}
+                        </a>
+                      </div>
+                    )}
+                    {tender.contact_phone && (
+                      <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+                        <span className="text-sm font-medium text-muted-foreground">Phone:</span>
+                        <a href={`tel:${tender.contact_phone}`} className="text-sm text-primary hover:underline">
+                          {tender.contact_phone}
+                        </a>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Special Conditions */}
+              {tender.special_conditions && tender.special_conditions !== "N/A" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-orange-500" />
+                      Special Conditions
+                    </CardTitle>
+                    <CardDescription>Important conditions and requirements</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm whitespace-pre-wrap">{tender.special_conditions}</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Source Documents from API */}
+              {tender.document_urls && tender.document_urls.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Download className="h-5 w-5 text-primary" />
+                      Official Tender Documents
+                    </CardTitle>
+                    <CardDescription>Documents available from the tender source</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {tender.document_urls.map((doc: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50">
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-5 w-5 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">{doc.title || `Document ${index + 1}`}</p>
+                              {doc.type && <p className="text-xs text-muted-foreground">{doc.type}</p>}
+                            </div>
+                          </div>
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={doc.url} target="_blank" rel="noopener noreferrer">
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </a>
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {analysis?.eligibility_requirements && analysis.eligibility_requirements.length > 0 && (
                 <Card>
@@ -668,33 +849,7 @@ export default function TenderDetailPage() {
 
             {analysis && (
               <TabsContent value="analysis" className="space-y-4">
-                {analysis.summary && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>AI Summary</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">{analysis.summary}</p>
-                    </CardContent>
-                  </Card>
-                )}
-                {analysis.recommendations && analysis.recommendations.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Recommendations</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {analysis.recommendations.map((rec: string, i: number) => (
-                          <li key={i} className="flex items-start gap-2 text-sm">
-                            <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                            <span>{rec}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
+                <TenderAnalysisDisplay analysis={analysis} tender={tender} />
               </TabsContent>
             )}
 
@@ -775,9 +930,40 @@ export default function TenderDetailPage() {
               </Card>
             </TabsContent>
 
-            {analysis?.formFields && analysis.formFields.length > 0 && (
-              <TabsContent value="form">
-                <DynamicTenderForm formFields={analysis.formFields} tenderId={id} />
+            {/* BOQ Tab */}
+            {analysis?.boq && (
+              <TabsContent value="boq" className="space-y-4">
+                <TenderBOQDisplay 
+                  boq={analysis.boq} 
+                  tenderId={id}
+                  onSave={(boqData) => {
+                    console.log("[v0] Saving BOQ data:", boqData)
+                    // TODO: Save to tender_boq table
+                  }}
+                />
+              </TabsContent>
+            )}
+
+            {/* Project Plan Tab */}
+            {analysis?.project_plan && (
+              <TabsContent value="project-plan" className="space-y-4">
+                <TenderProjectPlanDisplay projectPlan={analysis.project_plan} />
+              </TabsContent>
+            )}
+
+            {/* Fillable Forms Tab */}
+            {(analysis?.fillable_fields?.length > 0 || analysis?.formFields?.length > 0) && (
+              <TabsContent value="forms" className="space-y-4">
+                <TenderFillableForms
+                  fillableFields={analysis.fillable_fields || analysis.formFields}
+                  formsSummary={analysis.forms_summary}
+                  documentsIdentified={analysis.documents_identified}
+                  tenderId={id}
+                  onSave={(formData) => {
+                    console.log("[v0] Saving form data:", formData)
+                    // TODO: Save to tender_responses table
+                  }}
+                />
               </TabsContent>
             )}
           </Tabs>

@@ -6,6 +6,8 @@ import { ProvincialScraper } from "./provincial-scraper"
 import { MunicipalScraper } from "./municipal-scraper"
 import { PrivateSectorScraper } from "./private-sector-scraper"
 import { ETenderApiScraper } from "./etender-api-scraper"
+import { OCDSBulkScraper } from "./ocds-bulk-scraper"
+import { TreasuryDataScraper } from "./treasury-data-scraper"
 
 export interface TenderSource {
   id: number
@@ -25,6 +27,14 @@ export class ScraperFactory {
       case "etender_api":
         console.log(`[ScraperFactory] Using eTender API scraper (OCDS format)`)
         return new ETenderApiScraper(id, name, tender_page_url)
+
+      case "ocds_bulk":
+        console.log(`[ScraperFactory] Using OCDS Bulk Data scraper`)
+        return new OCDSBulkScraper(id, name, tender_page_url)
+
+      case "treasury_data":
+        console.log(`[ScraperFactory] Using Treasury Data Portal scraper`)
+        return new TreasuryDataScraper(id, name, tender_page_url)
 
       case "etender":
         return new ETenderScraper(id, name, tender_page_url)

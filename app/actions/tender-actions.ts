@@ -372,14 +372,17 @@ export async function createCustomTender(tenderData: {
   description: string
   category?: string
   location?: string
-  uploadedFile?: File
+  uploadedFile?: File // Legacy single file support
+  uploadedFiles?: File[] // Multiple files support
+  uploadedUrls?: string[] // Pre-uploaded blob URLs
   analysis?: any
 }) {
   console.log("[v0] createCustomTender called with data:", {
     title: tenderData.title,
     organization: tenderData.organization,
     deadline: tenderData.deadline,
-    hasFile: !!tenderData.uploadedFile,
+    hasFiles: tenderData.uploadedFiles?.length || (tenderData.uploadedFile ? 1 : 0),
+    hasUrls: tenderData.uploadedUrls?.length || 0,
     hasAnalysis: !!tenderData.analysis,
   })
 
@@ -423,27 +426,60 @@ export async function createCustomTender(tenderData: {
 
     console.log("[v0] Custom tender created successfully:", customTender.id)
 
-    let documentSaved = false
-    let documentError: string | null = null
+    let documentsSaved = 0
+    let documentErrors: string[] = []
 
-    if (tenderData.uploadedFile) {
-      console.log("[v0] Uploading file to blob storage...")
-      console.log("[v0] File details:", {
-        name: tenderData.uploadedFile.name,
-        type: tenderData.uploadedFile.type,
-        size: tenderData.uploadedFile.size,
-      })
+    // Handle multiple files with pre-uploaded URLs
+    const files = tenderData.uploadedFiles || (tenderData.uploadedFile ? [tenderData.uploadedFile] : [])
+    const urls = tenderData.uploadedUrls || []
 
+    if (files.length > 0 && urls.length > 0) {
+      console.log(`[v0] Saving ${files.length} documents with pre-uploaded URLs...`)
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const blobUrl = urls[i]
+
+        if (!blobUrl) {
+          console.warn(`[v0] No URL for file ${file.name}, skipping`)
+          continue
+        }
+
+        const documentData = {
+          tender_id: customTender.id,
+          file_name: file.name,
+          file_type: file.type,
+          file_size: file.size,
+          blob_url: blobUrl,
+          storage_path: blobUrl,
+        }
+
+        console.log(`[v0] Inserting document ${i + 1}:`, file.name)
+
+        const { data: insertedDoc, error: docError } = await supabase
+          .from("user_custom_tender_documents")
+          .insert(documentData)
+          .select()
+          .single()
+
+        if (docError) {
+          console.error(`[v0] Error saving document ${file.name}:`, docError)
+          documentErrors.push(`${file.name}: ${docError.message}`)
+        } else {
+          console.log(`[v0] Document saved: ${insertedDoc.id}`)
+          documentsSaved++
+        }
+      }
+    } else if (tenderData.uploadedFile && !urls.length) {
+      // Legacy: single file without pre-uploaded URL
+      console.log("[v0] Uploading single file to blob storage...")
+      
       try {
         const blob = await put(
           `custom-tenders/${customTender.id}/${tenderData.uploadedFile.name}`,
           tenderData.uploadedFile,
-          {
-            access: "public",
-          },
+          { access: "public" },
         )
-
-        console.log("[v0] File uploaded to blob:", blob.url)
 
         const documentData = {
           tender_id: customTender.id,
@@ -454,29 +490,22 @@ export async function createCustomTender(tenderData: {
           storage_path: blob.url,
         }
 
-        console.log("[v0] Inserting document with data:", JSON.stringify(documentData, null, 2))
-
-        const { data: insertedDoc, error: docError } = await supabase
+        const { error: docError } = await supabase
           .from("user_custom_tender_documents")
           .insert(documentData)
           .select()
           .single()
 
         if (docError) {
-          console.error("[v0] Error saving document reference:", docError)
-          console.error("[v0] Error code:", docError.code)
-          console.error("[v0] Error message:", docError.message)
-          documentError = `Failed to save document: ${docError.message} (Code: ${docError.code})`
+          documentErrors.push(`${tenderData.uploadedFile.name}: ${docError.message}`)
         } else {
-          console.log("[v0] Document reference saved successfully:", insertedDoc.id)
-          documentSaved = true
+          documentsSaved++
         }
       } catch (uploadError) {
-        console.error("[v0] Error uploading file:", uploadError)
-        documentError = `Failed to upload file: ${uploadError instanceof Error ? uploadError.message : "Unknown error"}`
+        documentErrors.push(`Upload failed: ${uploadError instanceof Error ? uploadError.message : "Unknown error"}`)
       }
     } else {
-      console.log("[v0] No file to upload")
+      console.log("[v0] No files to save")
     }
 
     let analysisSaved = false
@@ -513,12 +542,13 @@ export async function createCustomTender(tenderData: {
     revalidatePath("/dashboard/tenders")
     revalidatePath("/dashboard/custom-tenders")
 
-    return {
+return {
       success: true,
       data: customTender,
       tenderId: customTender.id,
-      documentSaved,
-      documentError,
+      documentSaved: documentsSaved > 0,
+      documentsSaved,
+      documentErrors: documentErrors.length > 0 ? documentErrors : null,
       analysisSaved,
       analysisError,
     }

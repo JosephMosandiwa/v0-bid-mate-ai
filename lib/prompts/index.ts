@@ -13,13 +13,20 @@
 
 import { ORIGINAL_ANALYSIS_PROMPT } from "./original-analysis-prompt"
 import { CUSTOM_ANALYSIS_PROMPT } from "./custom-analysis-prompt"
+import { SA_TENDER_EXPERT_PROMPT } from "./sa-tender-expert-prompt"
 
 export function getAnalysisPrompt(): string {
-  const useCustomPrompt = process.env.USE_CUSTOM_PROMPT === "true"
+  const promptMode = process.env.USE_CUSTOM_PROMPT
 
-  if (useCustomPrompt) {
+  if (promptMode === "true") {
     console.log("[v0] Using CUSTOM analysis prompt")
     return CUSTOM_ANALYSIS_PROMPT
+  }
+  
+  if (promptMode === "expert" || promptMode === undefined) {
+    // Default to SA Tender Expert prompt
+    console.log("[v0] Using SA TENDER EXPERT prompt")
+    return SA_TENDER_EXPERT_PROMPT
   }
 
   console.log("[v0] Using ORIGINAL analysis prompt")
