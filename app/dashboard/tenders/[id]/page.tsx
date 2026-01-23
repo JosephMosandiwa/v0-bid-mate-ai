@@ -2,6 +2,7 @@
 
 import React from "react"
 import { Suspense } from "react"
+import { RefreshCw } from "lucide-react"; // Import RefreshCw here
 
 import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
@@ -167,57 +168,99 @@ export default function UnifiedTenderDetailPage() {
   }
 
   // Auto-analyze if no analysis exists
+  // For scraped tenders, we can analyze even without documents (from metadata)
+  // For custom tenders, we need at least one document
   useEffect(() => {
-    if (!loading && tender && !analysis && documents.length > 0 && !analysisInitiated.current && !analyzing) {
-      triggerAnalysis()
+    if (!loading && tender && !analysis && !analysisInitiated.current && !analyzing) {
+      const canAnalyze = detectedType === "scraped" || documents.length > 0
+      if (canAnalyze) {
+        triggerAnalysis()
+      }
     }
-  }, [loading, tender, analysis, documents])
+  }, [loading, tender, analysis, documents, detectedType])
 
-  const triggerAnalysis = async () => {
+  const triggerAnalysis = async (force = false) => {
     if (analysisInitiated.current || analyzing) return
     analysisInitiated.current = true
     setAnalyzing(true)
 
     try {
-      const firstDoc = documents[0]
-      const documentUrl = firstDoc.blob_url || firstDoc.storage_path || firstDoc.original_url
-      
-      if (!documentUrl) {
-        console.error("[v0] No document URL available for analysis")
-        return
-      }
+      let response: Response
 
-      const response = await fetch("/api/analyze-tender", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentUrl }),
-      })
+      if (detectedType === "scraped") {
+        // First, try to download any documents from source URLs if not already downloaded
+        console.log("[v0] Checking for downloadable documents...")
+        try {
+          const downloadResponse = await fetch(`/api/tenders/scraped/${id}/download-documents`, {
+            method: "POST",
+          })
+          if (downloadResponse.ok) {
+            const downloadResult = await downloadResponse.json()
+            if (downloadResult.downloaded > 0) {
+              console.log("[v0] Downloaded", downloadResult.downloaded, "new documents")
+              // Refresh documents list
+              await loadScrapedDocuments()
+            }
+          }
+        } catch (downloadError) {
+          console.log("[v0] Document download skipped:", downloadError)
+        }
 
-      if (response.ok) {
-        const analysisResult = await response.json()
-        setAnalysis(analysisResult)
-
-        // Save analysis to database
-        const saveEndpoint = detectedType === "custom" 
-          ? `/api/custom-tenders/${id}/analysis`
-          : `/api/tenders/${id}/analysis`
-        
-        await fetch(saveEndpoint, {
+        // Use the scraped tender analyze endpoint which handles OCR + AI analysis
+        console.log("[v0] Triggering analysis for scraped tender:", id)
+        response = await fetch(`/api/tenders/scraped/${id}/analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ analysis: analysisResult }),
+          body: JSON.stringify({ force }),
         })
+      } else {
+        // Custom tender - use document URL directly
+        const firstDoc = documents[0]
+        const documentUrl = firstDoc?.blob_url || firstDoc?.storage_path || firstDoc?.original_url
+        
+        if (!documentUrl) {
+          console.error("[v0] No document URL available for analysis")
+          setAnalyzing(false)
+          return
+        }
+
+        console.log("[v0] Triggering analysis for custom tender:", id)
+        response = await fetch("/api/analyze-tender", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ documentUrl }),
+        })
+      }
+
+      if (response.ok) {
+        const result = await response.json()
+        const analysisResult = result.analysis || result
+        setAnalysis(analysisResult)
+
+        // Save analysis to database for custom tenders (scraped already saves)
+        if (detectedType === "custom") {
+          await fetch(`/api/custom-tenders/${id}/analysis`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ analysis: analysisResult }),
+          })
+        }
 
         toast({
           title: "Analysis Complete",
-          description: "Tender document has been analyzed successfully.",
+          description: result.fromMetadata 
+            ? "Basic analysis created from tender metadata. Upload documents for full analysis."
+            : "Tender document has been analyzed successfully.",
         })
+      } else {
+        const error = await response.json()
+        throw new Error(error.error || "Analysis failed")
       }
     } catch (error) {
       console.error("[v0] Analysis error:", error)
       toast({
         title: "Analysis Failed",
-        description: "Failed to analyze tender document.",
+        description: error instanceof Error ? error.message : "Failed to analyze tender document.",
         variant: "destructive",
       })
     } finally {
@@ -388,6 +431,19 @@ export default function UnifiedTenderDetailPage() {
               <p className="text-sm sm:text-base text-muted-foreground truncate">{tenderInfo.organization}</p>
             </div>
             <div className="flex gap-2 flex-shrink-0">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  analysisInitiated.current = false
+                  triggerAnalysis(true)
+                }} 
+                disabled={analyzing} 
+                className="flex-1 sm:flex-none bg-transparent"
+              >
+                {analyzing ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <RefreshCw className="h-4 w-4 sm:mr-2" />}
+                <span className="hidden sm:inline">{analyzing ? "Analyzing..." : "Analyze"}</span>
+              </Button>
               <Button variant="outline" size="sm" onClick={handleSave} disabled={saving} className="flex-1 sm:flex-none bg-transparent">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin sm:mr-2" /> : <Save className="h-4 w-4 sm:mr-2" />}
                 <span className="hidden sm:inline">Save</span>
