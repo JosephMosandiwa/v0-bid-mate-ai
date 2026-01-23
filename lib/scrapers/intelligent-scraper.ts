@@ -94,13 +94,30 @@ export class IntelligentScraper extends BaseScraper {
       headers[api.authentication.headerName] = process.env.API_KEY || ''
     }
 
-    const response = await fetch(url, {
-      headers,
-      signal: AbortSignal.timeout(30000)
-    })
+    let response: Response
+    try {
+      response = await fetch(url, {
+        headers,
+        signal: AbortSignal.timeout(30000)
+      })
+    } catch (fetchError) {
+      const errorMsg = fetchError instanceof Error ? fetchError.message : 'Network error'
+      console.error(`[IntelligentScraper] API fetch failed: ${errorMsg}`)
+      throw new Error(`Failed to connect to API: ${errorMsg}`)
+    }
 
     if (!response.ok) {
-      throw new Error(`API returned ${response.status}: ${response.statusText}`)
+      const statusMsg = `API returned ${response.status}: ${response.statusText}`
+      console.error(`[IntelligentScraper] ${statusMsg}`)
+      
+      if (response.status === 404) {
+        throw new Error(`API endpoint not found (404). The source URL may have changed.`)
+      } else if (response.status === 403) {
+        throw new Error(`API access forbidden (403). The source may require authentication.`)
+      } else if (response.status >= 500) {
+        throw new Error(`API server error (${response.status}). The source may be temporarily unavailable.`)
+      }
+      throw new Error(statusMsg)
     }
 
     const data = await response.json()
@@ -144,14 +161,21 @@ export class IntelligentScraper extends BaseScraper {
 
     console.log(`[IntelligentScraper] Fetching HTML: ${html.listUrl}`)
 
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-      },
-      signal: AbortSignal.timeout(30000)
-    })
+    let response: Response
+    try {
+      response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+        },
+        signal: AbortSignal.timeout(30000)
+      })
+    } catch (fetchError) {
+      const errorMsg = fetchError instanceof Error ? fetchError.message : 'Network error'
+      console.error(`[IntelligentScraper] HTML fetch failed: ${errorMsg}`)
+      throw new Error(`Failed to fetch HTML: ${errorMsg}`)
+    }
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -326,7 +350,7 @@ export class IntelligentScraper extends BaseScraper {
         return value.replace(/[^\d+\-() ]/g, '').trim()
       
       case 'url':
-        return value.startsWith('http') ? value : value
+        return value.startsWith('http') ? value : this.makeAbsoluteUrl(value, this.config!.website)
       
       default:
         return value
@@ -529,6 +553,7 @@ export class IntelligentScraper extends BaseScraper {
       estimated_value: data.value?.amount ? `R ${data.value.amount.toLocaleString()}` : data.estimatedValue,
       contact_person: data.contactPerson || data.contact?.name,
       contact_email: data.contactEmail || data.contact?.email,
+      contact_phone: data.contactPhone || data.contact?.telephoneNumber,
       tender_url: data.url || data.link,
       document_urls: data.documents?.map((d: any) => ({
         title: d.title || d.name,
@@ -686,5 +711,27 @@ export class IntelligentScraper extends BaseScraper {
    */
   private getNestedValue(obj: any, path: string): any {
     return path.split('.').reduce((current, key) => current?.[key], obj)
+  }
+
+  /**
+   * Helper to parse date strings
+   */
+  private parseDate(dateStr: string): string | undefined {
+    const date = new Date(dateStr)
+    return isNaN(date.getTime()) ? undefined : date.toISOString()
+  }
+
+  /**
+   * Helper to make URLs absolute
+   */
+  private makeAbsoluteUrl(url: string, baseUrl: string): string {
+    return new URL(url, baseUrl).href
+  }
+
+  /**
+   * Helper to normalize tender data
+   */
+  private normalizeTenderData(tender: ScrapedTender): ScrapedTender {
+    return tender
   }
 }
