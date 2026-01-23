@@ -1,4 +1,6 @@
 import { generateText } from "ai"
+import { google } from "@ai-sdk/google"
+import { xai } from "@ai-sdk/xai"
 import { extractText, getDocumentProxy } from "unpdf"
 import { PDFDocument } from "pdf-lib"
 import { getAnalysisPrompt } from "@/lib/prompts"
@@ -7,56 +9,97 @@ import { getAnalysisPrompt } from "@/lib/prompts"
 const MIN_CHARS_PER_PAGE = 100
 
 /**
- * Extract text from scanned/image-based PDF pages using GPT-4o vision
- * This handles pages with screenshots, images, or scanned content
+ * Extract text from scanned/image-based PDF pages using Gemini 2.5 Pro
+ * Gemini 2.5 Pro has the best OCR accuracy for complex documents with tables, images, and mixed content
  */
 async function extractTextWithVision(pdfUrl: string, pageNumbers: number[]): Promise<string> {
-  console.log("[v0] ========== VISION OCR PROCESSING ==========")
+  console.log("[v0] ========== GEMINI 2.5 PRO OCR PROCESSING ==========")
   console.log(`[v0] PDF URL: ${pdfUrl}`)
   console.log(`[v0] Pages flagged for OCR: ${pageNumbers.length > 0 ? pageNumbers.join(", ") : "ALL pages"}`)
+  console.log(`[v0] Model: google/gemini-2.5-pro`)
   
   try {
-    console.log("[v0] Calling GPT-4o for vision-based text extraction...")
+    // First, fetch the PDF and convert to base64 for Gemini
+    console.log("[v0] Fetching PDF for Gemini 2.5 Pro processing...")
+    const pdfResponse = await fetch(pdfUrl)
+    if (!pdfResponse.ok) {
+      throw new Error(`Failed to fetch PDF: ${pdfResponse.status}`)
+    }
+    const pdfBuffer = await pdfResponse.arrayBuffer()
+    const pdfBase64 = Buffer.from(pdfBuffer).toString("base64")
+    console.log(`[v0] PDF size: ${(pdfBuffer.byteLength / 1024).toFixed(2)} KB`)
+    
+    console.log("[v0] Calling Gemini 2.5 Pro for maximum OCR accuracy...")
     const startTime = Date.now()
     
-    // Use GPT-4o to read the PDF document
+    // Use Gemini 2.5 Pro for best-in-class document OCR accuracy
     const { text: extractedText } = await generateText({
-      model: "openai/gpt-4o",
+      model: google("gemini-2.5-pro"),
       messages: [
         {
           role: "user",
-          content: `You are a document OCR assistant. I need you to extract ALL text from a PDF document located at this URL: ${pdfUrl}
+          content: [
+            {
+              type: "text",
+              text: `You are an expert document OCR assistant specializing in South African tender documents. Extract ALL text from this PDF document with perfect accuracy.
 
-IMPORTANT: 
-- Extract EVERY piece of text you can see, even if it's in an image or screenshot
-- Preserve the structure (headings, bullet points, tables)
-- Include all form field labels and any pre-filled values
-- Extract text from logos, headers, and footers if readable
-- For tables, preserve the table structure as best as possible
+CRITICAL INSTRUCTIONS:
+1. Extract EVERY piece of text, including:
+   - All headings, subheadings, and body text
+   - Table contents (preserve structure with | separators)
+   - Form field labels and any pre-filled values
+   - Text in images, screenshots, or scanned sections
+   - Headers, footers, and page numbers
+   - Fine print and footnotes
 
-Output ONLY the extracted text, nothing else. No explanations or commentary.`,
+2. Document Structure to Identify:
+   - SBD Forms (SBD 1, SBD 2, SBD 3.1, SBD 4, SBD 6.1, SBD 6.2, SBD 8, SBD 9)
+   - Bill of Quantities / Pricing Schedules / Annexures
+   - Terms of Reference / Specifications
+   - General Conditions of Contract (GCC)
+   - Special Conditions of Contract (SCC)
+
+3. For Tables and BOQ:
+   - Preserve column alignment
+   - Include all line items, quantities, units
+   - Keep item numbers and descriptions together
+
+4. Output Format:
+   - Pure text only, no markdown formatting
+   - Preserve paragraph breaks
+   - Use | for table column separators
+   - Indicate page breaks with "--- Page X ---"
+
+Extract the complete document text now:`,
+            },
+            {
+              type: "file",
+              data: pdfBase64,
+              mimeType: "application/pdf",
+            },
+          ],
         },
       ],
     })
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2)
     console.log("[v0] ----------------------------------------")
-    console.log(`[v0] Vision OCR completed in ${duration}s`)
+    console.log(`[v0] Gemini OCR completed in ${duration}s`)
     console.log(`[v0] Extracted text length: ${extractedText?.length || 0} characters`)
     console.log(`[v0] Word count: ${extractedText?.split(/\s+/).length || 0} words`)
     
     if (extractedText && extractedText.length > 0) {
-      console.log("[v0] -------- VISION OCR OUTPUT (first 2000 chars) --------")
+      console.log("[v0] -------- GEMINI OCR OUTPUT (first 2000 chars) --------")
       console.log(extractedText.substring(0, 2000))
       console.log("[v0] -------- END OF PREVIEW --------")
     } else {
-      console.log("[v0] WARNING: Vision OCR returned empty or null text")
+      console.log("[v0] WARNING: Gemini OCR returned empty or null text")
     }
     console.log("[v0] ================================================")
     
     return extractedText || ""
   } catch (error: any) {
-    console.error("[v0] ========== VISION OCR ERROR ==========")
+    console.error("[v0] ========== GEMINI OCR ERROR ==========")
     console.error("[v0] Error message:", error?.message || error)
     console.error("[v0] Full error:", JSON.stringify(error, null, 2))
     console.error("[v0] =======================================")
@@ -403,8 +446,10 @@ NOTE: This PDF does not have interactive form fields. Generate formFields based 
     try {
       const startTime = Date.now()
 
+      // Use Grok 3 (full model) for deep, thorough tender analysis
+      console.log("[v0] Using xAI Grok 3 (full) for deep tender analysis...")
       const { text: aiResponse } = await generateText({
-        model: "openai/gpt-4o",
+        model: xai("grok-3"),
         prompt: `${basePrompt}
 
 ${pdfFieldsInstruction}
