@@ -37,7 +37,7 @@ export class MunicipalScraper extends BaseScraper {
       const tenders: ScrapedTender[] = []
 
       // Municipal sites often use simple table or list formats
-      $("table tbody tr, div.tender-item, li.tender, div.notice").each((_: any, element: any) => {
+      $("table tbody tr, div.tender-item, li.tender, div.notice").each((_, element) => {
         const $el = $(element)
 
         const title = $el.find("td:first-child, .title, a, strong").first().text().trim()
@@ -78,7 +78,18 @@ export class MunicipalScraper extends BaseScraper {
     }
   }
 
-  // Use helper methods from BaseScraper: `cleanText`, `makeAbsoluteUrl`, `parseDate`
+  private cleanText(text: string): string {
+    return text.trim().replace(/\s+/g, " ")
+  }
+
+  private makeAbsoluteUrl(link: string, baseUrl: string): string {
+    if (link.startsWith("http")) return link
+    try {
+      return new URL(link, baseUrl).href
+    } catch {
+      return link
+    }
+  }
 
   private extractReference(text: string): string | null {
     const patterns = [

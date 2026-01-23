@@ -30,7 +30,6 @@ interface TenderContext {
   deadline?: string | null
   value?: string | null
   requirements?: any
-  analysis?: any
 }
 
 interface Message {

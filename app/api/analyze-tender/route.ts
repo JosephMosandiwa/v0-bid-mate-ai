@@ -1,14 +1,7 @@
-import generateTextViaProvider from "@/lib/providers"
+import { generateText } from "ai"
 import { extractText } from "unpdf"
 import { PDFDocument } from "pdf-lib"
 import { getAnalysisPrompt } from "@/lib/prompts"
-import {
-  extractJsonFromText,
-  stripCodeFences,
-  validateJsonAgainstSchema,
-  compactSchemaForPrompt,
-} from "@/lib/analysis/parser"
-import analysisSchema from "@/lib/analysis/schema"
 
 async function extractPdfFormFields(pdfUrl: string): Promise<{
   fields: Array<{
@@ -32,7 +25,7 @@ async function extractPdfFormFields(pdfUrl: string): Promise<{
     const fields = form.getFields()
     const pages = pdfDoc.getPages()
 
-    const extractedFields = fields.map((field: any) => {
+    const extractedFields = fields.map((field) => {
       const name = field.getName()
       const typeName = field.constructor.name
 
@@ -61,7 +54,7 @@ async function extractPdfFormFields(pdfUrl: string): Promise<{
       }
 
       try {
-          const widgets = field.acroField.getWidgets()
+        const widgets = field.acroField.getWidgets()
         if (widgets.length > 0) {
           const widget = widgets[0]
           const rect = widget.getRectangle()
@@ -216,17 +209,17 @@ This PDF document has ${pdfFormFields.length} interactive form fields. You MUST 
 
 Here are the actual PDF form field names and their types:
 ${pdfFormFields
-          .map((f) => {
-            let info = `- "${f.name}" (type: ${f.type})`
-            if (f.options && f.options.length > 0) {
-              info += ` [options: ${f.options.join(", ")}]`
-            }
-            if (f.position) {
-              info += ` [position: page ${f.position.page}, x ${f.position.x}, y ${f.position.y}, width ${f.position.width}, height ${f.position.height}]`
-            }
-            return info
-          })
-          .join("\n")}
+  .map((f) => {
+    let info = `- "${f.name}" (type: ${f.type})`
+    if (f.options && f.options.length > 0) {
+      info += ` [options: ${f.options.join(", ")}]`
+    }
+    if (f.position) {
+      info += ` [position: page ${f.position.page}, x ${f.position.x}, y ${f.position.y}, width ${f.position.width}, height ${f.position.height}]`
+    }
+    return info
+  })
+  .join("\n")}
 
 For each PDF field above, create a corresponding formField entry with:
 - id: Use the EXACT field name from the PDF (e.g., "${pdfFormFields[0]?.name || "Text1"}")
@@ -244,36 +237,13 @@ NOTE: This PDF does not have interactive form fields. Generate formFields based 
 `
     }
 
-    console.log("[v0] Step 3: Calling configured AI provider via wrapper for analysis...")
-
-    // Validate provider configuration early to give actionable errors
-    const hasOpenAI = !!process.env.OPENAI_API_KEY
-    const hasAzure = !!process.env.AZURE_OPENAI_ENDPOINT && !!process.env.AZURE_OPENAI_KEY && !!process.env.AZURE_OPENAI_DEPLOYMENT
-    const hasGemini = !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)
-    if (!hasOpenAI && !hasAzure && !hasGemini) {
-      console.error('[v0] No AI provider configured. Set OPENAI_API_KEY or GEMINI_API_KEY/GOOGLE_API_KEY or AZURE_OPENAI_* env vars.')
-      return Response.json(
-        {
-          error: 'No AI provider configured',
-          errorType: 'no_ai_provider_configured',
-          details:
-            'Set OPENAI_API_KEY or GEMINI_API_KEY/GOOGLE_API_KEY or AZURE_OPENAI_ENDPOINT+AZURE_OPENAI_KEY+AZURE_OPENAI_DEPLOYMENT in your environment.',
-        },
-        { status: 400 },
-      )
-    }
-
-    // Determine preferred provider for logging/response (actual selection may be influenced by provider wrapper)
-    const preferredProvider = hasGemini ? 'Gemini' : hasAzure ? 'Azure' : 'OpenAI'
-    const modelToUse = hasGemini ? 'gemini-1.5-flash' : hasAzure ? 'azure-deployment' : 'gpt-4o'
-    const promptLength = (basePrompt + '\n' + truncatedText).length
-    console.log(`[v0] Provider selection: ${preferredProvider}; model hint: ${modelToUse}; prompt length: ${promptLength} chars; truncated text length: ${truncatedText.length}`)
+    console.log("[v0] Step 3: Calling Vercel AI Gateway with generateText...")
 
     try {
       const startTime = Date.now()
 
-      const { text: aiResponse } = await generateTextViaProvider({
-        model: "gemini-2.5-flash",
+      const { text: aiResponse } = await generateText({
+        model: "openai/gpt-4o-mini",
         prompt: `${basePrompt}
 
 ${pdfFieldsInstruction}
@@ -384,79 +354,37 @@ Respond with ONLY the following JSON structure (no markdown, no code blocks, jus
       const endTime = Date.now()
       console.log("[v0] AI generation completed in", (endTime - startTime) / 1000, "seconds")
       console.log("[v0] Raw AI response length:", aiResponse.length, "characters")
-      console.log("[v0] AI response preview (first 200 chars):", aiResponse.substring(0, 200))
       console.log("[v0] First 500 chars of response:", aiResponse.substring(0, 500))
 
-      // Robust parsing + verification loop
-      let analysis: any = null
-      const diagnostics: any = { parseAttempts: 0, parseErrors: [], verifierAttempts: 0, providerRawPreview: aiResponse.substring(0, 2000) }
-
-      let responseText = aiResponse
-      const maxAttempts = 2
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        diagnostics.parseAttempts = attempt
-        try {
-          let cleaned = stripCodeFences(responseText)
-          const candidate = extractJsonFromText(cleaned)
-          if (!candidate) {
-            diagnostics.parseErrors.push("no_json_found")
-            throw new Error("No JSON object could be extracted from the model response")
-          }
-
-          let parsed: any
-          try {
-            parsed = JSON.parse(candidate)
-          } catch (e: any) {
-            diagnostics.parseErrors.push(`json_parse_error: ${e.message}`)
-            throw e
-          }
-
-          const validation = validateJsonAgainstSchema(parsed)
-          if (!validation.valid) {
-            diagnostics.parseErrors.push({ validation: validation.errors })
-            throw new Error("Schema validation failed")
-          }
-
-          // Success
-          analysis = parsed
-          break
-        } catch (parseErr: any) {
-          console.warn(`[v0] Parse attempt ${attempt} failed:`, parseErr?.message)
-
-          // Call verifier on last attempt only if we still can try
-          if (attempt < maxAttempts) {
-            diagnostics.verifierAttempts += 1
-            const verifierPrompt = `The assistant produced the following text when asked to return a single JSON object. Extract or correct the JSON so it matches this canonical schema and return RAW JSON only (no markdown, no explanation):\n\nSchema: ${compactSchemaForPrompt()}\n\nModel output:\n${responseText}`
-
-            try {
-              const { text: verifierResp } = await generateTextViaProvider({ model: "gemini-2.5-flash", prompt: verifierPrompt, maxTokens: 4000 })
-              responseText = verifierResp
-              console.log('[v0] Verifier response preview:', responseText.substring(0, 400))
-              continue
-            } catch (verr: any) {
-              diagnostics.parseErrors.push(`verifier_error: ${verr?.message}`)
-              break
-            }
-          }
+      let analysis
+      try {
+        let cleanedResponse = aiResponse.trim()
+        if (cleanedResponse.startsWith("```json")) {
+          cleanedResponse = cleanedResponse.slice(7)
         }
-      }
+        if (cleanedResponse.startsWith("```")) {
+          cleanedResponse = cleanedResponse.slice(3)
+        }
+        if (cleanedResponse.endsWith("```")) {
+          cleanedResponse = cleanedResponse.slice(0, -3)
+        }
+        cleanedResponse = cleanedResponse.trim()
 
-      if (!analysis) {
-        console.error('[v0] Failed to produce valid analysis after verifier attempts', diagnostics)
+        analysis = JSON.parse(cleanedResponse)
+        console.log("[v0] ✓ JSON parsed successfully")
+      } catch (parseError: any) {
+        console.error("[v0] JSON parse error:", parseError.message)
+        console.error("[v0] Response that failed to parse:", aiResponse.substring(0, 1000))
+
         return Response.json(
           {
-            error: "Failed to parse or validate AI response as JSON",
-            errorType: "json_parse_or_validation_error",
-            details: diagnostics,
+            error: "Failed to parse AI response as JSON",
+            errorType: "json_parse_error",
+            details: parseError.message,
           },
           { status: 500 },
         )
       }
-
-      // Attach provider info and diagnostics to analysis for frontend visibility (no secrets)
-      analysis.__meta = { provider: preferredProvider, model: modelToUse }
-      analysis.diagnostics = analysis.diagnostics || {}
-      analysis.diagnostics = { ...analysis.diagnostics, ...diagnostics }
 
       analysis.pdfFormFieldsDetected = hasPdfFormFields
       analysis.pdfFormFieldCount = pdfFormFields.length
@@ -564,19 +492,15 @@ Respond with ONLY the following JSON structure (no markdown, no code blocks, jus
     } catch (aiError: any) {
       console.error("[v0] AI GENERATION ERROR")
       console.error("[v0] Error message:", aiError?.message)
-      console.error("[v0] Error stack:", aiError?.stack?.substring?.(0, 1000))
+      console.error("[v0] Error stack:", aiError?.stack?.substring(0, 500))
 
       return Response.json(
         {
           error: "AI generation failed",
           errorType: "ai_generation_error",
           details: aiError?.message || "Unknown AI error",
-          // include truncated stack for local debugging
-          stack: (aiError?.stack || '').substring(0, 1000),
-          provider: preferredProvider,
-          model: modelToUse,
         },
-        { status: 502 },
+        { status: 500 },
       )
     }
   } catch (error: any) {

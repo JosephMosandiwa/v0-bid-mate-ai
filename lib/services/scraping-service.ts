@@ -103,7 +103,7 @@ export class ScrapingService {
               alert_type: "new_opportunity",
               title: `${opportunities.length} New Matching Tenders`,
               message: `We found ${opportunities.length} new tender${opportunities.length > 1 ? "s" : ""} that match your profile. Check them out!`,
-              priority: opportunities.some((o: any) => o.match_score >= 0.8) ? "high" : "medium",
+              priority: opportunities.some((o) => o.match_score >= 0.8) ? "high" : "medium",
               action_url: "/dashboard/strategist?tab=opportunities",
               action_label: "View Opportunities",
             })
@@ -280,7 +280,7 @@ export class ScrapingService {
 
       if (result.tender) {
         console.log(
-          `[v0] ScrapingService: ✓ Tender ACCEPTED - ${result.tender.title} (${result.validation?.grade}, ${(result.validation?.completeness ?? 0) * 100}% complete)`,
+          `[v0] ScrapingService: ✓ Tender ACCEPTED - ${result.tender.title} (${result.validation?.grade}, ${result.validation?.completeness * 100}% complete)`,
         )
         validatedTenders.push({
           source_id: sourceId,
@@ -313,43 +313,69 @@ export class ScrapingService {
 
     const savedTenders: any[] = []
 
+    let newCount = 0
+    let duplicateCount = 0
+    let errorCount = 0
+
     for (const tender of validatedTenders) {
       try {
-        const { data: existing } = await this.supabase
-          .from("scraped_tenders")
-          .select("id, title")
-          .eq("source_id", tender.source_id)
-          .ilike("title", tender.title)
-          .maybeSingle()
+        // Check for duplicate using tender_reference (unique ID from source) if available
+        // Otherwise fall back to exact title match within same source
+        let existing = null
+        
+        if (tender.tender_reference) {
+          const { data } = await this.supabase
+            .from("scraped_tenders")
+            .select("id, title")
+            .eq("source_id", tender.source_id)
+            .eq("tender_reference", tender.tender_reference)
+            .maybeSingle()
+          existing = data
+        }
+        
+        // If no tender_reference or not found, check by exact title
+        if (!existing && tender.title) {
+          const { data } = await this.supabase
+            .from("scraped_tenders")
+            .select("id, title")
+            .eq("source_id", tender.source_id)
+            .eq("title", tender.title)
+            .maybeSingle()
+          existing = data
+        }
 
         if (existing) {
-          console.log(`[v0] ScrapingService: Tender already exists (ID: ${existing.id}): ${tender.title}`)
-          savedTenders.push(existing)
+          console.log(`[v0] ScrapingService: Duplicate found (ID: ${existing.id}): ${tender.title?.substring(0, 50)}...`)
+          duplicateCount++
+          savedTenders.push({ ...existing, isDuplicate: true })
           continue
         }
 
+        // Insert new tender
         const { data, error } = await this.supabase.from("scraped_tenders").insert(tender).select().single()
 
         if (error) {
-          console.error(`[v0] ScrapingService: ❌ Error saving tender "${tender.title}":`, error.message)
-          console.error(`[v0] ScrapingService: Error details:`, JSON.stringify(error, null, 2))
+          console.error(`[v0] ScrapingService: Error saving "${tender.title?.substring(0, 50)}...":`, error.message)
+          errorCount++
           continue
         }
 
         if (data) {
-          console.log(`[v0] ScrapingService: ✓ Successfully saved new tender (ID: ${data.id}): ${tender.title}`)
-          savedTenders.push(data)
+          console.log(`[v0] ScrapingService: NEW tender saved (ID: ${data.id}): ${tender.title?.substring(0, 50)}...`)
+          newCount++
+          savedTenders.push({ ...data, isNew: true })
         }
       } catch (error) {
-        console.error(`[v0] ScrapingService: ❌ Exception saving tender "${tender.title}":`, error)
+        console.error(`[v0] ScrapingService: Exception saving tender:`, error)
+        errorCount++
       }
     }
 
     console.log(`\n[v0] ScrapingService: ==================== SAVE SUMMARY ====================`)
     console.log(`[v0] ScrapingService: Attempted to save: ${validatedTenders.length}`)
-    console.log(`[v0] ScrapingService: Successfully saved: ${savedTenders.filter((t) => !t.title).length} new tenders`)
-    console.log(`[v0] ScrapingService: Duplicates skipped: ${savedTenders.filter((t) => t.title).length}`)
-    console.log(`[v0] ScrapingService: Failed: ${validatedTenders.length - savedTenders.length}`)
+    console.log(`[v0] ScrapingService: NEW tenders saved: ${newCount}`)
+    console.log(`[v0] ScrapingService: Duplicates skipped: ${duplicateCount}`)
+    console.log(`[v0] ScrapingService: Errors: ${errorCount}`)
 
     return savedTenders
   }

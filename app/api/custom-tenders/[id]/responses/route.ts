@@ -1,10 +1,9 @@
 import { createClient } from "@/lib/supabase/server"
 import type { NextRequest } from "next/server"
 
-export async function GET(request: NextRequest, context: any) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const paramsObj = context?.params ? await context.params : context?.params ?? context
-    const { id } = paramsObj as { id?: string }
+    const { id } = params
     const supabase = await createClient()
 
     const {
@@ -40,10 +39,9 @@ export async function GET(request: NextRequest, context: any) {
   }
 }
 
-export async function POST(request: NextRequest, context: any) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const paramsObj = context?.params ? await context.params : context?.params ?? context
-    const { id } = paramsObj as { id?: string }
+    const { id } = params
     const { responses } = await request.json()
     const supabase = await createClient()
 

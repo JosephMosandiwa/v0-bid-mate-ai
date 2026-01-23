@@ -7,19 +7,11 @@ import { TenderService, validateTender, normalizeTenderData } from "../tenders"
 import { OpportunityService, CompetitivenessService, StrategistService } from "../strategist"
 import type { ScrapedTender } from "../../scrapers/base-scraper"
 import type { ParsedDocument } from "../documind/types"
-import { orchestrateTenderAnalysis } from "./tender-orchestrator"
-// Tender types: use existing TenderValidationResult from tenders; keep TenderData as any for now
-type TenderData = any
-import type { TenderValidationResult as ValidationResult } from "../tenders/types"
+import type { TenderData, ValidationResult } from "../tenders/types"
 
 export interface EngineOrchestrator {
   processScrapedTender(tender: ScrapedTender): Promise<ProcessedTenderResult>
-  processUploadedDocument(
-    file: ArrayBuffer,
-    mimeType: string,
-    userId: string,
-    options?: { tenderId?: string; documentUrl?: string },
-  ): Promise<ProcessedDocumentResult>
+  processUploadedDocument(file: ArrayBuffer, mimeType: string, userId: string): Promise<ProcessedDocumentResult>
   enrichTenderWithStrategy(
     tenderId: string,
     tenderType: "custom" | "scraped",
@@ -41,7 +33,6 @@ export interface ProcessedDocumentResult {
   document?: ParsedDocument
   extractedTenderData?: TenderData
   validation?: ValidationResult
-  fieldMappings?: Record<string, any>
   error?: string
 }
 
@@ -57,7 +48,17 @@ export interface StrategyEnrichmentResult {
  * Orchestrates all engines to work together seamlessly
  */
 export class EngineOrchestrator {
-  // Services expose static methods; call them directly (no instances required)
+  private tenderService: TenderService
+  private opportunityService: OpportunityService
+  private competitivenessService: CompetitivenessService
+  private strategistService: StrategistService
+
+  constructor() {
+    this.tenderService = new TenderService()
+    this.opportunityService = new OpportunityService()
+    this.competitivenessService = new CompetitivenessService()
+    this.strategistService = new StrategistService()
+  }
 
   /**
    * Process a scraped tender through all engines
@@ -72,13 +73,13 @@ export class EngineOrchestrator {
       const validation = validateTender(tender)
 
       console.log("[v0] Orchestrator: Validation result:", {
-        score: validation.score,
-        isValid: validation.isValid,
-        errors: validation.errors?.length || 0,
+        completeness: validation.completeness,
+        grade: validation.grade,
+        qualityScore: validation.quality_score,
       })
 
       console.log(
-        `[v0] Orchestrator: Processing tender - Score: ${validation.score}`,
+        `[v0] Orchestrator: Processing tender from official API - Grade: ${validation.grade}, Completeness: ${validation.completeness * 100}%`,
       )
 
       const normalizedTender = normalizeTenderData(tender)
@@ -116,9 +117,9 @@ export class EngineOrchestrator {
         console.log("[v0] Orchestrator: Step 3 - Analyzing opportunities for user...")
 
         try {
-          const opportunity = await OpportunityService.createOpportunity({
+          const opportunity = await this.opportunityService.createOpportunity({
             userId,
-            tenderId: tender.scraped_tender_id || tender.tender_reference || "",
+            tenderId: tender.id || "",
             tenderType: "scraped",
             tenderTitle: normalizedTender.title,
             tenderData: normalizedTender,
@@ -153,12 +154,7 @@ export class EngineOrchestrator {
    * Process an uploaded document through all engines
    * Flow: Documind (extract) -> Tenders Engine (validate/normalize) -> Strategist (analyze)
    */
-  async processUploadedDocument(
-    file: ArrayBuffer,
-    mimeType: string,
-    userId: string,
-    options?: { tenderId?: string; documentUrl?: string },
-  ): Promise<ProcessedDocumentResult> {
+  async processUploadedDocument(file: ArrayBuffer, mimeType: string, userId: string): Promise<ProcessedDocumentResult> {
     try {
       console.log("[v0] Orchestrator: Processing uploaded document")
 
@@ -183,7 +179,7 @@ export class EngineOrchestrator {
 
       // Step 2: Tenders Engine - Extract tender data from document
       console.log("[v0] Orchestrator: Step 2 - Extracting tender data from document...")
-      const extractedTender = await TenderService.extractTenderFromDocument(document)
+      const extractedTender = await this.tenderService.extractTenderFromDocument(document)
 
       if (!extractedTender) {
         console.warn("[v0] Orchestrator: Could not extract tender data from document")
@@ -200,38 +196,14 @@ export class EngineOrchestrator {
       const normalizedTender = normalizeTenderData(extractedTender)
 
       console.log(
-        `[v0] Orchestrator: Tender extracted - Score: ${validation.score}`,
+        `[v0] Orchestrator: Tender extracted - Grade: ${validation.grade}, Completeness: ${validation.completeness * 100}%`,
       )
-
-      // Map document-detected fields to schema for UI form rendering
-      let fieldMappings: Record<string, any> | undefined = undefined
-      try {
-        fieldMappings = TenderService.mapDocumentFieldsToSchema
-          ? TenderService.mapDocumentFieldsToSchema(document)
-          : undefined
-      } catch (mapErr) {
-        console.warn('[v0] Orchestrator: field mapping failed', mapErr)
-      }
-
-      // If a tenderId was provided, kick off full tender orchestration (persisted progress, phase1/2)
-      let orchestration: any = null
-      if (options?.tenderId) {
-        try {
-          console.log('[v0] Orchestrator: launching TenderOrchestrator for tenderId', options.tenderId)
-          orchestration = await orchestrateTenderAnalysis(options.tenderId, userId, options.documentUrl)
-          console.log('[v0] Orchestrator: TenderOrchestrator started', { orchestrationId: orchestration?.orchestrationId, status: orchestration?.status })
-        } catch (orchErr) {
-          console.warn('[v0] Orchestrator: failed to start TenderOrchestrator', orchErr)
-        }
-      }
 
       return {
         success: true,
         document,
         extractedTenderData: normalizedTender,
         validation,
-        fieldMappings,
-        orchestration,
       }
     } catch (error) {
       console.error("[v0] Orchestrator: Error processing uploaded document:", error)
@@ -256,7 +228,7 @@ export class EngineOrchestrator {
 
       // Step 1: Calculate competitiveness score
       console.log("[v0] Orchestrator: Step 1 - Calculating competitiveness...")
-      const competitiveness = await CompetitivenessService.calculateScore({
+      const competitiveness = await this.competitivenessService.calculateScore({
         userId,
         tenderId,
         tenderType,
@@ -264,7 +236,7 @@ export class EngineOrchestrator {
 
       // Step 2: Generate recommendations
       console.log("[v0] Orchestrator: Step 2 - Generating strategic recommendations...")
-      const recommendations = await StrategistService.generateRecommendations({
+      const recommendations = await this.strategistService.generateRecommendations({
         userId,
         tenderId,
         tenderType,
@@ -273,7 +245,7 @@ export class EngineOrchestrator {
 
       // Step 3: Find related opportunities
       console.log("[v0] Orchestrator: Step 3 - Finding related opportunities...")
-      const opportunities = await OpportunityService.findSimilar({
+      const opportunities = await this.opportunityService.findSimilar({
         userId,
         tenderId,
         tenderType,

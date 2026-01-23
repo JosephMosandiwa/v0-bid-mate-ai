@@ -30,7 +30,7 @@ export class PrivateSectorScraper extends BaseScraper {
       const tenders: ScrapedTender[] = []
 
       // Private sector often uses RFP, RFQ, RFI terminology
-      $("div.rfp, div.rfq, div.opportunity, table tbody tr, div.procurement").each((_: any, element: any) => {
+      $("div.rfp, div.rfq, div.opportunity, table tbody tr, div.procurement").each((_, element) => {
         const $el = $(element)
 
         const title = $el.find(".title, h3, h4, td:first-child, a").first().text().trim()
@@ -73,7 +73,18 @@ export class PrivateSectorScraper extends BaseScraper {
     }
   }
 
-  // Use helper methods from BaseScraper: `cleanText`, `makeAbsoluteUrl`, `parseDate`
+  private cleanText(text: string): string {
+    return text.trim().replace(/\s+/g, " ")
+  }
+
+  private makeAbsoluteUrl(link: string, baseUrl: string): string {
+    if (link.startsWith("http")) return link
+    try {
+      return new URL(link, baseUrl).href
+    } catch {
+      return link
+    }
+  }
 
   private extractTenderType(text: string): string {
     const upperText = text.toUpperCase()

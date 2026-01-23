@@ -152,7 +152,7 @@ export default function UsageMonitoringPage() {
               </div>
             }
           >
-            {(UsageStats as any)()}
+            <UsageStats />
           </Suspense>
 
           <div className="space-y-4">

@@ -1,10 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
-export async function GET(request: NextRequest, context: any) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const paramsObj = context?.params ? await context.params : context?.params ?? context
-    const { id } = paramsObj as { id?: string }
+    const { id } = await params
 
     console.log("[v0] Fetching scraped tender:", id)
 
@@ -30,7 +29,7 @@ export async function GET(request: NextRequest, context: any) {
     const { data: documents, error: docsError } = await supabase
       .from("tender_documents")
       .select("*")
-      .eq("tender_id", String(id))
+      .eq("tender_id", id.toString())
       .order("created_at", { ascending: false })
 
     if (docsError) {
@@ -40,7 +39,7 @@ export async function GET(request: NextRequest, context: any) {
     const { data: analysisData, error: analysisError } = await supabase
       .from("tender_analysis")
       .select("*")
-      .eq("tender_id", String(id))
+      .eq("tender_id", id.toString())
       .order("created_at", { ascending: false })
       .limit(1)
       .single()

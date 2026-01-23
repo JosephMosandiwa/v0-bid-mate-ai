@@ -2,7 +2,7 @@
 // AI STRATEGIST - BOQ PRICING ENDPOINT
 // ============================================
 
-import generateTextViaProvider from "@/lib/providers"
+import { generateText } from "ai"
 import { createClient } from "@/lib/supabase/server"
 import { StrategistService } from "@/lib/engines/strategist"
 
@@ -137,7 +137,7 @@ YOU MUST RETURN ONLY VALID JSON - NO MARKDOWN, NO EXPLANATIONS, JUST THE JSON OB
 REMEMBER: Return ONLY the JSON object, no markdown code blocks, no explanations.`
 
       console.log("[v0] Calling AI to generate BOQ...")
-      const { text } = await generateTextViaProvider({
+      const { text } = await generateText({
         model: "openai/gpt-4o",
         prompt,
         temperature: 0.7,
@@ -328,7 +328,7 @@ ${boq_items ? JSON.stringify(boq_items, null, 2) : "No BOQ items provided - prov
 
     console.log("[Strategist] BOQ analysis for THIS SPECIFIC tender:", finalTenderId, tenderData?.title)
 
-    const { text } = await generateTextViaProvider({
+    const { text } = await generateText({
       model: "openai/gpt-4-turbo",
       system: systemPrompt,
       prompt: userPrompt,

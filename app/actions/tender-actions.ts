@@ -2,11 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
-import { PinTenderOptions } from "@/lib/types"
-import { redirect } from "next/navigation"
-import { AnalyzedTender } from "@/lib/types/tender"
-import { orchestrateTenderAnalysis } from "@/lib/engines/orchestrator/tender-orchestrator"
-
+import { put } from "@vercel/blob"
 
 export interface TenderDocument {
   id?: string
@@ -190,37 +186,63 @@ export async function getUserTenders() {
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: "Not authenticated", tenders: [] }
 
-  // Fetch all tenders from user_tenders (both scraped and custom)
-  const { data: tenders, error } = await supabase
+  // Fetch scraped tenders from user_tenders
+  const { data: scrapedTenders, error: scrapedError } = await supabase
     .from("user_tenders")
     .select("*")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
 
-  if (error) {
-    console.error("[v0] Error fetching tenders:", error)
-    return { success: false, error: "Failed to fetch tenders", tenders: [] }
+  if (scrapedError) {
+    console.error("[v0] Error fetching scraped tenders:", scrapedError)
   }
 
-  // Normalize data for frontend
-  const normalizedTenders = (tenders || []).map((tender) => ({
-    id: tender.id,
-    tender_id: tender.tender_id || `custom-${tender.id}`, // Fallback for custom tenders
-    title: tender.title,
-    organization: tender.organization,
-    status: tender.status,
-    close_date: tender.close_date || tender.deadline, // Use deadline if close_date is null
-    value: tender.value,
-    category: tender.category,
-    is_pinned: tender.is_pinned || false,
-    is_favourited: tender.is_favourited || false,
-    is_wishlisted: tender.is_wishlisted || false,
-    created_at: tender.created_at,
-    tender_type: tender.tender_type || "scraped", // Default to scraped if null
-    location: tender.location,
-  }))
+  // Fetch custom tenders from user_custom_tenders
+  const { data: customTenders, error: customError } = await supabase
+    .from("user_custom_tenders")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
 
-  return { success: true, tenders: normalizedTenders }
+  if (customError) {
+    console.error("[v0] Error fetching custom tenders:", customError)
+  }
+
+  // Combine and normalize both types of tenders
+  const allTenders = [
+    ...(scrapedTenders || []).map((tender) => ({
+      id: tender.id,
+      tender_id: tender.tender_id,
+      title: tender.title,
+      organization: tender.organization,
+      status: tender.status,
+      close_date: tender.close_date,
+      value: tender.value,
+      category: tender.category,
+      is_pinned: tender.is_pinned || false,
+      is_favourited: tender.is_favourited || false,
+      is_wishlisted: tender.is_wishlisted || false,
+      created_at: tender.created_at,
+      tender_type: "scraped" as const,
+    })),
+    ...(customTenders || []).map((tender) => ({
+      id: tender.id,
+      tender_id: `custom-${tender.id}`,
+      title: tender.title,
+      organization: tender.organization,
+      status: tender.status,
+      close_date: tender.deadline,
+      value: tender.value,
+      category: tender.category,
+      is_pinned: tender.is_pinned || false,
+      is_favourited: tender.is_favourited || false,
+      is_wishlisted: tender.is_wishlisted || false,
+      created_at: tender.created_at,
+      tender_type: "custom" as const,
+    })),
+  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+  return { success: true, tenders: allTenders }
 }
 
 export async function deleteTender(tenderId: string, tenderType?: "scraped" | "custom") {
@@ -231,8 +253,27 @@ export async function deleteTender(tenderId: string, tenderType?: "scraped" | "c
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: "Not authenticated" }
 
-  // Simply delete from user_tenders table
-  const { error } = await supabase.from("user_tenders").delete().eq("id", tenderId).eq("user_id", user.id)
+  // Try to determine tender type if not provided
+  if (!tenderType) {
+    // Check if it exists in custom tenders first
+    const { data: customTender } = await supabase
+      .from("user_custom_tenders")
+      .select("id")
+      .eq("id", tenderId)
+      .eq("user_id", user.id)
+      .single()
+
+    if (customTender) {
+      tenderType = "custom"
+    } else {
+      tenderType = "scraped"
+    }
+  }
+
+  // Delete from the appropriate table
+  const tableName = tenderType === "custom" ? "user_custom_tenders" : "user_tenders"
+
+  const { error } = await supabase.from(tableName).delete().eq("id", tenderId).eq("user_id", user.id)
 
   if (error) {
     console.error("[v0] Error deleting tender:", error)
@@ -310,7 +351,6 @@ export async function saveScrapedTenderToUser(scrapedTender: {
       description: scrapedTender.description,
       url: scrapedTender.tender_url,
       status: "in-progress",
-      tender_type: "scraped",
     })
     .select()
     .single()
@@ -361,7 +401,7 @@ export async function createCustomTender(tenderData: {
     console.log("[v0] Creating custom tender record...")
 
     const { data: customTender, error: customTenderError } = await supabase
-      .from("user_tenders")
+      .from("user_custom_tenders")
       .insert({
         user_id: user.id,
         title: tenderData.title,
@@ -372,7 +412,6 @@ export async function createCustomTender(tenderData: {
         description: tenderData.description,
         location: tenderData.location,
         status: "in-progress",
-        tender_type: "custom",
       })
       .select()
       .single()
@@ -386,49 +425,55 @@ export async function createCustomTender(tenderData: {
 
     let documentSaved = false
     let documentError: string | null = null
-    let uploadData: any = null // Declare uploadData here to be accessible later
 
     if (tenderData.uploadedFile) {
-      console.log("[v0] Processing existing document...")
+      console.log("[v0] Uploading file to blob storage...")
+      console.log("[v0] File details:", {
+        name: tenderData.uploadedFile.name,
+        type: tenderData.uploadedFile.type,
+        size: tenderData.uploadedFile.size,
+      })
 
       try {
-        const file = tenderData.uploadedFile
-        const fileName = `${user.id}/${customTender.id}/${file.name}`
+        const blob = await put(
+          `custom-tenders/${customTender.id}/${tenderData.uploadedFile.name}`,
+          tenderData.uploadedFile,
+          {
+            access: "public",
+          },
+        )
 
-        const { data: uploaded, error: uploadError } = await supabase.storage
-          .from("tender-documents")
-          .upload(fileName, file)
-        uploadData = uploaded // Assign to the outer scope variable
+        console.log("[v0] File uploaded to blob:", blob.url)
 
-        if (uploadError) {
-          console.error("[v0] Error uploading file to Supabase:", uploadError)
-          documentError = "Failed to upload file to permanent storage"
-        } else {
-          const documentData = {
-            tender_id: customTender.id,
-            file_name: file.name,
-            file_type: file.type,
-            file_size: file.size,
-            storage_path: uploadData.path,
-            blob_url: uploadData.path,
-          }
-
-          const { data: insertedDoc, error: docError } = await supabase
-            .from("user_tender_documents")
-            .insert(documentData)
-            .select()
-            .single()
-
-          if (docError) {
-            console.error("[v0] Error saving doc ref:", docError)
-            documentError = "Failed to save document reference"
-          } else {
-            documentSaved = true
-          }
+        const documentData = {
+          tender_id: customTender.id,
+          file_name: tenderData.uploadedFile.name,
+          file_type: tenderData.uploadedFile.type,
+          file_size: tenderData.uploadedFile.size,
+          blob_url: blob.url,
+          storage_path: blob.url,
         }
-      } catch (err: any) {
-        console.error("[v0] Upload error:", err)
-        documentError = err.message
+
+        console.log("[v0] Inserting document with data:", JSON.stringify(documentData, null, 2))
+
+        const { data: insertedDoc, error: docError } = await supabase
+          .from("user_custom_tender_documents")
+          .insert(documentData)
+          .select()
+          .single()
+
+        if (docError) {
+          console.error("[v0] Error saving document reference:", docError)
+          console.error("[v0] Error code:", docError.code)
+          console.error("[v0] Error message:", docError.message)
+          documentError = `Failed to save document: ${docError.message} (Code: ${docError.code})`
+        } else {
+          console.log("[v0] Document reference saved successfully:", insertedDoc.id)
+          documentSaved = true
+        }
+      } catch (uploadError) {
+        console.error("[v0] Error uploading file:", uploadError)
+        documentError = `Failed to upload file: ${uploadError instanceof Error ? uploadError.message : "Unknown error"}`
       }
     } else {
       console.log("[v0] No file to upload")
@@ -436,7 +481,6 @@ export async function createCustomTender(tenderData: {
 
     let analysisSaved = false
     let analysisError: string | null = null
-    let orchestrationId: string | null = null
 
     if (tenderData.analysis) {
       console.log("[v0] Saving analysis data...")
@@ -449,57 +493,30 @@ export async function createCustomTender(tenderData: {
       console.log("[v0] Inserting analysis with tender_id:", customTender.id)
 
       const { data: insertedAnalysis, error: analysisErr } = await supabase
-        .from("user_tender_analysis") // Updated table name
+        .from("user_custom_tender_analysis")
         .insert(analysisData)
         .select()
         .single()
 
       if (analysisErr) {
         console.error("[v0] Error saving analysis:", analysisErr)
-        analysisError = analysisErr.message
+        analysisError = `Failed to save analysis: ${analysisErr.message} (Code: ${analysisErr.code})`
       } else {
-        console.log("[v0] Analysis saved successfully")
+        console.log("[v0] Analysis saved successfully:", insertedAnalysis.id)
         analysisSaved = true
-
-        // Trigger multi-engine orchestration for deep analysis
-        console.log("[v0] Triggering multi-engine orchestration...")
-        try {
-          // Get document URL if file was uploaded
-          let documentUrl: string | undefined
-          if (documentSaved) {
-            const { data: { publicUrl } } = supabase.storage
-              .from('tender-documents')
-              .getPublicUrl(uploadData?.path || '')
-            documentUrl = publicUrl
-          }
-
-          const orchestrationResult = await orchestrateTenderAnalysis(
-            customTender.id,
-            user.id,
-            documentUrl
-          )
-
-          orchestrationId = orchestrationResult.orchestrationId
-          console.log(`[v0] Orchestration started: ${orchestrationId}`)
-        } catch (orchError: any) {
-          console.error("[v0] Orchestration failed:", orchError)
-          // Don't fail the entire operation if orchestration fails, just log it
-        }
       }
     } else {
-      console.log("[v0] No analysis data provided")
+      console.log("[v0] No analysis to save")
     }
 
-    // Return success with tender ID and orchestration ID
-    console.log("[v0] Returning success for tender:", customTender.id)
-
+    console.log("[v0] Tender creation completed")
     revalidatePath("/dashboard/tenders")
     revalidatePath("/dashboard/custom-tenders")
 
     return {
       success: true,
+      data: customTender,
       tenderId: customTender.id,
-      orchestrationId,
       documentSaved,
       documentError,
       analysisSaved,
@@ -520,53 +537,71 @@ export async function getDashboardStats() {
   if (!user) return { success: false, error: "Not authenticated" }
 
   try {
-    // Get all tenders count for this user
-    const { count: totalTenders } = await supabase
+    // Get scraped tenders count
+    const { count: scrapedCount } = await supabase
       .from("user_tenders")
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id)
 
-    // Get analyzed tenders count (where we have analysis data)
-    // RLS ensures we only see our own analyses
+    // Get custom tenders count
+    const { count: customCount } = await supabase
+      .from("user_custom_tenders")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+
+    const totalTenders = (scrapedCount || 0) + (customCount || 0)
+
+    // Get analyzed tenders (custom tenders with analysis)
     const { count: analyzedCount } = await supabase
-      .from("user_tender_analysis")
+      .from("user_custom_tender_analysis")
       .select("tender_id", { count: "exact", head: true })
-    // Wait, user_tender_analysis doesn't have user_id in my migration?
-    // Let's check migration script...
-    // user_custom_tender_analysis didn't have user_id in the original schema I saw in 031?
-    // L131: WHERE id = tender_id AND user_id = auth.uid() -> checking parent tender.
-    // So user_tender_analysis table assumes linking to user_tenders.
-    // query:
-    // select count(*) from user_tender_analysis join user_tenders on ... where user_tenders.user_id = ...
+      .in(
+        "tender_id",
+        await supabase
+          .from("user_custom_tenders")
+          .select("id")
+          .eq("user_id", user.id)
+          .then((res) => res.data?.map((t) => t.id) || []),
+      )
 
-    // Alternative: Just query user_tenders where tender_type='custom' (proxy for analyzed?)
-    // Or just fetching recent activity from unified table.
+    // Get recent activity (last 5 custom tenders)
+    const { data: recentCustom } = await supabase
+      .from("user_custom_tenders")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(3)
 
-    // Get recent activity (last 5 tenders)
-    const { data: recentTenders } = await supabase
+    // Get recent scraped tenders
+    const { data: recentScraped } = await supabase
       .from("user_tenders")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(5)
+      .limit(2)
 
-    const recentActivity = (recentTenders || []).map((tender) => ({
-      id: tender.id,
-      title: tender.title,
-      organization: tender.organization,
-      type: tender.tender_type === "custom" ? ("analyzed" as const) : ("saved" as const),
-      created_at: tender.created_at,
-    }))
+    const recentActivity = [
+      ...(recentCustom || []).map((tender) => ({
+        id: tender.id,
+        title: tender.title,
+        organization: tender.organization,
+        type: "analyzed" as const,
+        created_at: tender.created_at,
+      })),
+      ...(recentScraped || []).map((tender) => ({
+        id: tender.id,
+        title: tender.title,
+        organization: tender.organization,
+        type: "saved" as const,
+        created_at: tender.created_at,
+      })),
+    ]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 5)
 
     // Get tenders closing soon (next 7 days)
     const sevenDaysFromNow = new Date()
     sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7)
-
-    // Check both close_date (scraped) and deadline (custom, if parsed?)
-    // For now, relying on close_date. My migration copied deadline to close_date if I recall?
-    // No, I copied close_date to close_date. Custom tenders might rely on 'deadline' text column.
-    // This is tricky for sorting. Ideally we parse deadline to close_date.
-    // Assuming close_date is populated for meaningful deadlines.
 
     const { data: closingSoon } = await supabase
       .from("user_tenders")
@@ -581,10 +616,8 @@ export async function getDashboardStats() {
     return {
       success: true,
       stats: {
-        totalTenders: totalTenders || 0,
-        analyzedTenders: analyzedCount || 0, // This might be inaccurate without join, but acceptable for now or I can do a join query if needed.
-        // Actually, let's try to get substantial analyzed count if possible.
-        // For now 0 is fine or just count custom tenders?
+        totalTenders,
+        analyzedTenders: analyzedCount || 0,
         closingSoon: closingSoon?.length || 0,
         recentActivity,
         upcomingDeadlines: closingSoon || [],

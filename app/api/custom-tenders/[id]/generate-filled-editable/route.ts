@@ -4,10 +4,9 @@ import { put } from "@vercel/blob"
 import type { NextRequest } from "next/server"
 import { findBestMatch } from "@/lib/utils"
 
-export async function POST(request: NextRequest, context: any) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const paramsObj = context?.params ? await context.params : context?.params ?? context
-    const { id } = paramsObj as { id?: string }
+    const { id } = params
     const body = await request.json()
     const { documentId, saveToBlob = true } = body
 
@@ -548,7 +547,7 @@ export async function POST(request: NextRequest, context: any) {
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
         const filename = `filled_${tenderData.title?.replace(/[^a-z0-9]/gi, "_").toLowerCase() || "tender"}_${timestamp}.pdf`
 
-        const blob = await put(filename, filledPdfBytes as any, {
+        const blob = await put(filename, filledPdfBytes, {
           access: "public",
           contentType: "application/pdf",
         })
@@ -570,7 +569,7 @@ export async function POST(request: NextRequest, context: any) {
       }
     }
 
-    return new Response(filledPdfBytes as unknown as BodyInit, {
+    return new Response(filledPdfBytes, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="filled_tender_${tenderData.title?.replace(/[^a-z0-9]/gi, "_").toLowerCase() || "document"}.pdf"`,

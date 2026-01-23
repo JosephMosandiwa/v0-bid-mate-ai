@@ -4,10 +4,9 @@ import type { NextRequest } from "next/server"
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-export async function POST(request: NextRequest, context: any) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const paramsObj = context?.params ? await context.params : context?.params ?? context
-    const { id } = paramsObj as { id?: string }
+    const { id } = params
     const { documentId } = await request.json()
 
     console.log("[v0] Filling PDF for tender:", id, "document:", documentId)
@@ -124,7 +123,7 @@ export async function POST(request: NextRequest, context: any) {
 
     const filledPdfBytes = await pdfDoc.save()
 
-    return new Response(filledPdfBytes as unknown as BodyInit, {
+    return new Response(filledPdfBytes, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="filled_${docData.file_name}"`,

@@ -99,8 +99,7 @@ interface TenderAnalysis {
   }[]
 }
 
-function ScrapedTenderDetailClient(props: any) {
-  const { id } = props
+function ScrapedTenderDetailClient({ id }: { id: string }) {
   const [tender, setTender] = useState<any>(null)
   const [documents, setDocuments] = useState<any[]>([])
   const [analysis, setAnalysis] = useState<any>(null)
@@ -283,7 +282,7 @@ function ScrapedTenderDetailClient(props: any) {
           )}
         </div>
 
-        <TenderProgressTracker {...({ tenderId: tender.id, tenderType: "scraped", progress: formProgress } as any)} />
+        <TenderProgressTracker tenderId={tender.id} tenderType="scraped" progress={formProgress} />
 
         <div className="grid gap-3 md:grid-cols-4">
           <Card>
@@ -489,7 +488,7 @@ function ScrapedTenderDetailClient(props: any) {
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-2">
-                            {analysis.actionableTasks.slice(0, 5).map((task: any, idx: number) => (
+                            {analysis.actionableTasks.slice(0, 5).map((task, idx) => (
                               <div key={idx} className="flex items-start gap-3 p-3 rounded-lg border">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
@@ -529,7 +528,7 @@ function ScrapedTenderDetailClient(props: any) {
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-2">
-                            {analysis.deadlines.map((deadline: any, idx: number) => (
+                            {analysis.deadlines.map((deadline, idx) => (
                               <div key={idx} className="flex items-start gap-2">
                                 <Clock className="h-4 w-4 text-orange-500 mt-0.5" />
                                 <span className="text-sm">{deadline}</span>
@@ -547,7 +546,7 @@ function ScrapedTenderDetailClient(props: any) {
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-2">
-                            {analysis.recommendations.map((rec: any, idx: number) => (
+                            {analysis.recommendations.map((rec, idx) => (
                               <div key={idx} className="flex items-start gap-2">
                                 <Sparkles className="h-4 w-4 text-primary mt-0.5" />
                                 <span className="text-sm">{rec}</span>
@@ -607,7 +606,7 @@ function ScrapedTenderDetailClient(props: any) {
                         </CardHeader>
                         <CardContent>
                           <ul className="space-y-3">
-                            {analysis.keyRequirements.map((req: any, idx: number) => (
+                            {analysis.keyRequirements.map((req, idx) => (
                               <li key={idx} className="flex items-start gap-2 pl-6 relative">
                                 <span className="absolute left-0 top-1 w-4 h-4 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-xs font-medium text-green-700 dark:text-green-300">
                                   {idx + 1}
@@ -630,7 +629,7 @@ function ScrapedTenderDetailClient(props: any) {
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-2">
-                            {analysis.complianceChecklist.map((item: any, idx: number) => (
+                            {analysis.complianceChecklist.map((item, idx) => (
                               <div key={idx} className="flex items-start gap-2 p-2 rounded hover:bg-accent">
                                 <div className="mt-0.5 h-4 w-4 rounded border-2 border-muted-foreground" />
                                 <span className="text-sm">{item}</span>
@@ -652,7 +651,7 @@ function ScrapedTenderDetailClient(props: any) {
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-2">
-                            {analysis.evaluationCriteria.map((criterion: any, idx: number) => (
+                            {analysis.evaluationCriteria.map((criterion, idx) => (
                               <div key={idx} className="flex items-start gap-2">
                                 <Calculator className="h-4 w-4 text-blue-500 mt-0.5" />
                                 <span className="text-sm">{criterion}</span>
@@ -690,7 +689,7 @@ function ScrapedTenderDetailClient(props: any) {
                       )}
                     </div>
                     <div className="grid gap-3">
-                      {documents.map((doc: any) => (
+                      {documents.map((doc) => (
                         <Card key={doc.id} className="hover:shadow-md transition-shadow">
                           <CardHeader className="pb-3">
                             <div className="flex items-start justify-between gap-4">

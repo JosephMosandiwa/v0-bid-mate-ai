@@ -13,7 +13,7 @@ async function getTesseract() {
   if (!TesseractModule) {
     TesseractModule = await import("tesseract.js")
   }
-  return (TesseractModule as any)
+  return TesseractModule.default
 }
 
 export interface OCRResult {
@@ -59,10 +59,10 @@ export async function performOCR(
     const blocks: OCRBlock[] = []
 
     // Process paragraphs/blocks
-    result.data.paragraphs?.forEach((para: any) => {
+    result.data.paragraphs?.forEach((para) => {
       const words: WordInfo[] = []
 
-      para.words?.forEach((word: any) => {
+      para.words?.forEach((word) => {
         words.push({
           text: word.text,
           position: {
@@ -230,20 +230,26 @@ export async function renderPageToImage(
   pdfPage: any, // pdfjsLib.PDFPageProxy
   scale = 2.0,
 ): Promise<Buffer> {
-  // Attempt server-side rendering via page-renderer utility which may use puppeteer
-  try {
-    const { renderPdfPageToPng } = await import("../utils/page-renderer")
-    // If pdfPage is a proxy, we cannot use it directly; expect caller to provide raw pdf bytes
-    if ((pdfPage as any)?.rawPdf && typeof (pdfPage as any).pageNumber === "number") {
-      const png = await renderPdfPageToPng((pdfPage as any).rawPdf, (pdfPage as any).pageNumber, scale)
-      return png as Buffer
-    }
+  // This requires a canvas implementation
+  // In Node.js, we'd use node-canvas or similar
+  // For now, return a placeholder - actual implementation depends on environment
 
-    throw new Error("renderPageToImage: pdfPage does not contain rawPdf/pageNumber for server rendering")
-  } catch (err) {
-    console.warn("renderPageToImage: server rendering not available", err)
-    throw err
-  }
+  const viewport = pdfPage.getViewport({ scale })
+
+  // In browser, we could use canvas:
+  // const canvas = document.createElement('canvas')
+  // canvas.width = viewport.width
+  // canvas.height = viewport.height
+  // const context = canvas.getContext('2d')
+  // await pdfPage.render({ canvasContext: context, viewport }).promise
+  // return canvas.toDataURL('image/png')
+
+  // In Node.js with node-canvas:
+  // const { createCanvas } = require('canvas')
+  // const canvas = createCanvas(viewport.width, viewport.height)
+  // ...
+
+  throw new Error("Page rendering requires canvas implementation - use in browser or with node-canvas")
 }
 
 /**

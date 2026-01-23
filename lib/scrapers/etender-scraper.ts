@@ -31,7 +31,7 @@ export class ETenderScraper extends BaseScraper {
       const tenders: ScrapedTender[] = []
 
       // eTenders uses a table structure with specific classes
-      $("table.table tbody tr, div.tender-row, div.opportunity-item").each((_: any, element: any) => {
+      $("table.table tbody tr, div.tender-row, div.opportunity-item").each((_, element) => {
         const $el = $(element)
 
         // Extract tender information
@@ -75,5 +75,26 @@ export class ETenderScraper extends BaseScraper {
     }
   }
 
-  // Use helper methods from BaseScraper: `cleanText`, `makeAbsoluteUrl`, `parseDate`
+  private cleanText(text: string): string {
+    return text.trim().replace(/\s+/g, " ")
+  }
+
+  private makeAbsoluteUrl(link: string, baseUrl: string): string {
+    if (link.startsWith("http")) return link
+    if (link.startsWith("/")) return `${baseUrl}${link}`
+    return `${baseUrl}/${link}`
+  }
+
+  private parseDate(dateStr: string): string {
+    try {
+      // eTenders typically uses DD/MM/YYYY or YYYY-MM-DD format
+      const date = new Date(dateStr)
+      if (!isNaN(date.getTime())) {
+        return date.toISOString()
+      }
+    } catch (error) {
+      console.error(`[v0] ETenderScraper: Error parsing date: ${dateStr}`)
+    }
+    return new Date().toISOString()
+  }
 }

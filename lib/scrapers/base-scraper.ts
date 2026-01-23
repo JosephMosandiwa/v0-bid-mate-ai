@@ -31,14 +31,6 @@ export interface ScrapedTender {
   compulsory_briefing?: string
   tender_type?: string
   procurement_category?: string
-  // Additional common scraper-provided fields
-  categories?: string[]
-  source_level?: string
-  source_province?: string
-  source_municipality?: string
-  contact_name?: string
-  source?: string
-  scraped_tender_id?: string | null
 }
 
 export interface ScraperResult {

@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-// Progress UI removed: using uploading state
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Upload, Loader2, CheckCircle2, AlertCircle, FileText } from "lucide-react"
@@ -33,7 +32,6 @@ export function UploadCustomTenderDialog({ trigger }: UploadCustomTenderDialogPr
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  
   const router = useRouter()
   const { toast } = useToast()
 
@@ -96,7 +94,7 @@ export function UploadCustomTenderDialog({ trigger }: UploadCustomTenderDialogPr
       // Redirect to the custom tender detail page after a short delay
       setTimeout(() => {
         setOpen(false)
-        router.push(`/dashboard/tenders/${result.tender.id}`)
+        router.push(`/dashboard/custom-tenders/${result.tender.id}`)
       }, 1500)
     } catch (err: any) {
       console.error("[v0] Upload error:", err)
@@ -166,8 +164,6 @@ export function UploadCustomTenderDialog({ trigger }: UploadCustomTenderDialogPr
               )}
             </div>
           </div>
-
-          {/* simulated upload progress removed; using uploading state for UX */}
 
           {/* Title */}
           <div className="space-y-2">

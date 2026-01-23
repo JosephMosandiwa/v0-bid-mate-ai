@@ -38,7 +38,4 @@ export interface TenderValidationResult {
   }>
   missingFields: string[]
   warnings: string[]
-  // Optional legacy/consumer-friendly properties
-  grade?: string
-  completeness?: number
 }

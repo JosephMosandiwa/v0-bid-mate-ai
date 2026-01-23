@@ -35,8 +35,6 @@ export interface PDFParseResult {
   formFields: FormField[]
   rawText: string
   isScanned: boolean
-  // raw PDF bytes for optional server-side rendering/OCR
-  rawPdf?: Uint8Array
 }
 
 export interface PDFParseOptions {
@@ -132,7 +130,6 @@ export async function parsePDF(data: ArrayBuffer | Uint8Array, options: PDFParse
     formFields,
     rawText: fullText,
     isScanned,
-    rawPdf: uint8Data,
   }
 }
 
@@ -362,7 +359,7 @@ async function extractFormFields(data: Uint8Array): Promise<FormField[]> {
 
       const widget = widgets[0]
       const rect = widget.getRectangle()
-      const page = pdfDoc.getPages().findIndex((p: any) => {
+      const page = pdfDoc.getPages().findIndex((p) => {
         const pageRef = p.ref
         const widgetPage = widget.P()
         return widgetPage && pageRef.toString() === widgetPage.toString()

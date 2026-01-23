@@ -35,34 +35,34 @@ LAYER 1: CORE PROCESSING ENGINES
 
 ### Core Processing Engines
 
-| Engine     | Purpose                                           | Status |
-| ---------- | ------------------------------------------------- | ------ |
-| DocuMind   | Parse documents, extract text/structure/positions | 30%    |
-| FormFlow   | Detect fields, match templates, fill forms        | 20%    |
-| TableSense | Extract and understand tables                     | 0%     |
+| Engine | Purpose | Status |
+|--------|---------|--------|
+| DocuMind | Parse documents, extract text/structure/positions | 30% |
+| FormFlow | Detect fields, match templates, fill forms | 20% |
+| TableSense | Extract and understand tables | 0% |
 
 ### Intelligence Engines
 
-| Engine         | Purpose                             | Status |
-| -------------- | ----------------------------------- | ------ |
-| ThinkEngine    | AI orchestration, analysis, NLU     | 40%    |
-| KnowledgeVault | Domain knowledge, rules, compliance | 10%    |
-| PriceGraph     | Pricing data, market intelligence   | 0%     |
+| Engine | Purpose | Status |
+|--------|---------|--------|
+| ThinkEngine | AI orchestration, analysis, NLU | 40% |
+| KnowledgeVault | Domain knowledge, rules, compliance | 10% |
+| PriceGraph | Pricing data, market intelligence | 0% |
 
 ### Data Engines
 
-| Engine      | Purpose                           | Status |
-| ----------- | --------------------------------- | ------ |
-| DataHarvest | Scrape, aggregate, normalize data | 60%    |
-| LearnLoop   | Collect feedback, train models    | 0%     |
+| Engine | Purpose | Status |
+|--------|---------|--------|
+| DataHarvest | Scrape, aggregate, normalize data | 60% |
+| LearnLoop | Collect feedback, train models | 0% |
 
 ### Platform Services
 
-| Service          | Purpose                    | Status |
-| ---------------- | -------------------------- | ------ |
-| EngineHub        | API gateway, auth, routing | 0%     |
-| Developer Portal | Docs, SDKs, onboarding     | 0%     |
-| Admin Console    | Monitoring, analytics      | 0%     |
+| Service | Purpose | Status |
+|---------|---------|--------|
+| EngineHub | API gateway, auth, routing | 0% |
+| Developer Portal | Docs, SDKs, onboarding | 0% |
+| Admin Console | Monitoring, analytics | 0% |
 
 ---
 
@@ -216,9 +216,7 @@ All engines are accessed via EngineHub API Gateway.
 Base URL: `https://api.engines.bidmate.ai`
 
 ### Authentication
-
 All requests require API key in header:
-
 ```
 Authorization: Bearer {api_key}
 X-App-ID: {app_id}
@@ -227,7 +225,6 @@ X-App-ID: {app_id}
 ### Endpoints by Engine
 
 #### DocuMind
-
 ```
 POST   /documind/parse
 GET    /documind/document/{id}
@@ -237,7 +234,6 @@ GET    /documind/health
 ```
 
 #### FormFlow
-
 ```
 POST   /formflow/detect
 POST   /formflow/fill
@@ -247,7 +243,6 @@ GET    /formflow/health
 ```
 
 #### TableSense
-
 ```
 POST   /tablesense/extract
 GET    /tablesense/table/{id}
@@ -255,7 +250,6 @@ GET    /tablesense/health
 ```
 
 #### ThinkEngine
-
 ```
 POST   /think/analyze
 POST   /think/chat
@@ -263,7 +257,6 @@ GET    /think/health
 ```
 
 #### DataHarvest
-
 ```
 GET    /harvest/tenders
 GET    /harvest/tender/{id}
@@ -272,7 +265,6 @@ GET    /harvest/health
 ```
 
 #### LearnLoop
-
 ```
 POST   /learn/feedback
 GET    /learn/metrics
@@ -286,7 +278,6 @@ GET    /learn/health
 Each engine has isolated tables with clear ownership.
 
 ### DocuMind Tables
-
 - documents
 - document_pages
 - document_fields
@@ -294,7 +285,6 @@ Each engine has isolated tables with clear ownership.
 - template_matches
 
 ### FormFlow Tables
-
 - form_definitions
 - form_fields
 - field_mappings
@@ -302,27 +292,23 @@ Each engine has isolated tables with clear ownership.
 - fill_values
 
 ### TableSense Tables
-
 - extracted_tables
 - table_rows
 - table_columns
 - table_templates
 
 ### ThinkEngine Tables
-
 - analysis_results
 - prompts
 - conversations
 
 ### DataHarvest Tables
-
 - sources
 - scraped_tenders
 - normalized_tenders
 - scrape_jobs
 
 ### LearnLoop Tables
-
 - feedback_events
 - corrections
 - model_versions
@@ -333,42 +319,40 @@ Each engine has isolated tables with clear ownership.
 
 ## Technology Stack (All Engines)
 
-| Layer      | Technology                                  |
-| ---------- | ------------------------------------------- |
-| Runtime    | Node.js                                     |
-| Framework  | Next.js API Routes / Standalone             |
-| Database   | PostgreSQL (Supabase)                       |
-| Cache      | Redis (Upstash)                             |
-| Queue      | QStash (Upstash)                            |
-| Storage    | Vercel Blob                                 |
-| AI         | AI provider (OpenAI / Azure OpenAI / other) |
-| Monitoring | Vercel Analytics                            |
+| Layer | Technology |
+|-------|------------|
+| Runtime | Node.js |
+| Framework | Next.js API Routes / Standalone |
+| Database | PostgreSQL (Supabase) |
+| Cache | Redis (Upstash) |
+| Queue | QStash (Upstash) |
+| Storage | Vercel Blob |
+| AI | Vercel AI Gateway |
+| Monitoring | Vercel Analytics |
 
 ---
 
 ## Implementation Priority
 
-| Order | Engine         | Rationale                             |
-| ----- | -------------- | ------------------------------------- |
-| 1     | DocuMind       | Foundation - all engines depend on it |
-| 2     | FormFlow       | Core feature - currently broken       |
-| 3     | TableSense     | Enables BOQ feature                   |
-| 4     | KnowledgeVault | Improves analysis quality             |
-| 5     | PriceGraph     | Enables pricing intelligence          |
-| 6     | LearnLoop      | Needs data from other engines         |
-| 7     | EngineHub      | Decouple once engines stable          |
+| Order | Engine | Rationale |
+|-------|--------|-----------|
+| 1 | DocuMind | Foundation - all engines depend on it |
+| 2 | FormFlow | Core feature - currently broken |
+| 3 | TableSense | Enables BOQ feature |
+| 4 | KnowledgeVault | Improves analysis quality |
+| 5 | PriceGraph | Enables pricing intelligence |
+| 6 | LearnLoop | Needs data from other engines |
+| 7 | EngineHub | Decouple once engines stable |
 
 ---
 
 ## Cost Summary (Monthly)
 
 ### Development Phase
-
 - Total: ~$100/month
 - OCR, storage, cache, queue
 
 ### Production (10K docs/month)
-
 - DocuMind: ~$85
 - FormFlow: ~$50
 - TableSense: ~$40
@@ -378,5 +362,4 @@ Each engine has isolated tables with clear ownership.
 - **Total: ~$455/month**
 
 ### Scale (100K docs/month)
-
 - **Total: ~$2,000/month**

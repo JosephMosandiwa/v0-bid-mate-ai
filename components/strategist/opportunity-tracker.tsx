@@ -26,8 +26,8 @@ import { useStrategistOpportunities } from "@/hooks/use-strategist"
 
 interface Opportunity {
   id: string
-  scraped_tender_id?: string | null
-  custom_tender_id?: string | null
+  scraped_tender_id?: string
+  custom_tender_id?: string
   match_score: number
   match_reasons: string[]
   opportunity_type: "low_risk" | "high_margin" | "quick_win" | "strategic" | "growth"
@@ -35,14 +35,14 @@ interface Opportunity {
   is_saved: boolean
   is_dismissed: boolean
   ai_insights: any
-  estimated_margin?: number | null
-  estimated_effort?: string | null
-    tender?: {
+  estimated_margin?: number
+  estimated_effort?: string
+  tender?: {
     id: string
     title: string
     organization: string
-    close_date?: string | null
-    estimated_value?: string | null
+    closing_date: string
+    estimated_value?: string
   }
 }
 
@@ -58,7 +58,7 @@ export function OpportunityTracker() {
   const { opportunities, isLoading, refresh, saveOpportunity, dismissOpportunity, markViewed } =
     useStrategistOpportunities()
 
-  const [activeTab, setActiveTab] = useState<string>("all")
+  const [activeTab, setActiveTab] = useState("all")
 
   const filteredOpportunities = opportunities.filter((opp) => {
     if (activeTab === "all") return !opp.is_dismissed
@@ -95,7 +95,7 @@ export function OpportunityTracker() {
             <CardTitle className="text-lg">Opportunity Tracker</CardTitle>
             <CardDescription>Tenders matched to your profile</CardDescription>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => refresh?.()} disabled={isLoading}>
+          <Button variant="ghost" size="icon" onClick={refresh} disabled={isLoading}>
             <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
           </Button>
         </div>
@@ -168,10 +168,10 @@ export function OpportunityTracker() {
                                 <Building2 className="h-3 w-3" />
                                 {opportunity.tender?.organization || "Unknown"}
                               </span>
-                              {opportunity.tender?.close_date && (
+                              {opportunity.tender?.closing_date && (
                                 <span className="flex items-center gap-1">
                                   <Calendar className="h-3 w-3" />
-                                  {new Date(opportunity.tender.close_date as string).toLocaleDateString()}
+                                  {new Date(opportunity.tender.closing_date).toLocaleDateString()}
                                 </span>
                               )}
                             </div>

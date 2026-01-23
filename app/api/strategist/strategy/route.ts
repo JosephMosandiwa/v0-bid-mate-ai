@@ -2,7 +2,7 @@
 // AI STRATEGIST - STRATEGY GENERATION ENDPOINT
 // ============================================
 
-import generateTextViaProvider from "@/lib/providers"
+import { generateText } from "ai"
 import { createClient } from "@/lib/supabase/server"
 import { StrategistService, buildStrategyGenerationPrompt } from "@/lib/engines/strategist"
 import type { StrategyType, StrategyContent } from "@/lib/engines/strategist"
@@ -71,7 +71,7 @@ Remember: You are NOT creating a general strategy template. You are creating a s
 
     console.log("[Strategist] Generating tender-specific strategy with AI...")
 
-    const { text: aiResponse } = await generateTextViaProvider({
+    const { text: aiResponse } = await generateText({
       model: "openai/gpt-4-turbo",
       prompt: enhancedPrompt,
       temperature: 0.6,

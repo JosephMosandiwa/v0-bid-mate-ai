@@ -40,20 +40,21 @@ export function useStrategistChat(options?: {
       tender_id: options?.tenderId,
       include_context: true,
     },
-    onResponse: (response: any) => {
+    onResponse: (response) => {
       const newConversationId = response.headers.get("X-Conversation-Id")
       if (newConversationId && newConversationId !== conversationId) {
         setConversationId(newConversationId)
       }
     },
-    onError: (error: any) => {
+    onError: (error) => {
       console.error("[useStrategistChat] Error:", error)
     },
-  } as any)
+  })
 
-  // Return a relaxed-any shape to satisfy various UI consumers expecting
-  // `messages`, `input`, `handleInputChange`, `handleSubmit`, `isLoading`, `setInput`, etc.
-  return ({ ...(chat as any), conversationId } as any)
+  return {
+    ...chat,
+    conversationId,
+  }
 }
 
 /**

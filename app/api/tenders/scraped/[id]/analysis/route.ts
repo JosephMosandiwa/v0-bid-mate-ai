@@ -3,10 +3,9 @@ import { type NextRequest, NextResponse } from "next/server"
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-export async function GET(request: NextRequest, context: any) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const paramsObj = context?.params ? await context.params : context?.params ?? context
-    const tenderId = (paramsObj as { id?: string }).id
+    const tenderId = params.id
 
     console.log("[v0] Fetching analysis for tender:", tenderId)
 
@@ -44,10 +43,9 @@ export async function GET(request: NextRequest, context: any) {
   }
 }
 
-export async function POST(request: NextRequest, context: any) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const paramsObj = context?.params ? await context.params : context?.params ?? context
-    const tenderId = (paramsObj as { id?: string }).id
+    const tenderId = params.id
     const { analysis } = await request.json()
 
     console.log("[v0] Saving analysis for tender:", tenderId)

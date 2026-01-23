@@ -10,10 +10,9 @@ const openai = new OpenAI({
 // Instead, we'll require that the tender already has extracted_text in the database
 // or we'll skip the AI analysis and just add fields at standard positions
 
-export async function POST(request: NextRequest, context: any) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const paramsObj = context?.params ? await context.params : context?.params ?? context
-    const { id } = paramsObj as { id?: string }
+    const { id } = params
     const body = await request.json()
     const { documentId } = body
 
@@ -166,7 +165,7 @@ export async function POST(request: NextRequest, context: any) {
       console.log("[v0] Filled", fieldsFilled, "out of", existingFields.length, "fields")
 
       const filledPdfBytes = await pdfDoc.save()
-      return new Response(filledPdfBytes as unknown as BodyInit, {
+      return new Response(filledPdfBytes, {
         headers: {
           "Content-Type": "application/pdf",
           "Content-Disposition": `attachment; filename="editable_tender_${tenderData.title?.replace(/[^a-z0-9]/gi, "_").toLowerCase() || "document"}.pdf"`,
@@ -220,7 +219,7 @@ export async function POST(request: NextRequest, context: any) {
         currentY = currentPage.getSize().height - 100
       }
 
-      console.log("[v0] Adding section:", section, "with", (fields as any).length, "fields")
+      console.log("[v0] Adding section:", section, "with", fields.length, "fields")
 
       // Draw section header
       currentPage.drawText(section, {
@@ -231,7 +230,7 @@ export async function POST(request: NextRequest, context: any) {
       })
       currentY -= lineHeight
 
-      for (const formField of (fields as any[])) {
+      for (const formField of fields) {
         if (currentY < 100) {
           // Need a new page
           const newPage = pdfDoc.addPage()
@@ -289,7 +288,7 @@ export async function POST(request: NextRequest, context: any) {
 
     const editablePdfBytes = await pdfDoc.save()
 
-    return new Response(editablePdfBytes as unknown as BodyInit, {
+    return new Response(editablePdfBytes, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="editable_tender_${tenderData.title?.replace(/[^a-z0-9]/gi, "_").toLowerCase() || "document"}.pdf"`,

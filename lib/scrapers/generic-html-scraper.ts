@@ -133,7 +133,7 @@ export class GenericHtmlScraper extends BaseScraper {
       const elements = $(selector)
       if (elements.length > 0) {
         console.log(`[v0] GenericHtmlScraper: Found ${elements.length} elements using selector: ${selector}`)
-        return elements.toArray().map((el: any) => $(el))
+        return elements.toArray().map((el) => $(el))
       } else {
         console.log(`[v0] GenericHtmlScraper: No elements found with selector: ${selector}`)
       }
@@ -326,7 +326,20 @@ export class GenericHtmlScraper extends BaseScraper {
     return null
   }
 
-  // Use helper methods from BaseScraper: `cleanText`, `makeAbsoluteUrl`, `parseDate`
+  private cleanText(text: string): string {
+    return text.trim().replace(/\s+/g, " ")
+  }
+
+  private makeAbsoluteUrl(link: string, baseUrl: string): string {
+    if (link.startsWith("http")) {
+      return link
+    }
+    return new URL(link, baseUrl).href
+  }
+
+  private parseDate(date: string): string {
+    return new Date(date).toISOString()
+  }
 
   private extractDocumentUrls(
     $: cheerio.CheerioAPI,
@@ -351,7 +364,7 @@ export class GenericHtmlScraper extends BaseScraper {
       ".7z",
     ]
 
-    element.find("a").each((_: any, linkEl: any) => {
+    element.find("a").each((_, linkEl) => {
       const href = $(linkEl).attr("href")
       if (!href) return
 

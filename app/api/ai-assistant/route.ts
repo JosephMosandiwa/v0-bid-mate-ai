@@ -1,4 +1,4 @@
-import { streamTextViaProvider, convertToModelMessages } from "@/lib/providers"
+import { streamText, convertToModelMessages } from "ai"
 
 export const maxDuration = 30
 
@@ -27,17 +27,11 @@ Be concise, practical, and specific in your advice. Always reference the tender 
 
     const modelMessages = convertToModelMessages([{ role: "system", content: systemPrompt }, ...messages])
 
-    // Ensure provider messages conform to { role: string; content: string }[]
-    const providerMessages = modelMessages.map((m: any) => ({
-      role: m.role,
-      content: Array.isArray(m.content) ? m.content.map((p: any) => (typeof p === "string" ? p : JSON.stringify(p))).join("") : String(m.content),
-    }))
+    console.log("[v0] Calling OpenAI GPT-4 with", modelMessages.length, "messages")
 
-    console.log("[v0] Calling OpenAI GPT-4 with", providerMessages.length, "messages")
-
-    const result = streamTextViaProvider({
+    const result = streamText({
       model: "openai/gpt-4-turbo",
-      messages: providerMessages,
+      messages: modelMessages,
       temperature: 0.7,
       maxTokens: 2000,
       abortSignal: request.signal,
@@ -59,7 +53,7 @@ Be concise, practical, and specific in your advice. Always reference the tender 
       return Response.json(
         {
           error:
-            "OpenAI API key is missing or invalid. Please set `OPENAI_API_KEY` in your environment (e.g. .env.local) or configure your cloud provider's secret store.",
+            "OpenAI API key is missing or invalid. Please add your OPENAI_API_KEY environment variable in the Vercel dashboard.",
         },
         { status: 403 },
       )
