@@ -11,9 +11,14 @@ const MIN_CHARS_PER_PAGE = 100
  * This handles pages with screenshots, images, or scanned content
  */
 async function extractTextWithVision(pdfUrl: string, pageNumbers: number[]): Promise<string> {
-  console.log(`[v0] Using GPT-4o vision to extract text from PDF`)
+  console.log("[v0] ========== VISION OCR PROCESSING ==========")
+  console.log(`[v0] PDF URL: ${pdfUrl}`)
+  console.log(`[v0] Pages flagged for OCR: ${pageNumbers.length > 0 ? pageNumbers.join(", ") : "ALL pages"}`)
   
   try {
+    console.log("[v0] Calling GPT-4o for vision-based text extraction...")
+    const startTime = Date.now()
+    
     // Use GPT-4o to read the PDF document
     const { text: extractedText } = await generateText({
       model: "openai/gpt-4o",
@@ -34,10 +39,27 @@ Output ONLY the extracted text, nothing else. No explanations or commentary.`,
       ],
     })
 
-    console.log(`[v0] Vision OCR extracted ${extractedText?.length || 0} characters`)
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2)
+    console.log("[v0] ----------------------------------------")
+    console.log(`[v0] Vision OCR completed in ${duration}s`)
+    console.log(`[v0] Extracted text length: ${extractedText?.length || 0} characters`)
+    console.log(`[v0] Word count: ${extractedText?.split(/\s+/).length || 0} words`)
+    
+    if (extractedText && extractedText.length > 0) {
+      console.log("[v0] -------- VISION OCR OUTPUT (first 2000 chars) --------")
+      console.log(extractedText.substring(0, 2000))
+      console.log("[v0] -------- END OF PREVIEW --------")
+    } else {
+      console.log("[v0] WARNING: Vision OCR returned empty or null text")
+    }
+    console.log("[v0] ================================================")
+    
     return extractedText || ""
   } catch (error: any) {
-    console.error("[v0] Vision OCR failed:", error?.message || error)
+    console.error("[v0] ========== VISION OCR ERROR ==========")
+    console.error("[v0] Error message:", error?.message || error)
+    console.error("[v0] Full error:", JSON.stringify(error, null, 2))
+    console.error("[v0] =======================================")
     return ""
   }
 }
@@ -50,8 +72,10 @@ async function analyzePdfTextDensity(pdfBytes: ArrayBuffer): Promise<{
   totalPages: number
   scannedPages: number[]
   textPerPage: number[]
+  pageTexts: string[]
 }> {
   try {
+    console.log("[v0] ========== PDF TEXT DENSITY ANALYSIS ==========")
     const pdf = await getDocumentProxy(new Uint8Array(pdfBytes))
     const result = await extractText(pdf, { mergePages: false })
     const pageTexts = Array.isArray(result.text) ? result.text : [result.text]
@@ -59,27 +83,41 @@ async function analyzePdfTextDensity(pdfBytes: ArrayBuffer): Promise<{
     const textPerPage = pageTexts.map(t => (t || "").length)
     const scannedPages: number[] = []
     
+    console.log("[v0] Page-by-page text extraction results:")
     textPerPage.forEach((charCount, index) => {
-      if (charCount < MIN_CHARS_PER_PAGE) {
-        scannedPages.push(index + 1)
+      const pageNum = index + 1
+      const isLowText = charCount < MIN_CHARS_PER_PAGE
+      console.log(`[v0]   Page ${pageNum}: ${charCount} chars ${isLowText ? "(LOW - likely scanned/image)" : "(OK)"}`)
+      
+      // Log first 200 chars of each page for debugging
+      const pagePreview = (pageTexts[index] || "").substring(0, 200).replace(/\n/g, " ")
+      console.log(`[v0]   Page ${pageNum} preview: "${pagePreview}..."`)
+      
+      if (isLowText) {
+        scannedPages.push(pageNum)
       }
     })
     
     const avgCharsPerPage = textPerPage.reduce((a, b) => a + b, 0) / textPerPage.length
     const isScanned = avgCharsPerPage < MIN_CHARS_PER_PAGE || scannedPages.length > textPerPage.length / 2
     
-    console.log(`[v0] PDF analysis: ${textPerPage.length} pages, avg ${Math.round(avgCharsPerPage)} chars/page`)
-    console.log(`[v0] Scanned pages detected: ${scannedPages.length} (${scannedPages.join(", ") || "none"})`)
+    console.log("[v0] ----------------------------------------")
+    console.log(`[v0] SUMMARY: ${textPerPage.length} pages total`)
+    console.log(`[v0] Average chars/page: ${Math.round(avgCharsPerPage)}`)
+    console.log(`[v0] Scanned/image pages: ${scannedPages.length} (pages: ${scannedPages.join(", ") || "none"})`)
+    console.log(`[v0] Document classification: ${isScanned ? "SCANNED/IMAGE-BASED" : "TEXT-BASED"}`)
+    console.log("[v0] ================================================")
     
     return {
       isScanned,
       totalPages: textPerPage.length,
       scannedPages,
       textPerPage,
+      pageTexts,
     }
   } catch (error) {
     console.error("[v0] PDF density analysis failed:", error)
-    return { isScanned: true, totalPages: 0, scannedPages: [], textPerPage: [] }
+    return { isScanned: true, totalPages: 0, scannedPages: [], textPerPage: [], pageTexts: [] }
   }
 }
 
@@ -261,18 +299,29 @@ export async function POST(request: Request) {
           console.log("[v0] Text extracted from", totalPages, "pages")
         }
 
+        // Log extraction results
+        console.log("[v0] ========== TEXT EXTRACTION COMPLETE ==========")
         console.log("[v0] Total extracted text length:", textToAnalyze?.length || 0, "characters")
-        console.log("[v0] First 500 characters:", textToAnalyze?.substring(0, 500))
+        console.log("[v0] Word count:", textToAnalyze?.trim().split(/\s+/).length || 0)
+        console.log("[v0] -------- EXTRACTED TEXT OUTPUT (first 3000 chars) --------")
+        console.log(textToAnalyze?.substring(0, 3000) || "(empty)")
+        console.log("[v0] -------- END OF PREVIEW --------")
+        console.log("[v0] ================================================")
 
         if (!textToAnalyze || textToAnalyze.trim().length < 50) {
           // Last resort - try vision on entire document
-          console.log("[v0] Insufficient text - trying full vision OCR as last resort...")
+          console.log("[v0] WARNING: Insufficient text extracted (< 50 chars)")
+          console.log("[v0] Attempting full document vision OCR as last resort...")
           const visionText = await extractTextWithVision(documentUrl, [])
           
           if (visionText && visionText.length > 50) {
             textToAnalyze = visionText
-            console.log("[v0] Vision OCR successful:", visionText.length, "characters")
+            console.log("[v0] SUCCESS: Vision OCR extracted:", visionText.length, "characters")
+            console.log("[v0] -------- VISION OCR FULL OUTPUT (first 3000 chars) --------")
+            console.log(visionText.substring(0, 3000))
+            console.log("[v0] -------- END OF PREVIEW --------")
           } else {
+            console.log("[v0] FAILURE: Vision OCR also failed or returned insufficient text")
             throw new Error(
               `Insufficient text extracted from PDF - only got ${textToAnalyze?.length || 0} characters. Vision OCR also failed.`,
             )
@@ -280,7 +329,7 @@ export async function POST(request: Request) {
         }
 
         const wordCount = textToAnalyze.trim().split(/\s+/).length
-        console.log("[v0] Final word count:", wordCount)
+        console.log("[v0] FINAL: Using", textToAnalyze.length, "chars /", wordCount, "words for analysis")
       } catch (extractError: any) {
         console.error("[v0] PDF TEXT EXTRACTION FAILED")
         console.error("[v0] Error message:", extractError?.message)
