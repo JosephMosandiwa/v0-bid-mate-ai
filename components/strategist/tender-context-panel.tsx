@@ -30,6 +30,7 @@ interface TenderContext {
   deadline?: string | null
   value?: string | null
   requirements?: any
+  analysis?: any
 }
 
 interface Message {
@@ -62,18 +63,24 @@ export function TenderContextStrategistPanel({
   const [projectPlan, setProjectPlan] = useState<any>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
+  // All hooks must be called before any early returns
   useEffect(() => {
-    if (tender.id) {
+    if (tender?.id) {
       loadReadiness()
       loadProjectPlan()
     }
-  }, [tender.id])
+  }, [tender?.id])
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages])
+
+  // Return null if tender is not provided or has no id - AFTER all hooks
+  if (!tender?.id) {
+    return null
+  }
 
   const loadReadiness = async () => {
     setLoadingReadiness(true)
@@ -287,7 +294,7 @@ export function TenderContextStrategistPanel({
     } catch (error) {
       console.error("[v0] BOQ generation error:", error)
       toast.error("Error", {
-        description: error instanceof Error ? error.message : "Failed to generate BOQ",
+        description: "Failed to generate BOQ",
       })
     }
   }
@@ -488,4 +495,7 @@ export function TenderContextStrategistPanel({
   )
 }
 
-export { TenderContextStrategistPanel as TenderContextPanel }
+// Alias export for backwards compatibility
+export function TenderContextPanel(props: Props) {
+  return <TenderContextStrategistPanel {...props} />
+}

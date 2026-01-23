@@ -638,11 +638,16 @@ export default function UnifiedTenderDetailPage() {
 
                 {/* Tender Strategist Panel */}
                 <TenderContextStrategistPanel
-                  tenderId={id}
-                  tenderType={detectedType || "scraped"}
-                  tenderTitle={tenderInfo.title}
-                  tenderDescription={tenderInfo.description}
-                  analysis={analysis}
+                  tender={{
+                    id: id,
+                    title: tenderInfo.title,
+                    organization: tenderInfo.organization,
+                    description: tenderInfo.description,
+                    deadline: tenderInfo.closeDate,
+                    value: tenderInfo.value,
+                    requirements: analysis?.compliance_summary?.requirements,
+                    analysis: analysis,
+                  }}
                 />
               </div>
             )}
