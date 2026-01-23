@@ -347,9 +347,15 @@ export class ScrapingService {
       console.log(`[v0] ScrapingService: Close Date: ${tender.close_date || tender.closeDate || 'N/A'}`)
       console.log(`[v0] ScrapingService: Organization: ${tender.organization || 'N/A'}`)
 
-      const result = await engineOrchestrator.processScrapedTender(tender)
-      
-      console.log(`[v0] ScrapingService: Process result - success: ${result.success}, has tender: ${!!result.tender}, error: ${result.error || 'none'}`)
+      // Process tender through orchestrator for validation and normalization
+      let result: any
+      try {
+        result = await engineOrchestrator.processScrapedTender(tender)
+        console.log(`[v0] ScrapingService: Process result - success: ${result.success}, has tender: ${!!result.tender}, error: ${result.error || 'none'}`)
+      } catch (orchError) {
+        console.error(`[v0] ScrapingService: Orchestrator threw error:`, orchError)
+        result = { success: false, error: orchError instanceof Error ? orchError.message : 'Unknown error' }
+      }
 
       if (result.tender) {
         console.log(
@@ -401,11 +407,10 @@ export class ScrapingService {
         
         validatedTenders.push(enrichedTender)
       } else {
-        console.warn(`[v0] ScrapingService: ⚠️ Warning - Could not process tender: ${tender.title}`)
-        console.warn(`[v0] ScrapingService:   Error: ${result.error || "Unknown error"}`)
-        console.warn(`[v0] ScrapingService:   Result details:`, JSON.stringify(result, null, 2))
+        console.warn(`[v0] ScrapingService: ⚠️ Warning - Orchestrator did not return tender data`)
+        console.warn(`[v0] ScrapingService:   Error: ${result?.error || "No tender returned"}`)
         
-        // If processing failed but we have basic data, still try to save the tender with minimal validation
+        // ALWAYS try to save the tender if it has a title - don't discard scraped data
         if (tender.title) {
           console.log(`[v0] ScrapingService: Attempting to save with minimal validation...`)
           const minimalTender = {

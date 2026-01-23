@@ -3,7 +3,7 @@
 // ============================================
 
 import { processDocument } from "../documind"
-import { TenderService, validateTender, normalizeTenderData } from "../tenders"
+import { TenderService, validateTender, normalizeTenderData, TenderValidator } from "../tenders"
 import { OpportunityService, CompetitivenessService, StrategistService } from "../strategist"
 import type { ScrapedTender } from "../../scrapers/base-scraper"
 import type { ParsedDocument } from "../documind/types"
@@ -66,23 +66,49 @@ export class EngineOrchestrator {
    */
   async processScrapedTender(tender: ScrapedTender, userId?: string): Promise<ProcessedTenderResult> {
     try {
-      console.log("[v0] Orchestrator: Processing scraped tender:", tender.title)
+      console.log("[v0] Orchestrator: Processing scraped tender:", tender.title?.substring(0, 50))
+      console.log("[v0] Orchestrator: Input tender keys:", Object.keys(tender || {}).join(", "))
 
       // Step 1: Tenders Engine - Validate and normalize
       console.log("[v0] Orchestrator: Step 1 - Validating tender data...")
-      const validation = validateTender(tender)
+      
+      let validationResult
+      let qualityResult
+      try {
+        validationResult = validateTender(tender)
+        qualityResult = TenderValidator.getQualityScore(tender)
+        console.log("[v0] Orchestrator: Validation result:", {
+          score: validationResult?.score,
+          isValid: validationResult?.isValid,
+          grade: qualityResult?.grade,
+        })
+      } catch (valError) {
+        console.error("[v0] Orchestrator: Validation error:", valError)
+        validationResult = { score: 30, isValid: true, errors: [], missingFields: [], warnings: [] }
+        qualityResult = { score: 30, grade: "C", feedback: [] }
+      }
 
-      console.log("[v0] Orchestrator: Validation result:", {
-        completeness: validation.completeness,
-        grade: validation.grade,
-        qualityScore: validation.quality_score,
-      })
+      // Create combined validation object with expected fields
+      const validation = {
+        completeness: (validationResult?.score || 30) / 100,
+        grade: qualityResult?.grade || "C",
+        quality_score: validationResult?.score || 30,
+        isValid: validationResult?.isValid ?? true,
+      }
 
       console.log(
-        `[v0] Orchestrator: Processing tender from official API - Grade: ${validation.grade}, Completeness: ${validation.completeness * 100}%`,
+        `[v0] Orchestrator: Grade: ${validation.grade}, Completeness: ${(validation.completeness * 100).toFixed(0)}%`,
       )
 
-      const normalizedTender = normalizeTenderData(tender)
+      let normalizedTender
+      try {
+        normalizedTender = normalizeTenderData(tender)
+        console.log("[v0] Orchestrator: Normalized tender keys:", Object.keys(normalizedTender || {}).join(", "))
+      } catch (normError) {
+        console.error("[v0] Orchestrator: Normalization error:", normError)
+        // Fall back to original tender data
+        normalizedTender = { ...tender }
+      }
 
       // Step 2: Documind Engine - Process documents if available
       const processedDocuments: ParsedDocument[] = []
@@ -143,8 +169,11 @@ export class EngineOrchestrator {
       }
     } catch (error) {
       console.error("[v0] Orchestrator: Error processing scraped tender:", error)
+      // Still return the original tender data so it can be saved with minimal processing
       return {
         success: false,
+        tender: tender as any, // Return original data as fallback
+        validation: { completeness: 0.3, grade: "C", quality_score: 30 },
         error: error instanceof Error ? error.message : "Unknown error",
       }
     }
