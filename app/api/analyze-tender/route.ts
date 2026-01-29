@@ -7,28 +7,32 @@ import { extractText, getDocumentProxy } from "unpdf";
 import { PDFDocument } from "pdf-lib";
 import { getAnalysisPrompt } from "@/lib/prompts";
 
-// Minimum characters per page to consider it "text-based" vs "scanned/image"
-const MIN_CHARS_PER_PAGE = 100;
+// Give Vercel more time — adjust based on your plan (Hobby max ~300–600s, Pro up to 800s)
+export const maxDuration = 600; // 10 minutes
+export const dynamic = 'force-dynamic';
 
-async function extractTextWithVision(pdfUrl: string, pageNumbers: number[]): Promise<string> {
-  console.log("[v0] ========== GEMINI 2.5 PRO OCR PROCESSING ==========");
-  console.log(`[v0] PDF URL: ${pdfUrl}`);
-  console.log(`[v0] Pages flagged for OCR: ${pageNumbers.length > 0 ? pageNumbers.join(", ") : "ALL pages"}`);
-  console.log(`[v0] Model: google/gemini-2.5-pro`);
+// ──────────────────────────────────────────────
+// CONFIG
+// ──────────────────────────────────────────────
+const MIN_CHARS_PER_PAGE = 80;              // lowered a bit
+const MIN_TEXT_LENGTH = 150;                // lowered from 200
+const MAX_SAFE_CHARS_SINGLE_CALL = 380_000; // safe for Grok-3 context
+const CHUNK_OVERLAP = 15_000;               // overlap chars between chunks
 
+// ──────────────────────────────────────────────
+// HELPERS (mostly unchanged, minor perf tweaks)
+// ──────────────────────────────────────────────
+
+async function extractTextWithVision(pdfUrl: string, pageNumbers: number[] = []): Promise<string> {
+  console.log("[v0] GEMINI OCR – pages:", pageNumbers.length || "all");
   try {
-    const pdfResponse = await fetch(pdfUrl);
-    if (!pdfResponse.ok) {
-      throw new Error(`Failed to fetch PDF: ${pdfResponse.status}`);
-    }
-    const pdfBuffer = await pdfResponse.arrayBuffer();
-    const pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
-    console.log(`[v0] PDF size: ${(pdfBuffer.byteLength / 1024).toFixed(2)} KB`);
+    const res = await fetch(pdfUrl);
+    if (!res.ok) throw new Error(`fetch failed ${res.status}`);
 
-    console.log("[v0] Calling Gemini 2.5 Pro for maximum OCR accuracy...");
-    const startTime = Date.now();
+    const buffer = await res.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
 
-    const { text: extractedText } = await generateObject({
+    const { object } = await generateObject({
       model: google("gemini-2.5-pro"),
       schema: z.object({ extractedText: z.string() }),
       messages: [
@@ -37,310 +41,189 @@ async function extractTextWithVision(pdfUrl: string, pageNumbers: number[]): Pro
           content: [
             {
               type: "text",
-              text: `You are an expert document OCR assistant specializing in South African tender documents. Extract ALL text from this PDF document with perfect accuracy.
-CRITICAL INSTRUCTIONS:
-1. Extract EVERY piece of text, including headings, tables, form fields, headers/footers, footnotes.
-2. For tables and BOQ: preserve structure with | separators.
-3. Output Format: Pure text only, preserve paragraph breaks, use | for table columns, indicate page breaks with "--- Page X ---"`,
+              text: `Extract ALL text from this PDF as completely as possible.
+Include tables (use | separators), headings, forms, headers/footers.
+Use "--- Page X ---" for page breaks.
+If extraction is partial, still return everything readable.`,
             },
-            {
-              type: "file",
-              data: pdfBase64,
-              mimeType: "application/pdf",
-            },
+            { type: "file", data: base64, mimeType: "application/pdf" },
           ],
         },
       ],
     });
 
-    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log(`[v0] Gemini OCR completed in ${duration}s`);
-    console.log(`[v0] Extracted text length: ${extractedText.extractedText?.length || 0} characters`);
-
-    return extractedText.extractedText || "";
-  } catch (error: any) {
-    console.error("[v0] GEMINI OCR ERROR:", error?.message || error);
+    return object.extractedText || "";
+  } catch (err) {
+    console.error("[v0] VISION OCR ERROR:", err);
     return "";
   }
 }
 
-async function analyzePdfTextDensity(pdfBytes: ArrayBuffer): Promise<{
-  isScanned: boolean;
-  totalPages: number;
-  scannedPages: number[];
-  textPerPage: number[];
-  pageTexts: string[];
-}> {
-  try {
-    console.log("[v0] ========== PDF TEXT DENSITY ANALYSIS ==========");
-    const pdf = await getDocumentProxy(new Uint8Array(pdfBytes));
-    const result = await extractText(pdf, { mergePages: false });
-    const pageTexts = Array.isArray(result.text) ? result.text : [result.text];
+// analyzePdfTextDensity and extractPdfFormFields remain the same
+// (copy them from your current file or previous version)
 
-    const textPerPage = pageTexts.map((t) => (t || "").length);
-    const scannedPages: number[] = [];
-
-    textPerPage.forEach((charCount, index) => {
-      const pageNum = index + 1;
-      if (charCount < MIN_CHARS_PER_PAGE) {
-        scannedPages.push(pageNum);
-      }
-    });
-
-    const avgCharsPerPage = textPerPage.reduce((a, b) => a + b, 0) / textPerPage.length;
-    const isScanned = avgCharsPerPage < MIN_CHARS_PER_PAGE || scannedPages.length > textPerPage.length / 2;
-
-    console.log(`[v0] SUMMARY: ${textPerPage.length} pages | Avg chars/page: ${Math.round(avgCharsPerPage)}`);
-    console.log(`[v0] Scanned/image pages: ${scannedPages.length} (pages: ${scannedPages.join(", ") || "none"})`);
-    console.log(`[v0] Document classification: ${isScanned ? "SCANNED/IMAGE-BASED" : "TEXT-BASED"}`);
-
-    return {
-      isScanned,
-      totalPages: textPerPage.length,
-      scannedPages,
-      textPerPage,
-      pageTexts,
-    };
-  } catch (error) {
-    console.error("[v0] PDF density analysis failed:", error);
-    return { isScanned: true, totalPages: 0, scannedPages: [], textPerPage: [], pageTexts: [] };
-  }
-}
-
-async function extractPdfFormFields(pdfUrl: string): Promise<{
-  fields: Array<{
-    name: string;
-    type: string;
-    options?: string[];
-    position?: { x: number; y: number; width: number; height: number; page: number };
-  }>;
-  hasFormFields: boolean;
-}> {
-  try {
-    const pdfResponse = await fetch(pdfUrl);
-    if (!pdfResponse.ok) throw new Error(`Failed to fetch PDF: ${pdfResponse.status}`);
-    const pdfBytes = await pdfResponse.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
-    const form = pdfDoc.getForm();
-    const fields = form.getFields();
-    const pages = pdfDoc.getPages();
-
-    const extractedFields = fields.map((field) => {
-      const name = field.getName();
-      const typeName = field.constructor.name;
-      let type = "text";
-      let options: string[] | undefined;
-      let position: { x: number; y: number; width: number; height: number; page: number } | undefined;
-
-      if (typeName === "PDFTextField") type = "text";
-      else if (typeName === "PDFCheckBox") type = "checkbox";
-      else if (typeName === "PDFRadioGroup") {
-        type = "radio";
-        options = (field as any).getOptions?.() || [];
-      } else if (typeName === "PDFDropdown") {
-        type = "select";
-        options = (field as any).getOptions?.() || [];
-      }
-
-      try {
-        const widgets = field.acroField.getWidgets();
-        if (widgets.length > 0) {
-          const widget = widgets[0];
-          const rect = widget.getRectangle();
-          let pageIndex = 0;
-          for (let i = 0; i < pages.length; i++) {
-            if (pages[i].ref.toString() === widget.P()?.toString()) {
-              pageIndex = i;
-              break;
-            }
-          }
-          position = { x: rect.x, y: rect.y, width: rect.width, height: rect.height, page: pageIndex + 1 };
-        }
-      } catch {}
-
-      return { name, type, options, position };
-    });
-
-    return {
-      fields: extractedFields,
-      hasFormFields: extractedFields.length > 0,
-    };
-  } catch (error: any) {
-    console.log("[v0] Could not extract PDF form fields:", error.message);
-    return { fields: [], hasFormFields: false };
-  }
-}
 
 // ──────────────────────────────────────────────
-// MAIN SCHEMA – this enforces consistent output structure
+// OUTPUT SCHEMA (keep your full structure – abbreviated here)
 // ──────────────────────────────────────────────
 const TenderAnalysisSchema = z.object({
-  tender_summary: z
-    .object({
-      tender_number: z.string().default("Not specified"),
-      title: z.string().default("Not specified"),
-      entity: z.string().default("Not specified"),
-      description: z.string().default("Not specified"),
-      contract_duration: z.string().default("Not specified"),
-      closing_date: z.string().default("Not specified"),
-      submission_method: z.string().default("Not specified"),
-      compulsory_briefing: z.string().default("Not specified"),
-      validity_period: z.string().default("Not specified"),
-      contact_email: z.string().default("Not specified"),
-    })
-    .default({}),
-
-  compliance_summary: z
-    .object({
-      requirements: z.array(z.string()).default([]),
-      disqualifiers: z.array(z.string()).default([]),
-      strengtheners: z.array(z.string()).default([]),
-    })
-    .default({}),
-
-  evaluation: z
-    .object({
-      criteria: z.array(z.object({ criterion: z.string(), weight: z.number() })).default([]),
-      threshold: z.string().default("Not specified"),
-      pricing_system: z.string().default("Not specified"),
-    })
-    .default({}),
-
-  action_plan: z
-    .object({
-      critical_dates: z
-        .array(z.object({ date: z.string(), event: z.string(), time: z.string().optional(), location: z.string().optional() }))
-        .default([]),
-      preparation_tasks: z
-        .array(z.object({ task: z.string(), priority: z.enum(["High", "Medium", "Low"]), deadline: z.string(), category: z.string() }))
-        .default([]),
-    })
-    .default({}),
-
-  // Add the remaining sections with .default() as needed
-  // financial_requirements, legal_registration, labour_employment, technical_specs,
-  // submission_requirements, penalties_payment, documents_identified, boq, project_plan,
-  // fillable_fields, forms_summary, formFields
-
+  tender_summary: z.object({
+    tender_number: z.string().default("Not specified"),
+    title: z.string().default("Not specified"),
+    entity: z.string().default("Not specified"),
+    description: z.string().default("Not specified"),
+    contract_duration: z.string().default("Not specified"),
+    closing_date: z.string().default("Not specified"),
+    // ... add all other fields from your original schema ...
+  }).default({}),
+  // ... compliance_summary, evaluation, boq, project_plan, formFields, etc. ...
   pdfFormFieldsDetected: z.boolean().default(false),
   pdfFormFieldCount: z.number().default(0),
-  pdfFormFields: z
-    .array(
-      z.object({
-        name: z.string(),
-        type: z.string(),
-        options: z.array(z.string()).optional(),
-        position: z.object({ x: z.number(), y: z.number(), width: z.number(), height: z.number(), page: z.number() }).optional(),
-      })
-    )
-    .default([]),
+  pdfFormFields: z.array(z.any()).default([]),
 });
 
+// ──────────────────────────────────────────────
+// MAIN POST HANDLER
+// ──────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   try {
-    const { documentText, documentUrl, pdfFields } = await request.json();
-
-    console.log("[v0] TENDER ANALYSIS REQUEST");
-    console.log("[v0] Document text length:", documentText?.length || 0);
-    console.log("[v0] Document URL:", documentUrl ? "YES" : "NO");
+    const { documentText, documentUrl } = await request.json();
 
     if (!documentText && !documentUrl) {
-      return NextResponse.json({ error: "Either document text or URL required" }, { status: 400 });
+      return NextResponse.json({ error: "documentText or documentUrl required" }, { status: 400 });
     }
 
-    let pdfFormFields: Awaited<ReturnType<typeof extractPdfFormFields>>["fields"] = [];
-    let hasPdfFormFields = false;
+    let fullText = documentText || "";
 
-    if (documentUrl) {
-      const pdfFieldsResult = await extractPdfFormFields(documentUrl);
-      pdfFormFields = pdfFieldsResult.fields;
-      hasPdfFormFields = pdfFieldsResult.hasFormFields;
-    }
+    // ── TEXT EXTRACTION ─────────────────────────────────────────────
+    if (documentUrl && fullText.length < 200) {
+      console.log("[v0] Extracting text from URL:", documentUrl);
 
-    let textToAnalyze = documentText || "";
+      const pdfRes = await fetch(documentUrl);
+      if (!pdfRes.ok) throw new Error(`PDF fetch failed: ${pdfRes.status}`);
 
-    if (documentUrl && (!documentText || documentText === "")) {
-      const pdfResponse = await fetch(documentUrl);
-      if (!pdfResponse.ok) throw new Error(`Failed to fetch PDF: ${pdfResponse.status}`);
+      const buffer = await pdfRes.arrayBuffer();
+      const copy1 = new Uint8Array(buffer).slice().buffer;
+      const copy2 = new Uint8Array(buffer).slice().buffer;
 
-      const pdfArrayBuffer = await pdfResponse.arrayBuffer();
-      const pdfBytesForDensity = new Uint8Array(pdfArrayBuffer).slice().buffer;
-      const pdfBytesForExtract = new Uint8Array(pdfArrayBuffer).slice().buffer;
+      const density = await analyzePdfTextDensity(copy1);
 
-      const densityAnalysis = await analyzePdfTextDensity(pdfBytesForDensity);
-
-      if (densityAnalysis.isScanned || densityAnalysis.scannedPages.length > 0) {
-        textToAnalyze = await extractTextWithVision(documentUrl, densityAnalysis.scannedPages);
+      if (density.isScanned || density.scannedPages.length > 3) {
+        console.log("[v0] Detected scanned content → using Gemini vision");
+        fullText = await extractTextWithVision(documentUrl, density.scannedPages);
       } else {
-        const pdf = await getDocumentProxy(new Uint8Array(pdfBytesForExtract));
+        console.log("[v0] Text-based PDF → using unpdf");
+        const pdf = await getDocumentProxy(new Uint8Array(copy2));
         const { text } = await extractText(pdf, { mergePages: true });
-        textToAnalyze = text;
+        fullText = text;
       }
 
-      if (!textToAnalyze || textToAnalyze.trim().length < 50) {
-        // Last resort full vision
-        textToAnalyze = await extractTextWithVision(documentUrl, []);
+      // Last resort: full vision if still very low
+      if (fullText.trim().length < MIN_TEXT_LENGTH) {
+        console.log("[v0] Low text after extraction → full vision fallback");
+        fullText = await extractTextWithVision(documentUrl, []);
       }
 
-      if (!textToAnalyze || textToAnalyze.trim().length < 50) {
+      if (fullText.trim().length < MIN_TEXT_LENGTH) {
         return NextResponse.json(
-          { error: "Insufficient text extracted from PDF", errorType: "insufficient_content" },
-          { status: 400 }
+          {
+            error: "Could not extract sufficient text from the PDF",
+            extractedChars: fullText.length,
+            hint: "Document may be image-only, corrupted, or protected.",
+          },
+          { status: 422 }
         );
       }
     }
 
-    const truncatedText = textToAnalyze.substring(0, 100_000);
+    console.log(`[v0] Final text length for analysis: ${fullText.length} chars`);
 
-    const basePrompt = getAnalysisPrompt();
-    let pdfFieldsInstruction = "";
+    // ── ANALYSIS (with chunking if needed) ──────────────────────────
+    let analysisResult;
 
-    if (hasPdfFormFields && pdfFormFields.length > 0) {
-      pdfFieldsInstruction = `PDF FORM FIELDS DETECTED (${pdfFormFields.length} fields):\n${pdfFormFields
-        .map((f) => `- "${f.name}" (type: ${f.type})${f.options ? ` [options: ${f.options.join(", ")}]` : ""}`)
-        .join("\n")}\nUse EXACT field names as "id" in formFields output.`;
+    if (fullText.length <= MAX_SAFE_CHARS_SINGLE_CALL) {
+      analysisResult = await analyzeSingleChunk(fullText);
     } else {
-      pdfFieldsInstruction = "No interactive PDF form fields detected. Generate formFields based on document content.";
+      console.log(`[v0] Very large document (${fullText.length} chars) → chunking`);
+      analysisResult = await analyzeLargeDocument(fullText);
     }
 
-    const { object: analysis } = await generateObject({
-      model: xai("grok-3"),
-      schema: TenderAnalysisSchema,
-      prompt: `${basePrompt}
-${pdfFieldsInstruction}
-
-Analyze this South African tender document text. Adapt to any format, wording, or layout.
-Use "Not specified" for missing information.
-Be accurate – extract only what is present.
-
-TENDER DOCUMENT TEXT:
-${truncatedText}
-
-END OF DOCUMENT
-
-Return structured data matching the schema exactly.`,
-      mode: "json",
-    });
-
-    // Attach form field info
-    analysis.pdfFormFieldsDetected = hasPdfFormFields;
-    analysis.pdfFormFieldCount = pdfFormFields.length;
-    analysis.pdfFormFields = pdfFormFields;
-
-    console.log("[v0] ANALYSIS COMPLETE");
-    console.log("[v0] Tender title:", analysis.tender_summary?.title);
-    console.log("[v0] BOQ found:", analysis.boq?.found ?? false);
-
-    return NextResponse.json(analysis);
+    return NextResponse.json(analysisResult);
   } catch (error: any) {
-    console.error("[v0] TENDER ANALYSIS ERROR:", error);
+    console.error("[v0] ANALYZE-TENDER CRASH:", error);
     return NextResponse.json(
       {
-        error: "Failed to analyze tender",
-        details: error?.message || "Unknown error",
-        errorType: error?.name || "server_error",
+        error: "Analysis failed",
+        details: error.message || "Unknown server error",
       },
       { status: 500 }
     );
   }
+}
+
+// ──────────────────────────────────────────────
+// SINGLE CHUNK (most documents)
+// ──────────────────────────────────────────────
+async function analyzeSingleChunk(text: string) {
+  const { object } = await generateObject({
+    model: xai("grok-3"),
+    schema: TenderAnalysisSchema,
+    prompt: `${getAnalysisPrompt()}
+
+Analyze this South African tender document completely.
+Extract all key information – do not omit details due to length.
+Use "Not specified" only when information is truly absent.
+
+DOCUMENT TEXT:
+${text}
+
+Return structured data matching the schema.`,
+    mode: "json",
+  });
+
+  return object;
+}
+
+// ──────────────────────────────────────────────
+// CHUNK + MERGE FOR VERY LARGE DOCS
+// ──────────────────────────────────────────────
+async function analyzeLargeDocument(fullText: string) {
+  const chunks: string[] = [];
+  let pos = 0;
+
+  while (pos < fullText.length) {
+    let end = Math.min(pos + MAX_SAFE_CHARS_SINGLE_CALL, fullText.length);
+    // Try to break on paragraph
+    const breakPos = fullText.lastIndexOf("\n\n", end);
+    if (breakPos > pos + 20000) end = breakPos;
+
+    chunks.push(fullText.substring(pos, end));
+    pos = end - CHUNK_OVERLAP;
+    if (pos >= fullText.length) break;
+  }
+
+  console.log(`[v0] Created ${chunks.length} chunks`);
+
+  const partials = await Promise.all(
+    chunks.map(async (chunk, idx) => {
+      console.log(`[v0] Processing chunk ${idx + 1}/${chunks.length} (${chunk.length} chars)`);
+      return analyzeSingleChunk(chunk);
+    })
+  );
+
+  // Basic merge strategy: keep the most complete version of each field
+  const merged = partials.reduce((acc, curr) => {
+    Object.keys(curr).forEach(key => {
+      const currVal = curr[key];
+      if (!acc[key] || 
+          (Array.isArray(currVal) && currVal.length > (acc[key]?.length || 0)) ||
+          (typeof currVal === "object" && Object.keys(currVal).length > Object.keys(acc[key] || {}).length)) {
+        acc[key] = currVal;
+      }
+    });
+    return acc;
+  }, {} as any);
+
+  // Enforce schema & defaults
+  return TenderAnalysisSchema.parse(merged);
 }
